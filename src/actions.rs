@@ -71,7 +71,7 @@ pub fn uninstall(mods: Vec<&String>, config: &Config) -> Result<(), String> {
                     .into_iter()
                     .filter(|e| {
                         if OsStr::new(e) == f.file_name() {
-                            utils::remove_dir(&f.path(), true).unwrap();
+                            utils::remove_dir(&f.path()).unwrap();
                             println!("Uninstalled {}", e);
                             false
                         } else {

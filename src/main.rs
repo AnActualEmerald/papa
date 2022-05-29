@@ -60,7 +60,9 @@ async fn main() -> Result<(), String> {
             let mods = utils::list_dir(&config.mod_dir().join("mods/"))?;
             if !mods.is_empty() {
                 println!("Installed mods:\n");
-                mods.into_iter().for_each(|f| println!("\t{}", f));
+                mods.into_iter()
+                    .enumerate()
+                    .for_each(|f| println!("{}. {}", f.0 + 1, f.1));
             } else {
                 println!("No mods currently installed");
             }
@@ -107,7 +109,7 @@ async fn main() -> Result<(), String> {
             } else {
                 println!("Clearing cached packages...");
             }
-            utils::remove_dir(dirs.cache_dir(), full)?;
+            utils::clear_cache(dirs.cache_dir(), full)?;
         }
     }
 
@@ -133,7 +135,14 @@ mod utils {
         fs::create_dir_all(dirs.config_dir()).unwrap();
     }
 
-    pub fn remove_dir(dir: &Path, force: bool) -> Result<(), String> {
+    pub fn remove_dir(dir: &Path) -> Result<(), String> {
+        fs::remove_dir_all(dir)
+            .map_err(|_| format!("Unable to remove directory {}", dir.display()))?;
+
+        Ok(())
+    }
+
+    pub fn clear_cache(dir: &Path, force: bool) -> Result<(), String> {
         for entry in
             fs::read_dir(dir).map_err(|_| format!("unable to read directory {}", dir.display()))?
         {
@@ -144,7 +153,7 @@ mod utils {
             println!("Removing {}", path.display());
 
             if path.is_dir() {
-                remove_dir(&path, force)?;
+                clear_cache(&path, force)?;
                 fs::remove_dir(&path)
                     .map_err(|_| format!("Unable to remove directory {}", path.display()))?;
             } else if path.ends_with(".zip") {
@@ -155,10 +164,6 @@ mod utils {
                     .map_err(|_| format!("Unable to remove file {}", path.display()))?;
             }
         }
-
-        fs::remove_dir(&dir)
-            .map_err(|_| format!("Unable to remove directory {}", dir.display()))?;
-        println!("Removing {}", dir.display());
 
         Ok(())
     }
