@@ -56,7 +56,7 @@ pub async fn download_file(url: String, file_path: PathBuf) -> Result<File, Stri
     let finished = File::open(&file_path)
         .map_err(|_| (format!("Unable to open finished file {}", file_path.display())))?;
 
-    pb.finish_with_message(format!("Downloaded {} to {}", url, file_path.display()));
+    pb.finish_with_message(format!("Downloaded {}", url));
     Ok(finished)
 }
 
