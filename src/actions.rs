@@ -2,13 +2,17 @@ use std::{
     cmp::min,
     fs::{self, File},
     io::{self, Write},
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
+use convert_case::{Case, Casing, Converter, Pattern};
 use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
+use regex::Regex;
 use reqwest::Client;
 use zip::ZipArchive;
+
+use crate::config::Config;
 
 pub async fn download_file(url: String, file_path: PathBuf) -> Result<File, String> {
     let client = Client::new();
@@ -21,7 +25,7 @@ pub async fn download_file(url: String, file_path: PathBuf) -> Result<File, Stri
         .or(Err(format!("Unable to GET from {}", &url)))?;
 
     if !res.status().is_success() {
-        return Err(format!("{}", res.status()));
+        return Err(format!("{} at URL {}", res.status(), url));
     }
 
     let file_size = res.content_length().ok_or(format!(
@@ -52,9 +56,13 @@ pub async fn download_file(url: String, file_path: PathBuf) -> Result<File, Stri
         downloaded = new;
         pb.set_position(new);
     }
+    let finished = File::open(&file_path).or(Err(format!(
+        "Unable to open finished file {}",
+        file_path.display()
+    )))?;
 
-    pb.finish_with_message(format!("Downloaded {}", url));
-    Ok(file)
+    pb.finish_with_message(format!("Downloaded {} to {}", url, file_path.display()));
+    Ok(finished)
 }
 
 //supposing the mod name is formatted like Author.Mod@v1.0.0
@@ -65,12 +73,23 @@ pub fn parse_mod_name(name: &str) -> Option<String> {
     let m_name = parts.0;
     let ver = parts.1.replace("v", "");
 
-    Some(format!("/{}/{}/{}", author, m_name, ver))
+    let big_snake = Converter::new()
+        .set_delim("_")
+        .set_pattern(Pattern::Capital);
+
+    Some(format!(
+        "/{}/{}/{}",
+        author,
+        big_snake.convert(&m_name),
+        ver
+    ))
 }
 
-pub fn install_mod(zip_file: &File, mods_dir: &Path) -> Result<(), String> {
+pub fn install_mod(zip_file: &File, config: &Config) -> Result<String, String> {
+    let mods_dir = config.mod_dir();
     let mut archive = ZipArchive::new(zip_file).or(Err(format!("Unable to read zip archive")))?;
-    // let outfile =
+    let mut deep = false;
+    let mut pkg = String::new();
 
     for i in 0..archive.len() {
         let mut file = archive
@@ -81,6 +100,12 @@ pub fn install_mod(zip_file: &File, mods_dir: &Path) -> Result<(), String> {
             .ok_or(format!("Unable to get file name"))?;
 
         if out.starts_with("mods/") {
+            if !deep {
+                //this probably isn't very robust but idk
+                let stripped = out.parent().unwrap().strip_prefix("mods/").unwrap();
+                pkg = stripped.to_str().unwrap().to_owned();
+                deep = true;
+            }
             let mp = mods_dir.join(out);
 
             if (*file.name()).ends_with("/") {
@@ -105,5 +130,5 @@ pub fn install_mod(zip_file: &File, mods_dir: &Path) -> Result<(), String> {
         }
     }
 
-    Ok(())
+    Ok(pkg)
 }
