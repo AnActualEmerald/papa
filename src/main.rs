@@ -3,8 +3,9 @@ use std::{
     path::Path,
 };
 
-use clap::{Command, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 use directories::ProjectDirs;
+use regex::Regex;
 
 mod utils;
 
@@ -38,6 +39,12 @@ async fn main() {
 
     match cli.command {
         Commands::Install { mod_name } => {
+            let re = Regex::new(r"(.+)\.(.+)@v?\d.\d.\d").unwrap();
+            if !re.is_match(&mod_name) {
+                println!("Mod name should be in 'Author.ModName@1.2.3' format");
+                return;
+            }
+
             let url = utils::parse_mod_name(&mod_name).unwrap();
             let path = dirs.cache_dir().join(format!("{}.zip", mod_name));
 

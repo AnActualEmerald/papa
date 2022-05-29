@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use futures_util::{stream::Zip, StreamExt};
+use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
 use zip::ZipArchive;
@@ -19,6 +19,10 @@ pub async fn download_file(url: String, file_path: PathBuf) -> Result<File, Stri
         .send()
         .await
         .or(Err(format!("Unable to GET from {}", &url)))?;
+
+    if !res.status().is_success() {
+        return Err(format!("{}", res.status()));
+    }
 
     let file_size = res.content_length().ok_or(format!(
         "Unable to read content length of response from {}",
