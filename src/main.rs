@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::{Parser, Subcommand};
 
 use directories::ProjectDirs;
@@ -24,7 +26,13 @@ enum Commands {
     Install {
         #[clap(value_name = "MOD")]
         #[clap(help = "Mod name(s) in Author.ModName@version format")]
+        #[clap(required_unless_present = "url")]
         mod_names: Vec<String>,
+
+        ///Alternate url to use
+        #[clap(short, long)]
+        #[clap(value_name = "URL")]
+        url: Option<String>
     },
     ///Remove a mod or mods from the current mods directory
     Remove {
@@ -67,7 +75,21 @@ async fn main() -> Result<(), String> {
                 println!("No mods currently installed");
             }
         }
-        Commands::Install { mod_names } => {
+        Commands::Install {mod_names: _, url: Some(url)} => {
+            let file_name = url.as_str().replace(":", "").split("/").collect::<Vec<&str>>().join("");
+            println!("Downloading to {}", file_name);
+            let path = dirs.cache_dir().join(file_name);
+            match actions::download_file(format!("{}", url), path.clone()).await {
+                Ok(f) => {
+                    let pkg = actions::install_mod(&f, &config).unwrap();
+                    utils::remove_file(&path)?;
+                    println!("Installed {}", pkg);
+
+                },
+                Err(e) => eprintln!("{}", e),
+            }
+        }
+        Commands::Install { mod_names, url: None } => {
             let mut valid = vec![];
             for name in mod_names {
                 let re = Regex::new(r"(.+)\.(.+)@(v?\d.\d.\d)").unwrap();
@@ -133,6 +155,10 @@ mod utils {
     pub fn ensure_dirs(dirs: &ProjectDirs) {
         fs::create_dir_all(dirs.cache_dir()).unwrap();
         fs::create_dir_all(dirs.config_dir()).unwrap();
+    }
+
+    pub fn remove_file(path: &Path) -> Result<(), String> {
+        fs::remove_file(path).map_err(|_| format!("Unable to remove file {}", path.display()))
     }
 
     pub fn remove_dir(dir: &Path) -> Result<(), String> {

@@ -125,7 +125,12 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<String, String> {
         if out.starts_with("mods/") {
             if !deep {
                 //this probably isn't very robust but idk
-                let stripped = out.parent().unwrap().strip_prefix("mods/").unwrap();
+                let stripped =
+                if out.is_dir() {
+                    out.strip_prefix("mods/").unwrap()
+                } else {
+                    out.parent().unwrap().strip_prefix("mods/").unwrap()
+                };
                 pkg = stripped.to_str().unwrap().to_owned();
                 deep = true;
             }
