@@ -26,12 +26,12 @@ impl Config {
         self.cache
     }
 
-    pub fn set_dir(&mut self, dir: String) {
-        self.mod_dir = dir;
+    pub fn set_dir(&mut self, dir: &str) {
+        self.mod_dir = dir.to_owned();
     }
 
-    pub fn set_cache(&mut self, cache: bool) {
-        self.cache = cache;
+    pub fn set_cache(&mut self, cache: &bool) {
+        self.cache = *cache;
     }
 }
 

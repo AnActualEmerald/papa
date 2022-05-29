@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use clap::{Parser, Subcommand};
 
 use directories::ProjectDirs;
@@ -50,6 +48,17 @@ enum Commands {
         #[clap(long, short)]
         full: bool,
     },
+    ///Display or update the configuration
+    Config {
+        #[clap(long, short, value_name = "PATH")]
+        ///Set the directory where 'mods/' can be found
+        mods_dir: Option<String>,
+
+        #[clap(long, short, value_name = "CACHE")]
+        ///Set whether or not to cache packages
+        cache: Option<bool>
+
+    }
 }
 
 //There is an API for thunderstore but getting the download links from it is kind of annoying so this will do for now
@@ -61,9 +70,29 @@ async fn main() -> Result<(), String> {
 
     let dirs = ProjectDirs::from("me", "greenboi", "papa").unwrap();
     utils::ensure_dirs(&dirs);
-    let config = config::load_config(dirs.config_dir()).unwrap();
+    let mut config = config::load_config(dirs.config_dir()).unwrap();
 
     match cli.command {
+        Commands::Config {mods_dir: None, cache: None} => {
+            println!("Current config:\n{}", toml::to_string_pretty(&config).unwrap());
+        }
+        Commands::Config {mods_dir, cache} => {
+            if let Some(dir) = mods_dir {
+                config.set_dir(&dir);
+                println!("Set mods parent directory to {}", dir);
+            }
+
+            if let Some(cache) = cache {
+                config.set_cache(&cache);
+                if cache {
+                    println!("Turned caching on");
+                }else {
+                    println!("Turned caching off");
+                }
+            }
+
+            config::save_config(dirs.config_dir(), config)?;
+        }
         Commands::List {} => {
             let mods = utils::list_dir(&config.mod_dir().join("mods/"))?;
             if !mods.is_empty() {
