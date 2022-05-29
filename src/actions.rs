@@ -3,13 +3,13 @@ use std::{
     ffi::OsStr,
     fs::{self, File},
     io::{self, Write},
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
-use convert_case::{Case, Casing, Converter, Pattern};
+use convert_case::{Converter, Pattern};
 use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
-use regex::Regex;
+
 use reqwest::Client;
 use zip::ZipArchive;
 
@@ -23,7 +23,7 @@ pub async fn download_file(url: String, file_path: PathBuf) -> Result<File, Stri
         .get(&url)
         .send()
         .await
-        .or(Err(format!("Unable to GET from {}", &url)))?;
+        .map_err(|_| (format!("Unable to GET from {}", &url)))?;
 
     if !res.status().is_success() {
         return Err(format!("{} at URL {}", res.status(), url));
@@ -40,27 +40,21 @@ pub async fn download_file(url: String, file_path: PathBuf) -> Result<File, Stri
     ).progress_chars("#>-"));
 
     //start download in chunks
-    let mut file = File::create(&file_path).or(Err(format!(
-        "Failed to create file {}",
-        file_path.display()
-    )))?;
+    let mut file = File::create(&file_path)
+        .map_err(|_| (format!("Failed to create file {}", file_path.display())))?;
     let mut downloaded: u64 = 0;
     let mut stream = res.bytes_stream();
 
     while let Some(item) = stream.next().await {
-        let chunk = item.or(Err(format!("Error downloading file :(")))?;
-        file.write_all(&chunk).or(Err(format!(
-            "Error writing to file {}",
-            file_path.display()
-        )))?;
+        let chunk = item.map_err(|_| ("Error downloading file :(".to_string()))?;
+        file.write_all(&chunk)
+            .map_err(|_| (format!("Error writing to file {}", file_path.display())))?;
         let new = min(downloaded + (chunk.len() as u64), file_size);
         downloaded = new;
         pb.set_position(new);
     }
-    let finished = File::open(&file_path).or(Err(format!(
-        "Unable to open finished file {}",
-        file_path.display()
-    )))?;
+    let finished = File::open(&file_path)
+        .map_err(|_| (format!("Unable to open finished file {}", file_path.display())))?;
 
     pb.finish_with_message(format!("Downloaded {} to {}", url, file_path.display()));
     Ok(finished)
@@ -69,7 +63,7 @@ pub async fn download_file(url: String, file_path: PathBuf) -> Result<File, Stri
 pub fn uninstall(mods: Vec<&String>, config: &Config) -> Result<(), String> {
     let mut mods = mods;
     fs::read_dir(config.mod_dir().join("mods/"))
-        .or(Err(format!("Unable to read mods directory")))?
+        .map_err(|_| ("Unable to read mods directory".to_string()))?
         .for_each(|f| {
             if let Ok(f) = f {
                 mods = mods
@@ -95,11 +89,11 @@ pub fn uninstall(mods: Vec<&String>, config: &Config) -> Result<(), String> {
 
 //supposing the mod name is formatted like Author.Mod@v1.0.0
 pub fn parse_mod_name(name: &str) -> Option<String> {
-    let parts = name.split_once(".")?;
+    let parts = name.split_once('.')?;
     let author = parts.0;
-    let parts = parts.1.split_once("@")?;
+    let parts = parts.1.split_once('@')?;
     let m_name = parts.0;
-    let ver = parts.1.replace("v", "");
+    let ver = parts.1.replace('v', "");
 
     let big_snake = Converter::new()
         .set_delim("_")
@@ -115,17 +109,18 @@ pub fn parse_mod_name(name: &str) -> Option<String> {
 
 pub fn install_mod(zip_file: &File, config: &Config) -> Result<String, String> {
     let mods_dir = config.mod_dir();
-    let mut archive = ZipArchive::new(zip_file).or(Err(format!("Unable to read zip archive")))?;
+    let mut archive =
+        ZipArchive::new(zip_file).map_err(|_| ("Unable to read zip archive".to_string()))?;
     let mut deep = false;
     let mut pkg = String::new();
 
     for i in 0..archive.len() {
         let mut file = archive
             .by_index(i)
-            .or(Err(format!("Unable to get file from archive")))?;
+            .map_err(|_| ("Unable to get file from archive".to_string()))?;
         let out = file
             .enclosed_name()
-            .ok_or(format!("Unable to get file name"))?;
+            .ok_or_else(|| "Unable to get file name".to_string())?;
 
         if out.starts_with("mods/") {
             if !deep {
@@ -136,7 +131,7 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<String, String> {
             }
             let mp = mods_dir.join(out);
 
-            if (*file.name()).ends_with("/") {
+            if (*file.name()).ends_with('/') {
                 fs::create_dir_all(&mp).unwrap();
             } else {
                 if let Some(p) = mp.parent() {
@@ -148,10 +143,10 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<String, String> {
                     .create(true)
                     .truncate(true)
                     .open(&mp)
-                    .or(Err(format!("Unable to open {}", &mp.display())))?;
+                    .map_err(|_| (format!("Unable to open {}", &mp.display())))?;
 
                 io::copy(&mut file, &mut outfile)
-                    .or(Err(format!("Unable to write extracted file")))?;
+                    .map_err(|_| ("Unable to write extracted file".to_string()))?;
 
                 println!("Write file {}", &mp.display());
             }

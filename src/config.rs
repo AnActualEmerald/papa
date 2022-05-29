@@ -1,5 +1,5 @@
-use std::fs::{self, read_to_string, File};
-use std::io::{Read, Write};
+use std::fs::{read_to_string, File};
+use std::io::Write;
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
@@ -38,10 +38,11 @@ impl Config {
 pub fn load_config(config_dir: &Path) -> Result<Config, String> {
     let cfg_path = config_dir.join("config.toml");
     if cfg_path.exists() {
-        let cfg = read_to_string(cfg_path).or(Err(format!("Unable to read config file")))?;
-        toml::from_str(&cfg).or(Err(format!("Unable to parse config")))
+        let cfg =
+            read_to_string(cfg_path).map_err(|_| ("Unable to read config file".to_string()))?;
+        toml::from_str(&cfg).map_err(|_| ("Unable to parse config".to_string()))
     } else {
-        File::create(cfg_path).or(Err(format!("Unable to create config file")))?;
+        File::create(cfg_path).map_err(|_| ("Unable to create config file".to_string()))?;
         Ok(Config::new(String::from("./"), true))
     }
 }
@@ -50,13 +51,14 @@ pub fn save_config(config_dir: &Path, config: Config) -> Result<(), String> {
     let cfg_path = config_dir.join("config.toml");
 
     if cfg_path.exists() {
-        let mut cfg = File::create(&cfg_path).or(Err(format!("Error opening config file")))?;
-        let parsed =
-            toml::to_string_pretty(&config).or(Err(format!("Error serializing config")))?;
+        let mut cfg =
+            File::create(&cfg_path).map_err(|_| ("Error opening config file".to_string()))?;
+        let parsed = toml::to_string_pretty(&config)
+            .map_err(|_| ("Error serializing config".to_string()))?;
         cfg.write_all(parsed.as_bytes())
-            .or(Err(format!("Unable to write config file")))?;
+            .map_err(|_| ("Unable to write config file".to_string()))?;
     } else {
-        return Err(format!("Config file does not exist to write to"));
+        return Err("Config file does not exist to write to".to_string());
     }
     Ok(())
 }

@@ -1,14 +1,10 @@
-use std::{
-    fs::{self, File},
-    path::Path,
-};
-
 use clap::{Parser, Subcommand};
-use convert_case::{Case, Casing};
+
 use directories::ProjectDirs;
 use regex::Regex;
 
 mod actions;
+#[allow(dead_code)]
 mod config;
 
 #[derive(Parser)]
@@ -49,7 +45,7 @@ enum Commands {
 }
 
 //There is an API for thunderstore but getting the download links from it is kind of annoying so this will do for now
-const BASE_URL: &'static str = "https://northstar.thunderstore.io/package/download";
+const BASE_URL: &str = "https://northstar.thunderstore.io/package/download";
 
 #[tokio::main]
 async fn main() {
@@ -57,12 +53,12 @@ async fn main() {
 
     let dirs = ProjectDirs::from("me", "greenboi", "papa").unwrap();
     utils::ensure_dirs(&dirs);
-    let mut config = config::load_config(dirs.config_dir()).unwrap();
+    let config = config::load_config(dirs.config_dir()).unwrap();
 
     match cli.command {
         Commands::List {} => {
             let mods = utils::list_dir(&config.mod_dir().join("mods/")).unwrap();
-            if mods.len() > 0 {
+            if !mods.is_empty() {
                 println!("Installed mods:\n");
                 mods.into_iter().for_each(|f| println!("\t{}", f));
             } else {
@@ -93,17 +89,15 @@ async fn main() {
                 }
             }
             valid.iter().for_each(|f| {
-                let pkg = actions::install_mod(f, &mut config).unwrap();
+                let pkg = actions::install_mod(f, &config).unwrap();
                 println!("Installed {}", pkg);
             });
-
-            config::save_config(dirs.config_dir(), config).unwrap();
         }
         Commands::Remove { mod_names } => {
             let re = Regex::new(r"(.+)\.(.+)").unwrap();
             let valid = mod_names
                 .iter()
-                .filter(|f| re.is_match(&f))
+                .filter(|f| re.is_match(f))
                 .collect::<Vec<&String>>();
             actions::uninstall(valid, &config).unwrap();
         }
@@ -115,7 +109,6 @@ async fn main() {
             }
             utils::remove_dir(dirs.cache_dir(), full).unwrap();
         }
-        _ => {}
     }
 }
 
@@ -140,32 +133,31 @@ mod utils {
 
     pub fn remove_dir(dir: &Path, force: bool) -> Result<(), String> {
         for entry in
-            fs::read_dir(dir).or(Err(format!("unable to read directory {}", dir.display())))?
+            fs::read_dir(dir).map_err(|_| format!("unable to read directory {}", dir.display()))?
         {
             let path = entry
-                .or(Err(format!("Error reading directory entry")))?
+                .map_err(|_| "Error reading directory entry".to_string())?
                 .path();
 
             println!("Removing {}", path.display());
 
             if path.is_dir() {
                 remove_dir(&path, force)?;
-                fs::remove_dir(&path).or(Err(format!(
-                    "Unable to remove directory {}",
-                    path.display()
-                )))?;
+                fs::remove_dir(&path)
+                    .map_err(|_| format!("Unable to remove directory {}", path.display()))?;
             } else {
-                if !force && path.ends_with(".zip") {
+                if path.ends_with(".zip") {
                     fs::remove_file(&path)
-                        .or(Err(format!("Unable to remove file {}", path.display())))?;
+                        .map_err(|_| format!("Unable to remove file {}", path.display()))?;
                 } else if force {
                     fs::remove_file(&path)
-                        .or(Err(format!("Unable to remove file {}", path.display())))?;
+                        .map_err(|_| format!("Unable to remove file {}", path.display()))?;
                 }
             }
         }
 
-        fs::remove_dir(&dir).or(Err(format!("Unable to remove directory {}", dir.display())))?;
+        fs::remove_dir(&dir)
+            .map_err(|_| format!("Unable to remove directory {}", dir.display()))?;
         println!("Removing {}", dir.display());
 
         Ok(())
@@ -173,7 +165,8 @@ mod utils {
 
     pub fn list_dir(dir: &Path) -> Result<Vec<String>, String> {
         Ok(fs::read_dir(dir)
-            .or(Err(format!("Unable to read directory {}", dir.display())))?
+            .map_err(|_| format!("unable to read directory {}", dir.display()))
+            .map_err(|_| format!("Unable to read directory {}", dir.display()))?
             .filter(|f| f.is_ok())
             .map(|f| f.unwrap())
             .map(|f| f.file_name().to_string_lossy().into_owned())
