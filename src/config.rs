@@ -42,8 +42,14 @@ pub fn load_config(config_dir: &Path) -> Result<Config, String> {
             read_to_string(cfg_path).map_err(|_| ("Unable to read config file".to_string()))?;
         toml::from_str(&cfg).map_err(|_| ("Unable to parse config".to_string()))
     } else {
-        File::create(cfg_path).map_err(|_| ("Unable to create config file".to_string()))?;
-        Ok(Config::new(String::from("./"), true))
+        let mut cfg =
+            File::create(cfg_path).map_err(|_| ("Unable to create config file".to_string()))?;
+        let def = Config::new(String::from("./"), true);
+        let parsed = toml::to_string_pretty(&def)
+            .map_err(|_| "Failed to serialize default config".to_string())?;
+        cfg.write_all(parsed.as_bytes())
+            .map_err(|_| "Unable to write config file".to_string())?;
+        Ok(def)
     }
 }
 
