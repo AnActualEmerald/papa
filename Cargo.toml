@@ -6,6 +6,7 @@ license = "MIT"
 description = "A cli mod manager for the Northstar launcher"
 readme = "README.md"
 authors = ["AnActualEmerald"]
+repository = "https://github.com/AnActualEmerald/papa"
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
