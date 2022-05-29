@@ -1,10 +1,16 @@
-use std::{cmp::min, fs::File, io::Write, path::PathBuf};
+use std::{
+    cmp::min,
+    fs::{self, File},
+    io::{self, Write},
+    path::{Path, PathBuf},
+};
 
-use futures_util::StreamExt;
+use futures_util::{stream::Zip, StreamExt};
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
+use zip::ZipArchive;
 
-pub async fn download_file(url: String, file_path: PathBuf) -> Result<(), String> {
+pub async fn download_file(url: String, file_path: PathBuf) -> Result<File, String> {
     let client = Client::new();
 
     //send the request
@@ -44,7 +50,7 @@ pub async fn download_file(url: String, file_path: PathBuf) -> Result<(), String
     }
 
     pb.finish_with_message(format!("Downloaded {}", url));
-    Ok(())
+    Ok(file)
 }
 
 //supposing the mod name is formatted like Author.Mod@v1.0.0
@@ -56,4 +62,44 @@ pub fn parse_mod_name(name: &str) -> Option<String> {
     let ver = parts.1.replace("v", "");
 
     Some(format!("/{}/{}/{}", author, m_name, ver))
+}
+
+pub fn install_mod(zip_file: &File, mods_dir: &Path) -> Result<(), String> {
+    let mut archive = ZipArchive::new(zip_file).or(Err(format!("Unable to read zip archive")))?;
+    // let outfile =
+
+    for i in 0..archive.len() {
+        let mut file = archive
+            .by_index(i)
+            .or(Err(format!("Unable to get file from archive")))?;
+        let out = file
+            .enclosed_name()
+            .ok_or(format!("Unable to get file name"))?;
+
+        if out.starts_with("mods/") {
+            let mp = mods_dir.join(out);
+
+            if (*file.name()).ends_with("/") {
+                fs::create_dir_all(&mp).unwrap();
+            } else {
+                if let Some(p) = mp.parent() {
+                    fs::create_dir_all(&p).unwrap();
+                }
+
+                let mut outfile = fs::OpenOptions::new()
+                    .write(true)
+                    .create(true)
+                    .truncate(true)
+                    .open(&mp)
+                    .or(Err(format!("Unable to open {}", &mp.display())))?;
+
+                io::copy(&mut file, &mut outfile)
+                    .or(Err(format!("Unable to write extracted file")))?;
+
+                println!("Write file {}", &mp.display());
+            }
+        }
+    }
+
+    Ok(())
 }

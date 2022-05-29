@@ -43,10 +43,11 @@ async fn main() {
 
             if let Some(f) = check_cache(&path) {
                 println!("Using cached version of {}", mod_name);
+                utils::install_mod(&f, &Path::new("./")).unwrap();
                 return;
             }
             match utils::download_file(format!("{}{}", BASE_URL, url), path).await {
-                Ok(_) => {}
+                Ok(f) => utils::install_mod(&f, &Path::new("./")).unwrap(),
                 Err(e) => eprintln!("{}", e),
             }
         }
