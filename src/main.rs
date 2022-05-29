@@ -28,6 +28,12 @@ enum Commands {
         #[clap(help = "Mod name(s) in Author.ModName@version format")]
         mod_names: Vec<String>,
     },
+    Remove {
+        #[clap(name = "MOD")]
+        #[clap(help = "Mod name(s) to remove in Author.ModName format")]
+        mod_names: Vec<String>,
+    },
+    List {},
     Clear {
         #[clap(
             help = "Force removal of all files in the cahce directory, not just downloaded packages"
@@ -49,6 +55,15 @@ async fn main() {
     let mut config = config::load_config(dirs.config_dir()).unwrap();
 
     match cli.command {
+        Commands::List {} => {
+            let mods = utils::list_dir(&config.mod_dir().join("mods/")).unwrap();
+            if mods.len() > 0 {
+                println!("Installed mods:\n");
+                mods.into_iter().for_each(|f| println!("\t{}", f));
+            } else {
+                println!("No mods currently installed");
+            }
+        }
         Commands::Install { mod_names } => {
             let mut valid = vec![];
             for name in mod_names {
@@ -74,11 +89,18 @@ async fn main() {
             }
             valid.iter().for_each(|f| {
                 let pkg = actions::install_mod(f, &mut config).unwrap();
-                config.add_installed(&pkg);
                 println!("Installed {}", pkg);
             });
 
             config::save_config(dirs.config_dir(), config).unwrap();
+        }
+        Commands::Remove { mod_names } => {
+            let re = Regex::new(r"(.+)\.(.+)").unwrap();
+            let valid = mod_names
+                .iter()
+                .filter(|f| re.is_match(&f))
+                .collect::<Vec<&String>>();
+            actions::uninstall(valid, &config).unwrap();
         }
         Commands::Clear { full } => {
             if full {
@@ -86,8 +108,9 @@ async fn main() {
             } else {
                 println!("Clearing cached packages...");
             }
-            utils::clear_cache(dirs.cache_dir(), full).unwrap();
+            utils::remove_dir(dirs.cache_dir(), full).unwrap();
         }
+        _ => {}
     }
 }
 
@@ -110,11 +133,10 @@ mod utils {
         fs::create_dir_all(dirs.config_dir()).unwrap();
     }
 
-    pub fn clear_cache(cache_dir: &Path, force: bool) -> Result<(), String> {
-        for entry in fs::read_dir(cache_dir).or(Err(format!(
-            "unable to read directory {}",
-            cache_dir.display()
-        )))? {
+    pub fn remove_dir(dir: &Path, force: bool) -> Result<(), String> {
+        for entry in
+            fs::read_dir(dir).or(Err(format!("unable to read directory {}", dir.display())))?
+        {
             let path = entry
                 .or(Err(format!("Error reading directory entry")))?
                 .path();
@@ -122,7 +144,7 @@ mod utils {
             println!("Removing {}", path.display());
 
             if path.is_dir() {
-                clear_cache(&path, force)?;
+                remove_dir(&path, force)?;
                 fs::remove_dir(&path).or(Err(format!(
                     "Unable to remove directory {}",
                     path.display()
@@ -138,6 +160,18 @@ mod utils {
             }
         }
 
+        fs::remove_dir(&dir).or(Err(format!("Unable to remove directory {}", dir.display())))?;
+        println!("Removing {}", dir.display());
+
         Ok(())
+    }
+
+    pub fn list_dir(dir: &Path) -> Result<Vec<String>, String> {
+        Ok(fs::read_dir(dir)
+            .or(Err(format!("Unable to read directory {}", dir.display())))?
+            .filter(|f| f.is_ok())
+            .map(|f| f.unwrap())
+            .map(|f| f.file_name().to_string_lossy().into_owned())
+            .collect())
     }
 }

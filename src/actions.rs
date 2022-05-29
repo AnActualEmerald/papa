@@ -1,8 +1,9 @@
 use std::{
     cmp::min,
+    ffi::OsStr,
     fs::{self, File},
     io::{self, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 use convert_case::{Case, Casing, Converter, Pattern};
@@ -12,7 +13,7 @@ use regex::Regex;
 use reqwest::Client;
 use zip::ZipArchive;
 
-use crate::config::Config;
+use crate::{config::Config, utils};
 
 pub async fn download_file(url: String, file_path: PathBuf) -> Result<File, String> {
     let client = Client::new();
@@ -63,6 +64,33 @@ pub async fn download_file(url: String, file_path: PathBuf) -> Result<File, Stri
 
     pb.finish_with_message(format!("Downloaded {} to {}", url, file_path.display()));
     Ok(finished)
+}
+
+pub fn uninstall(mods: Vec<&String>, config: &Config) -> Result<(), String> {
+    let mut mods = mods;
+    fs::read_dir(config.mod_dir().join("mods/"))
+        .or(Err(format!("Unable to read mods directory")))?
+        .for_each(|f| {
+            if let Ok(f) = f {
+                mods = mods
+                    .clone()
+                    .into_iter()
+                    .filter(|e| {
+                        if OsStr::new(e) == f.file_name() {
+                            utils::remove_dir(&f.path(), true).unwrap();
+                            println!("Uninstalled {}", e);
+                            false
+                        } else {
+                            true
+                        }
+                    })
+                    .collect();
+            }
+        });
+    mods.into_iter()
+        .for_each(|f| println!("Mod {} isn't installed", f));
+
+    Ok(())
 }
 
 //supposing the mod name is formatted like Author.Mod@v1.0.0

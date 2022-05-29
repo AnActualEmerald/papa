@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize)]
 pub struct Config {
     mod_dir: String,
-    installed: Vec<String>,
     cache: bool,
 }
 
@@ -15,7 +14,6 @@ impl Config {
     pub fn new(dir: String, cache: bool) -> Self {
         Config {
             mod_dir: dir,
-            installed: vec![],
             cache,
         }
     }
@@ -28,20 +26,12 @@ impl Config {
         self.cache
     }
 
-    pub fn installed(&self) -> &Vec<String> {
-        &self.installed
-    }
-
     pub fn set_dir(&mut self, dir: String) {
         self.mod_dir = dir;
     }
 
     pub fn set_cache(&mut self, cache: bool) {
         self.cache = cache;
-    }
-
-    pub fn add_installed(&mut self, pkg: &str) {
-        self.installed.push(pkg.to_owned());
     }
 }
 
