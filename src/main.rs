@@ -48,7 +48,7 @@ enum Commands {
 const BASE_URL: &str = "https://northstar.thunderstore.io/package/download";
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), String> {
     let cli = Cli::parse();
 
     let dirs = ProjectDirs::from("me", "greenboi", "papa").unwrap();
@@ -57,7 +57,7 @@ async fn main() {
 
     match cli.command {
         Commands::List {} => {
-            let mods = utils::list_dir(&config.mod_dir().join("mods/")).unwrap();
+            let mods = utils::list_dir(&config.mod_dir().join("mods/"))?;
             if !mods.is_empty() {
                 println!("Installed mods:\n");
                 mods.into_iter().for_each(|f| println!("\t{}", f));
@@ -99,7 +99,7 @@ async fn main() {
                 .iter()
                 .filter(|f| re.is_match(f))
                 .collect::<Vec<&String>>();
-            actions::uninstall(valid, &config).unwrap();
+            actions::uninstall(valid, &config)?;
         }
         Commands::Clear { full } => {
             if full {
@@ -107,9 +107,11 @@ async fn main() {
             } else {
                 println!("Clearing cached packages...");
             }
-            utils::remove_dir(dirs.cache_dir(), full).unwrap();
+            utils::remove_dir(dirs.cache_dir(), full)?;
         }
     }
+
+    Ok(())
 }
 
 mod utils {

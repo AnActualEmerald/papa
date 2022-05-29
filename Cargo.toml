@@ -3,7 +3,6 @@ name = "papa"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-license-file = "LICENSE"
 description = "A cli mod manager for the Northstar launcher"
 readme = "README.md"
 authors = ["AnActualEmerald"]
