@@ -16,6 +16,7 @@ mod config;
 #[clap(author = "AnAcutalEmerald <emerald_actual@proton.me>")]
 #[clap(version = env!("CARGO_PKG_VERSION"))]
 #[clap(about = "Command line mod manager for Northstar")]
+#[clap(after_help = "Welcome back. Cockpit cooling reactivated.")]
 struct Cli {
     #[clap(subcommand)]
     command: Commands,
@@ -23,17 +24,21 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    ///Install a mod or mods from https://northstar.thunderstore.io/
     Install {
-        #[clap(name = "MOD")]
+        #[clap(value_name = "MOD")]
         #[clap(help = "Mod name(s) in Author.ModName@version format")]
         mod_names: Vec<String>,
     },
+    ///Remove a mod or mods from the current mods directory
     Remove {
-        #[clap(name = "MOD")]
+        #[clap(value_name = "MOD")]
         #[clap(help = "Mod name(s) to remove in Author.ModName format")]
         mod_names: Vec<String>,
     },
+    ///List installed mods
     List {},
+    ///Clear mod cache
     Clear {
         #[clap(
             help = "Force removal of all files in the cahce directory, not just downloaded packages"
