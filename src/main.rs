@@ -145,14 +145,12 @@ mod utils {
                 remove_dir(&path, force)?;
                 fs::remove_dir(&path)
                     .map_err(|_| format!("Unable to remove directory {}", path.display()))?;
-            } else {
-                if path.ends_with(".zip") {
-                    fs::remove_file(&path)
-                        .map_err(|_| format!("Unable to remove file {}", path.display()))?;
-                } else if force {
-                    fs::remove_file(&path)
-                        .map_err(|_| format!("Unable to remove file {}", path.display()))?;
-                }
+            } else if path.ends_with(".zip") {
+                fs::remove_file(&path)
+                    .map_err(|_| format!("Unable to remove file {}", path.display()))?;
+            } else if force {
+                fs::remove_file(&path)
+                    .map_err(|_| format!("Unable to remove file {}", path.display()))?;
             }
         }
 
