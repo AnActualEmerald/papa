@@ -62,7 +62,7 @@ pub async fn download_file(url: String, file_path: PathBuf) -> Result<File, Stri
 
 pub fn uninstall(mods: Vec<&String>, config: &Config) -> Result<(), String> {
     let mut mods = mods;
-    fs::read_dir(config.mod_dir().join("mods/"))
+    fs::read_dir(config.mod_dir())
         .map_err(|_| ("Unable to read mods directory".to_string()))?
         .for_each(|f| {
             if let Ok(f) = f {
@@ -123,13 +123,13 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<String, String> {
             .ok_or_else(|| "Unable to get file name".to_string())?;
 
         if out.starts_with("mods/") {
+            let out = out.strip_prefix("mods/").unwrap();
             if !deep {
                 //this probably isn't very robust but idk
-                let stripped =
-                if out.is_dir() {
-                    out.strip_prefix("mods/").unwrap()
+                let stripped = if out.is_dir() {
+                    out
                 } else {
-                    out.parent().unwrap().strip_prefix("mods/").unwrap()
+                    out.parent().unwrap()
                 };
                 pkg = stripped.to_str().unwrap().to_owned();
                 deep = true;

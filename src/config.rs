@@ -44,7 +44,7 @@ pub fn load_config(config_dir: &Path) -> Result<Config, String> {
     } else {
         let mut cfg =
             File::create(cfg_path).map_err(|_| ("Unable to create config file".to_string()))?;
-        let def = Config::new(String::from("./"), true);
+        let def = Config::new(String::from("./mods"), true);
         let parsed = toml::to_string_pretty(&def)
             .map_err(|_| "Failed to serialize default config".to_string())?;
         cfg.write_all(parsed.as_bytes())
