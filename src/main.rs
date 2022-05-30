@@ -143,16 +143,24 @@ async fn main() -> Result<(), String> {
             mod_names,
             url: None,
         } => {
+            let index = utils::update_index().await;
             let mut valid = vec![];
             for name in mod_names {
-                let re = Regex::new(r"(.+)\.(.+)@(v?\d.\d.\d)").unwrap();
+                let re = Regex::new(r"(.+\..+)@?(v?\d.\d.\d)?").unwrap();
 
                 if !re.is_match(&name) {
-                    println!("Mod name should be in 'Author.ModName@1.2.3' format");
+                    println!("{} should be in 'Author.ModName@1.2.3' format", name);
                     continue;
                 }
 
-                let url = actions::parse_mod_name(&name).unwrap();
+                let parts = re.captures(&name).unwrap();
+
+                let mut url = index
+                    .iter()
+                    .find(|e| e.name == parts[1])
+                    .unwrap()
+                    .url
+                    .clone();
                 let path = dirs.cache_dir().join(format!("{}.zip", name));
 
                 if let Some(f) = utils::check_cache(&path) {
@@ -160,7 +168,7 @@ async fn main() -> Result<(), String> {
                     valid.push(f);
                     continue;
                 }
-                match actions::download_file(format!("{}{}", BASE_URL, url), path).await {
+                match actions::download_file(url, path).await {
                     Ok(f) => valid.push(f),
                     Err(e) => eprintln!("{}", e),
                 }
@@ -192,9 +200,18 @@ async fn main() -> Result<(), String> {
 }
 
 mod utils {
+    use crate::api;
     use directories::ProjectDirs;
     use std::fs::{self, File, OpenOptions};
     use std::path::Path;
+
+    pub async fn update_index() -> Vec<api::Mod> {
+        print!("Updating package index...");
+        let index = &api::get_package_index().await.unwrap();
+        //        save_file(&dirs.cache_dir().join("index.ron"), index)?;
+        println!(" Done!");
+        index.to_vec()
+    }
 
     pub fn check_cache(path: &Path) -> Option<File> {
         let opt = OpenOptions::new().read(true).open(path);

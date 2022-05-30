@@ -37,7 +37,7 @@ pub async fn download_file(url: String, file_path: PathBuf) -> Result<File, Stri
     //setup the progress bar
     let pb = ProgressBar::new(file_size).with_style(ProgressStyle::default_bar().template(
         "{msg}\n{spinner:.green} [{duration}] {wide_bar:.cyan} {bytes}/{total_bytes} {bytes_per_sec}",
-    ).progress_chars("#>-"));
+    ).progress_chars("=>-"));
 
     //start download in chunks
     let mut file = File::create(&file_path)
@@ -91,20 +91,15 @@ pub fn uninstall(mods: Vec<&String>, config: &Config) -> Result<(), String> {
 pub fn parse_mod_name(name: &str) -> Option<String> {
     let parts = name.split_once('.')?;
     let author = parts.0;
-    let parts = parts.1.split_once('@')?;
-    let m_name = parts.0;
-    let ver = parts.1.replace('v', "");
+    //let parts = parts.1.split_once('@')?;
+    let m_name = parts.1;
+    //let ver = parts.1.replace('v', "");
 
     let big_snake = Converter::new()
         .set_delim("_")
         .set_pattern(Pattern::Capital);
 
-    Some(format!(
-        "/{}/{}/{}",
-        author,
-        big_snake.convert(&m_name),
-        ver
-    ))
+    Some(format!("{}.{}", author, big_snake.convert(&m_name)))
 }
 
 pub fn install_mod(zip_file: &File, config: &Config) -> Result<String, String> {

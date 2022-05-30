@@ -2,12 +2,12 @@ use reqwest::{Client, RequestBuilder};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Mod {
-    name: String,
-    version: String,
-    url: String,
-    deps: Vec<String>,
+    pub name: String,
+    pub version: String,
+    pub url: String,
+    pub deps: Vec<String>,
 }
 
 pub async fn get_package_index() -> Result<Vec<Mod>, String> {
