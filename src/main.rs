@@ -4,6 +4,7 @@ use directories::ProjectDirs;
 use regex::Regex;
 
 mod actions;
+mod api;
 #[allow(dead_code)]
 mod config;
 
@@ -30,7 +31,7 @@ enum Commands {
         ///Alternate url to use
         #[clap(short, long)]
         #[clap(value_name = "URL")]
-        url: Option<String>
+        url: Option<String>,
     },
     ///Remove a mod or mods from the current mods directory
     Remove {
@@ -56,9 +57,9 @@ enum Commands {
 
         #[clap(long, short, value_name = "CACHE")]
         ///Set whether or not to cache packages
-        cache: Option<bool>
-
-    }
+        cache: Option<bool>,
+    },
+    Update {},
 }
 
 //There is an API for thunderstore but getting the download links from it is kind of annoying so this will do for now
@@ -73,10 +74,23 @@ async fn main() -> Result<(), String> {
     let mut config = config::load_config(dirs.config_dir()).unwrap();
 
     match cli.command {
-        Commands::Config {mods_dir: None, cache: None} => {
-            println!("Current config:\n{}", toml::to_string_pretty(&config).unwrap());
+        Commands::Update {} => {
+            print!("Updating package index...");
+            let index = ron::to_string(&api::get_package_index().await?)
+                .map_err(|_| "Error converting index to RON".to_string())?;
+            utils::save_file(&dirs.cache_dir().join("index.ron"), index)?;
+            println!(" Done!");
         }
-        Commands::Config {mods_dir, cache} => {
+        Commands::Config {
+            mods_dir: None,
+            cache: None,
+        } => {
+            println!(
+                "Current config:\n{}",
+                toml::to_string_pretty(&config).unwrap()
+            );
+        }
+        Commands::Config { mods_dir, cache } => {
             if let Some(dir) = mods_dir {
                 config.set_dir(&dir);
                 println!("Set mods parent directory to {}", dir);
@@ -86,7 +100,7 @@ async fn main() -> Result<(), String> {
                 config.set_cache(&cache);
                 if cache {
                     println!("Turned caching on");
-                }else {
+                } else {
                     println!("Turned caching off");
                 }
             }
@@ -104,8 +118,16 @@ async fn main() -> Result<(), String> {
                 println!("No mods currently installed");
             }
         }
-        Commands::Install {mod_names: _, url: Some(url)} => {
-            let file_name = url.as_str().replace(":", "").split("/").collect::<Vec<&str>>().join("");
+        Commands::Install {
+            mod_names: _,
+            url: Some(url),
+        } => {
+            let file_name = url
+                .as_str()
+                .replace(":", "")
+                .split("/")
+                .collect::<Vec<&str>>()
+                .join("");
             println!("Downloading to {}", file_name);
             let path = dirs.cache_dir().join(file_name);
             match actions::download_file(format!("{}", url), path.clone()).await {
@@ -113,12 +135,14 @@ async fn main() -> Result<(), String> {
                     let pkg = actions::install_mod(&f, &config).unwrap();
                     utils::remove_file(&path)?;
                     println!("Installed {}", pkg);
-
-                },
+                }
                 Err(e) => eprintln!("{}", e),
             }
         }
-        Commands::Install { mod_names, url: None } => {
+        Commands::Install {
+            mod_names,
+            url: None,
+        } => {
             let mut valid = vec![];
             for name in mod_names {
                 let re = Regex::new(r"(.+)\.(.+)@(v?\d.\d.\d)").unwrap();
@@ -231,5 +255,11 @@ mod utils {
             .map(|f| f.unwrap())
             .map(|f| f.file_name().to_string_lossy().into_owned())
             .collect())
+    }
+
+    pub fn save_file(file: &Path, data: String) -> Result<(), String> {
+        fs::write(file, data.as_bytes())
+            .map_err(|_| format!("Unable to write file {}", file.display()))?;
+        Ok(())
     }
 }

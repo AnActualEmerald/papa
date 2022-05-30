@@ -804,7 +804,9 @@ dependencies = [
  "indicatif",
  "regex",
  "reqwest",
+ "ron",
  "serde",
+ "serde_json",
  "tokio",
  "toml",
  "zip",
@@ -1009,6 +1011,17 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "winreg",
+]
+
+[[package]]
+name = "ron"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b861ecaade43ac97886a512b360d01d66be9f41f3c61088b42cedf92e03d678"
+dependencies = [
+ "base64",
+ "bitflags",
+ "serde",
 ]
 
 [[package]]
