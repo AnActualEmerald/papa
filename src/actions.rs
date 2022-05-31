@@ -15,15 +15,15 @@ use zip::ZipArchive;
 
 use crate::{config::Config, utils};
 
-pub async fn download_file(url: String, file_path: PathBuf) -> Result<File, String> {
+pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File, String> {
     let client = Client::new();
 
     //send the request
     let res = client
-        .get(&url)
+        .get(url)
         .send()
         .await
-        .map_err(|_| (format!("Unable to GET from {}", &url)))?;
+        .map_err(|_| (format!("Unable to GET from {}", url)))?;
 
     if !res.status().is_success() {
         return Err(format!("{} at URL {}", res.status(), url));
@@ -85,21 +85,6 @@ pub fn uninstall(mods: Vec<&String>, config: &Config) -> Result<(), String> {
         .for_each(|f| println!("Mod {} isn't installed", f));
 
     Ok(())
-}
-
-//supposing the mod name is formatted like Author.Mod@v1.0.0
-pub fn parse_mod_name(name: &str) -> Option<String> {
-    let parts = name.split_once('.')?;
-    let author = parts.0;
-    //let parts = parts.1.split_once('@')?;
-    let m_name = parts.1;
-    //let ver = parts.1.replace('v', "");
-
-    let big_snake = Converter::new()
-        .set_delim("_")
-        .set_pattern(Pattern::Capital);
-
-    Some(format!("{}.{}", author, big_snake.convert(&m_name)))
 }
 
 pub fn install_mod(zip_file: &File, config: &Config) -> Result<String, String> {

@@ -7,6 +7,7 @@ mod actions;
 mod api;
 #[allow(dead_code)]
 mod config;
+mod model;
 
 #[derive(Parser)]
 #[clap(name = "Papa")]
@@ -108,12 +109,11 @@ async fn main() -> Result<(), String> {
             config::save_config(dirs.config_dir(), config)?;
         }
         Commands::List {} => {
-            let mods = utils::list_dir(&config.mod_dir().join("mods/"))?;
+            let mods = utils::get_installed(dirs.config_dir())?;
             if !mods.is_empty() {
-                println!("Installed mods:\n");
+                println!("Installed mods:");
                 mods.into_iter()
-                    .enumerate()
-                    .for_each(|f| println!("{}. {}", f.0 + 1, f.1));
+                    .for_each(|m| println!("  {}@{}", m.package_name, m.version));
             } else {
                 println!("No mods currently installed");
             }
@@ -130,7 +130,7 @@ async fn main() -> Result<(), String> {
                 .join("");
             println!("Downloading to {}", file_name);
             let path = dirs.cache_dir().join(file_name);
-            match actions::download_file(format!("{}", url), path.clone()).await {
+            match actions::download_file(format!("{}", url).as_str(), path.clone()).await {
                 Ok(f) => {
                     let pkg = actions::install_mod(&f, &config).unwrap();
                     utils::remove_file(&path)?;
@@ -144,6 +144,7 @@ async fn main() -> Result<(), String> {
             url: None,
         } => {
             let index = utils::update_index().await;
+            let mut installed = utils::get_installed(dirs.config_dir())?;
             let mut valid = vec![];
             for name in mod_names {
                 let re = Regex::new(r"(.+\..+)@?(v?\d.\d.\d)?").unwrap();
@@ -152,31 +153,38 @@ async fn main() -> Result<(), String> {
                     println!("{} should be in 'Author.ModName@1.2.3' format", name);
                     continue;
                 }
-
                 let parts = re.captures(&name).unwrap();
 
-                let mut url = index
+                let base = index
                     .iter()
-                    .find(|e| e.name == parts[1])
-                    .unwrap()
-                    .url
-                    .clone();
+                    .find(|e| e.name == utils::parse_mod_name(&parts[1]).unwrap())
+                    .ok_or_else(|| {
+                        println!("Couldn't find package {}", name);
+                        "No such package".to_string()
+                    })?;
+
                 let path = dirs.cache_dir().join(format!("{}.zip", name));
 
                 if let Some(f) = utils::check_cache(&path) {
                     println!("Using cached version of {}", name);
-                    valid.push(f);
+                    valid.push((f, base.clone()));
                     continue;
                 }
-                match actions::download_file(url, path).await {
-                    Ok(f) => valid.push(f),
+                match actions::download_file(&base.url, path).await {
+                    Ok(f) => valid.push((f, base.clone())),
                     Err(e) => eprintln!("{}", e),
                 }
             }
-            valid.iter().for_each(|f| {
+            valid.iter().for_each(|(f, base)| {
                 let pkg = actions::install_mod(f, &config).unwrap();
+                installed.push(model::Installed::new(
+                    &base.name,
+                    &base.version,
+                    config.mod_dir().join(&pkg).to_str().unwrap(),
+                ));
                 println!("Installed {}", pkg);
             });
+            utils::save_installed(dirs.config_dir(), installed)?;
         }
         Commands::Remove { mod_names } => {
             let re = Regex::new(r"(.+)\.(.+)").unwrap();
@@ -201,16 +209,47 @@ async fn main() -> Result<(), String> {
 
 mod utils {
     use crate::api;
+    use crate::model;
+    use crate::model::Installed;
+    use convert_case::{Converter, Pattern};
     use directories::ProjectDirs;
     use std::fs::{self, File, OpenOptions};
+    use std::io::Write;
     use std::path::Path;
 
-    pub async fn update_index() -> Vec<api::Mod> {
+    pub async fn update_index() -> Vec<model::Mod> {
         print!("Updating package index...");
         let index = &api::get_package_index().await.unwrap();
         //        save_file(&dirs.cache_dir().join("index.ron"), index)?;
         println!(" Done!");
         index.to_vec()
+    }
+
+    pub fn get_installed(path: &Path) -> Result<Vec<Installed>, String> {
+        let path = path.join("installed.ron");
+        if path.exists() {
+            let raw = fs::read_to_string(path)
+                .map_err(|_| "Unable to read installed packages".to_string())?;
+            Ok(
+                ron::from_str(&raw)
+                    .map_err(|_| "Unable to parse installed packages".to_string())?,
+            )
+        } else {
+            File::create(path)
+                .map_err(|_| "Unable to create installed package index".to_string())?
+                .write_all(ron::to_string(&Vec::<Installed>::new()).unwrap().as_bytes())
+                .unwrap();
+
+            Ok(vec![])
+        }
+    }
+
+    pub fn save_installed(path: &Path, installed: Vec<Installed>) -> Result<(), String> {
+        let path = path.join("installed.ron");
+
+        save_file(&path, ron::to_string(&installed).unwrap())?;
+
+        Ok(())
     }
 
     pub fn check_cache(path: &Path) -> Option<File> {
@@ -278,5 +317,20 @@ mod utils {
         fs::write(file, data.as_bytes())
             .map_err(|_| format!("Unable to write file {}", file.display()))?;
         Ok(())
+    }
+
+    //supposing the mod name is formatted like Author.Mod@v1.0.0
+    pub fn parse_mod_name(name: &str) -> Option<String> {
+        let parts = name.split_once('.')?;
+        let author = parts.0;
+        //let parts = parts.1.split_once('@')?;
+        let m_name = parts.1;
+        //let ver = parts.1.replace('v', "");
+
+        let big_snake = Converter::new()
+            .set_delim("_")
+            .set_pattern(Pattern::Capital);
+
+        Some(format!("{}.{}", author, big_snake.convert(&m_name)))
     }
 }
