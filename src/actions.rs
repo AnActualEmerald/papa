@@ -2,18 +2,22 @@ use std::{
     cmp::min,
     ffi::OsStr,
     fs::{self, File},
-    io::{self, Write},
-    path::PathBuf,
+    io::{self, Read, Write},
+    path::{Path, PathBuf},
 };
 
-use convert_case::{Converter, Pattern};
 use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
+use serde_json;
 
 use reqwest::Client;
 use zip::ZipArchive;
 
-use crate::{config::Config, utils};
+use crate::{
+    config::Config,
+    model::{Installed, Manifest},
+    utils,
+};
 
 pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File, String> {
     let client = Client::new();
@@ -60,38 +64,35 @@ pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File, String
     Ok(finished)
 }
 
-pub fn uninstall(mods: Vec<&String>, config: &Config) -> Result<(), String> {
-    let mut mods = mods;
-    fs::read_dir(config.mod_dir())
-        .map_err(|_| ("Unable to read mods directory".to_string()))?
-        .for_each(|f| {
-            if let Ok(f) = f {
-                mods = mods
-                    .clone()
-                    .into_iter()
-                    .filter(|e| {
-                        if OsStr::new(e) == f.file_name() {
-                            utils::remove_dir(&f.path()).unwrap();
-                            println!("Uninstalled {}", e);
-                            false
-                        } else {
-                            true
-                        }
-                    })
-                    .collect();
-            }
-        });
-    mods.into_iter()
-        .for_each(|f| println!("Mod {} isn't installed", f));
-
+pub fn uninstall(mods: Vec<PathBuf>) -> Result<(), String> {
+    mods.iter().for_each(|p| {
+        fs::remove_dir_all(p).expect("Unable to remove directory");
+        println!("Removed {}", p.display());
+    });
     Ok(())
 }
 
-pub fn install_mod(zip_file: &File, config: &Config) -> Result<String, String> {
+pub fn install_mod(zip_file: &File, config: &Config) -> Result<Installed, String> {
     let mods_dir = config.mod_dir();
     let mut archive =
         ZipArchive::new(zip_file).map_err(|_| ("Unable to read zip archive".to_string()))?;
 
+    //Get the package manifest
+    let mut manifest = String::new();
+    archive
+        .by_name("manifest.json")
+        .map_err(|_| "Couldn't find manifest file".to_string())?
+        .read_to_string(&mut manifest)
+        .unwrap();
+
+    println!("{}", manifest);
+
+    let manifest: Manifest =
+        serde_json::from_str(&manifest).map_err(|_| "Unable to parse manifest".to_string())?;
+
+    //Extract each file in the archive that is in the mods directory
+    let mut deep = false;
+    let mut path = String::new();
     for i in 0..archive.len() {
         let mut file = archive
             .by_index(i)
@@ -103,6 +104,13 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<String, String> {
         if out.starts_with("mods/") {
             let out = out.strip_prefix("mods/").unwrap();
             let mp = mods_dir.join(out);
+
+            if !deep {
+                if let Some(p) = out.parent() {
+                    path = p.to_str().unwrap().to_string();
+                    deep = true;
+                }
+            }
 
             if (*file.name()).ends_with('/') {
                 fs::create_dir_all(&mp).unwrap();
@@ -126,5 +134,9 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<String, String> {
         }
     }
 
-    Ok(())
+    Ok(Installed {
+        package_name: manifest.name,
+        version: manifest.version_number,
+        path,
+    })
 }

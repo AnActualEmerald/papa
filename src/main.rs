@@ -2,7 +2,10 @@ use clap::{Parser, Subcommand};
 
 use directories::ProjectDirs;
 use regex::Regex;
-use std::fs::File;
+use std::{
+    fs::File,
+    path::{Path, PathBuf},
+};
 
 mod actions;
 mod api;
@@ -196,32 +199,46 @@ async fn main() -> Result<(), String> {
 
                 if let Some(f) = utils::check_cache(&path) {
                     println!("Using cached version of {}", name);
-                    valid.push((f, base.clone()));
+                    valid.push(f);
                     continue;
                 }
                 match actions::download_file(&base.url, path).await {
-                    Ok(f) => valid.push((f, base.clone())),
+                    Ok(f) => valid.push(f),
                     Err(e) => eprintln!("{}", e),
                 }
             }
-            valid.iter().for_each(|(f, base)| {
+            valid.iter().for_each(|f| {
                 let pkg = actions::install_mod(f, &config).unwrap();
-                installed.push(model::Installed::new(
-                    &base.name,
-                    &base.version,
-                    config.mod_dir().join(&base.name).to_str().unwrap(),
-                ));
-                println!("Installed {}", base.name);
+                installed.push(pkg.clone());
+                println!("Installed {}", pkg.package_name);
             });
             utils::save_installed(dirs.config_dir(), installed)?;
         }
         Commands::Remove { mod_names } => {
             let re = Regex::new(r"(.+)\.(.+)").unwrap();
+            let mut installed = utils::get_installed(dirs.config_dir())?;
+            let mut installed_iter = installed.clone().into_iter().enumerate();
+            println!("{:#?}", mod_names);
             let valid = mod_names
                 .iter()
                 .filter(|f| re.is_match(f))
-                .collect::<Vec<&String>>();
-            actions::uninstall(valid, &config)?;
+                .map(|f| {
+                    installed_iter.find(|(i, e)| {
+                        let m = e.package_name == *f;
+                        if m {
+                            println!("Uninstalling {}", e.package_name);
+                            installed.remove(*i);
+                        }
+                        m
+                    })
+                })
+                .filter(|f| f.is_some())
+                .map(|f| f.unwrap().1.path)
+                .map(|f| PathBuf::from(f.clone()))
+                .collect();
+
+            actions::uninstall(valid)?;
+            utils::save_installed(dirs.config_dir(), installed)?;
         }
         Commands::Clear { full } => {
             if full {
