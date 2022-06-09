@@ -36,7 +36,7 @@ pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File, String
 
     //setup the progress bar
     let pb = ProgressBar::new(file_size).with_style(ProgressStyle::default_bar().template(
-        "{msg}\n{spinner:.green} [{duration}] {wide_bar:.cyan} {bytes}/{total_bytes} {bytes_per_sec}",
+        "{msg}\n{spinner:.green} [{duration}] [{bar:30.cyan}] {bytes}/{total_bytes} {bytes_per_sec}",
     ).progress_chars("=>-"));
 
     //start download in chunks
@@ -91,8 +91,6 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<String, String> {
     let mods_dir = config.mod_dir();
     let mut archive =
         ZipArchive::new(zip_file).map_err(|_| ("Unable to read zip archive".to_string()))?;
-    let mut deep = false;
-    let mut pkg = String::new();
 
     for i in 0..archive.len() {
         let mut file = archive
@@ -104,16 +102,6 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<String, String> {
 
         if out.starts_with("mods/") {
             let out = out.strip_prefix("mods/").unwrap();
-            if !deep {
-                //this probably isn't very robust but idk
-                let stripped = if out.is_dir() {
-                    out
-                } else {
-                    out.parent().unwrap()
-                };
-                pkg = stripped.to_str().unwrap().to_owned();
-                deep = true;
-            }
             let mp = mods_dir.join(out);
 
             if (*file.name()).ends_with('/') {
@@ -138,5 +126,5 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<String, String> {
         }
     }
 
-    Ok(pkg)
+    Ok(())
 }

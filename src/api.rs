@@ -37,9 +37,9 @@ fn map_response(res: Value) -> Option<Vec<Mod>> {
                     let version = latest["version_number"].as_str().unwrap().to_string();
                     let url = latest["download_url"].as_str().unwrap().to_string();
                     let deps = if let Value::Array(d) = &latest["dependencies"] {
-                        d.into_iter()
-                            .map(|e| e.as_str().unwrap().to_string())
-                            .collect()
+                        //TODO: Support dependencies
+                        // d.into_iter().map(|e| e).collect()
+                        vec![]
                     } else {
                         vec![]
                     };

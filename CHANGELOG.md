@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added 
+- `update` command
+- Installed mod tracking
+
+### Changed
+- Get download URLs from thunderstore api
+
+
+
 ## v0.2.0
 
 ### Added

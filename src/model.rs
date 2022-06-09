@@ -6,7 +6,7 @@ pub struct Mod {
     pub name: String,
     pub version: String,
     pub url: String,
-    pub deps: Vec<String>,
+    pub deps: Vec<Mod>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

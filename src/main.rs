@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 
 use directories::ProjectDirs;
 use regex::Regex;
+use std::fs::File;
 
 mod actions;
 mod api;
@@ -64,7 +65,7 @@ enum Commands {
 }
 
 //There is an API for thunderstore but getting the download links from it is kind of annoying so this will do for now
-const BASE_URL: &str = "https://northstar.thunderstore.io/package/download";
+//const BASE_URL: &str = "https://northstar.thunderstore.io/package/download";
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -77,10 +78,29 @@ async fn main() -> Result<(), String> {
     match cli.command {
         Commands::Update {} => {
             print!("Updating package index...");
-            let index = ron::to_string(&api::get_package_index().await?)
-                .map_err(|_| "Error converting index to RON".to_string())?;
-            utils::save_file(&dirs.cache_dir().join("index.ron"), index)?;
+            let index = &api::get_package_index().await?;
             println!(" Done!");
+            let mut installed = utils::get_installed(dirs.config_dir())?;
+            let mut ins = installed.clone().into_iter();
+            let outdated: Vec<(String, String, String)> = index
+                .iter()
+                .filter(|e| ins.any(|i| i.package_name == e.name && i.version != e.version))
+                .map(|e| (e.name.clone(), e.version.clone(), e.url.clone()))
+                .collect();
+
+            let mut downloaded = vec![];
+            for (name, version, url) in outdated {
+                let path = dirs.cache_dir().join(format!("{}.zip", name));
+                match actions::download_file(&url, path).await {
+                    Ok(f) => downloaded.push((f, version.clone(), name.clone())),
+                    Err(e) => eprintln!("{}", e),
+                }
+            }
+            downloaded.into_iter().for_each(|(f, version, name)| {
+                let pkg = actions::install_mod(&f, &config).unwrap();
+
+                println!("Updated {}", name);
+            });
         }
         Commands::Config {
             mods_dir: None,
@@ -113,7 +133,7 @@ async fn main() -> Result<(), String> {
             if !mods.is_empty() {
                 println!("Installed mods:");
                 mods.into_iter()
-                    .for_each(|m| println!("  {}@{}", m.package_name, m.version));
+                    .for_each(|m| println!("\x1b[92m{}@{}\x1b[0m", m.package_name, m.version));
             } else {
                 println!("No mods currently installed");
             }
@@ -134,7 +154,7 @@ async fn main() -> Result<(), String> {
                 Ok(f) => {
                     let pkg = actions::install_mod(&f, &config).unwrap();
                     utils::remove_file(&path)?;
-                    println!("Installed {}", pkg);
+                    println!("Installed {}", url);
                 }
                 Err(e) => eprintln!("{}", e),
             }
@@ -153,15 +173,24 @@ async fn main() -> Result<(), String> {
                     println!("{} should be in 'Author.ModName@1.2.3' format", name);
                     continue;
                 }
+
                 let parts = re.captures(&name).unwrap();
 
-                let base = index
+                let base = index.iter().find(|e| e.name == parts[1]).ok_or_else(|| {
+                    println!("Couldn't find package {}", name);
+                    "No such package".to_string()
+                })?;
+
+                if installed
                     .iter()
-                    .find(|e| e.name == utils::parse_mod_name(&parts[1]).unwrap())
-                    .ok_or_else(|| {
-                        println!("Couldn't find package {}", name);
-                        "No such package".to_string()
-                    })?;
+                    .any(|e| e.package_name == base.name && e.version == base.version)
+                {
+                    println!(
+                        "Package \x1b[36m{}\x1b[0m version \x1b[36m{}\x1b[0m already installed",
+                        base.name, base.version
+                    );
+                    continue;
+                }
 
                 let path = dirs.cache_dir().join(format!("{}.zip", name));
 
@@ -180,9 +209,9 @@ async fn main() -> Result<(), String> {
                 installed.push(model::Installed::new(
                     &base.name,
                     &base.version,
-                    config.mod_dir().join(&pkg).to_str().unwrap(),
+                    config.mod_dir().join(&base.name).to_str().unwrap(),
                 ));
-                println!("Installed {}", pkg);
+                println!("Installed {}", base.name);
             });
             utils::save_installed(dirs.config_dir(), installed)?;
         }
@@ -294,7 +323,7 @@ mod utils {
             } else if path.ends_with(".zip") {
                 fs::remove_file(&path)
                     .map_err(|_| format!("Unable to remove file {}", path.display()))?;
-            } else if force {
+            } else {
                 fs::remove_file(&path)
                     .map_err(|_| format!("Unable to remove file {}", path.display()))?;
             }
