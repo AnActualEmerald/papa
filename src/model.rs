@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::path::PathBuf
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Mod {
@@ -13,7 +14,7 @@ pub struct Mod {
 pub struct Installed {
     pub package_name: String,
     pub version: String,
-    pub path: String,
+    pub path: PathBuf,
 }
 
 impl Installed {
@@ -21,7 +22,7 @@ impl Installed {
         Installed {
             package_name: package_name.to_string(),
             version: version.to_string(),
-            path: path.to_string(),
+            path: PathBuf::from(path),
         }
     }
 }

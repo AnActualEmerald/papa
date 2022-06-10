@@ -73,7 +73,7 @@ pub fn uninstall(mods: Vec<PathBuf>) -> Result<(), String> {
 }
 
 pub fn install_mod(zip_file: &File, config: &Config) -> Result<Installed, String> {
-    let mods_dir = config.mod_dir();
+    let mods_dir = config.mod_dir().canon;
     let mut archive =
         ZipArchive::new(zip_file).map_err(|_| ("Unable to read zip archive".to_string()))?;
 
@@ -92,7 +92,7 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<Installed, String
 
     //Extract each file in the archive that is in the mods directory
     let mut deep = false;
-    let mut path = String::new();
+    let mut path = OsStr::new();
     for i in 0..archive.len() {
         let mut file = archive
             .by_index(i)
@@ -106,8 +106,8 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<Installed, String
             let mp = mods_dir.join(out);
 
             if !deep {
-                if let Some(p) = out.parent() {
-                    path = p.to_str().unwrap().to_string();
+                if let Some(p) = out.iter().next() {
+                    path = p;
                     deep = true;
                 }
             }
@@ -137,6 +137,6 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<Installed, String
     Ok(Installed {
         package_name: manifest.name,
         version: manifest.version_number,
-        path,
+        path: mods_dir.join(path),
     })
 }
