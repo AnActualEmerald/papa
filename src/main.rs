@@ -297,7 +297,7 @@ mod utils {
     }
 
     pub fn get_installed(path: &Path) -> Result<Vec<Installed>, String> {
-        let path = path.join("installed.ron");
+        let path = path.join(".installed.ron");
         if path.exists() {
             let raw = fs::read_to_string(path)
                 .map_err(|_| "Unable to read installed packages".to_string())?;
@@ -322,7 +322,7 @@ mod utils {
     }
 
     pub fn save_installed(path: &Path, installed: Vec<Installed>) -> Result<(), String> {
-        let path = path.join("installed.ron");
+        let path = path.join(".installed.ron");
 
         save_file(&path, ron::to_string(&installed).unwrap())?;
 
