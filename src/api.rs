@@ -28,11 +28,7 @@ fn map_response(res: Value) -> Option<Vec<Mod>> {
         Value::Array(v) => Some(
             v.into_iter()
                 .map(|e| {
-                    let name = format!(
-                        "{}.{}",
-                        e["owner"].as_str().unwrap(),
-                        e["name"].as_str().unwrap()
-                    );
+                    let name = format!("{}", e["name"].as_str().unwrap());
                     let latest = e["versions"][0].clone();
                     let version = latest["version_number"].as_str().unwrap().to_string();
                     let url = latest["download_url"].as_str().unwrap().to_string();

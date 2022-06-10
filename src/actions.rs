@@ -1,9 +1,9 @@
 use std::{
     cmp::min,
-    ffi::OsStr,
+    ffi::OsString,
     fs::{self, File},
     io::{self, Read, Write},
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 use futures_util::StreamExt;
@@ -16,7 +16,6 @@ use zip::ZipArchive;
 use crate::{
     config::Config,
     model::{Installed, Manifest},
-    utils,
 };
 
 pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File, String> {
@@ -73,7 +72,10 @@ pub fn uninstall(mods: Vec<PathBuf>) -> Result<(), String> {
 }
 
 pub fn install_mod(zip_file: &File, config: &Config) -> Result<Installed, String> {
-    let mods_dir = config.mod_dir().canonicalize().map_err(|_| "Couldn't resolve mods directory path".to_string())?;
+    let mods_dir = config
+        .mod_dir()
+        .canonicalize()
+        .map_err(|_| "Couldn't resolve mods directory path".to_string())?;
     let mut archive =
         ZipArchive::new(zip_file).map_err(|_| ("Unable to read zip archive".to_string()))?;
 
@@ -92,22 +94,23 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<Installed, String
 
     //Extract each file in the archive that is in the mods directory
     let mut deep = false;
-    let mut path = OsStr::new();
+    let mut path = OsString::new();
     for i in 0..archive.len() {
         let mut file = archive
             .by_index(i)
             .map_err(|_| ("Unable to get file from archive".to_string()))?;
+
         let out = file
             .enclosed_name()
             .ok_or_else(|| "Unable to get file name".to_string())?;
 
         if out.starts_with("mods/") {
-            let out = out.strip_prefix("mods/").unwrap();
-            let mp = mods_dir.join(out);
+            let out = out.strip_prefix("mods/").unwrap().clone();
+            let mp = mods_dir.join(&out);
 
             if !deep {
                 if let Some(p) = out.iter().next() {
-                    path = p;
+                    path = p.to_owned();
                     deep = true;
                 }
             }

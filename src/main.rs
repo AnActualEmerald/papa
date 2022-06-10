@@ -1,11 +1,9 @@
 use clap::{Parser, Subcommand};
 
 use directories::ProjectDirs;
+use model::Installed;
 use regex::Regex;
-use std::{
-    fs::File,
-    path::{Path, PathBuf},
-};
+use std::path::PathBuf;
 
 mod actions;
 mod api;
@@ -83,27 +81,38 @@ async fn main() -> Result<(), String> {
             print!("Updating package index...");
             let index = &api::get_package_index().await?;
             println!(" Done!");
-            let mut installed = utils::get_installed(dirs.config_dir())?;
+            let mut installed = utils::get_installed(config.mod_dir())?;
             let mut ins = installed.clone().into_iter();
-            let outdated: Vec<(String, String, String)> = index
+            let outdated: Vec<(String, String)> = index
                 .iter()
                 .filter(|e| ins.any(|i| i.package_name == e.name && i.version != e.version))
-                .map(|e| (e.name.clone(), e.version.clone(), e.url.clone()))
+                .map(|e| (e.name.clone(), e.url.clone()))
                 .collect();
 
             let mut downloaded = vec![];
-            for (name, version, url) in outdated {
+            for (name, url) in outdated {
                 let path = dirs.cache_dir().join(format!("{}.zip", name));
                 match actions::download_file(&url, path).await {
-                    Ok(f) => downloaded.push((f, version.clone(), name.clone())),
+                    Ok(f) => downloaded.push(f),
                     Err(e) => eprintln!("{}", e),
                 }
             }
-            downloaded.into_iter().for_each(|(f, version, name)| {
+            downloaded.into_iter().for_each(|f| {
                 let pkg = actions::install_mod(&f, &config).unwrap();
+                let mut i = 0usize;
+                installed.iter().enumerate().find(|(index, e)| {
+                    let m = e.package_name == pkg.package_name;
+                    if m {
+                        i = index.clone();
+                    }
+                    m
+                });
 
-                println!("Updated {}", name);
+                installed.get_mut(i).unwrap().version = pkg.version;
+                installed.get_mut(i).unwrap().path = pkg.path;
+                println!("Updated {}", pkg.package_name);
             });
+            utils::save_installed(config.mod_dir(), installed)?;
         }
         Commands::Config {
             mods_dir: None,
@@ -132,7 +141,7 @@ async fn main() -> Result<(), String> {
             config::save_config(dirs.config_dir(), config)?;
         }
         Commands::List {} => {
-            let mods = utils::get_installed(dirs.config_dir())?;
+            let mods = utils::get_installed(config.mod_dir())?;
             if !mods.is_empty() {
                 println!("Installed mods:");
                 mods.into_iter()
@@ -155,7 +164,7 @@ async fn main() -> Result<(), String> {
             let path = dirs.cache_dir().join(file_name);
             match actions::download_file(format!("{}", url).as_str(), path.clone()).await {
                 Ok(f) => {
-                    let pkg = actions::install_mod(&f, &config).unwrap();
+                    let _pkg = actions::install_mod(&f, &config).unwrap();
                     utils::remove_file(&path)?;
                     println!("Installed {}", url);
                 }
@@ -167,13 +176,13 @@ async fn main() -> Result<(), String> {
             url: None,
         } => {
             let index = utils::update_index().await;
-            let mut installed = utils::get_installed(dirs.config_dir())?;
+            let mut installed = utils::get_installed(config.mod_dir())?;
             let mut valid = vec![];
             for name in mod_names {
-                let re = Regex::new(r"(.+\..+)@?(v?\d.\d.\d)?").unwrap();
+                let re = Regex::new(r"(.+)@?(v?\d.\d.\d)?").unwrap();
 
                 if !re.is_match(&name) {
-                    println!("{} should be in 'Author.ModName@1.2.3' format", name);
+                    println!("{} should be in 'ModName@1.2.3' format", name);
                     continue;
                 }
 
@@ -212,33 +221,35 @@ async fn main() -> Result<(), String> {
                 installed.push(pkg.clone());
                 println!("Installed {}", pkg.package_name);
             });
-            utils::save_installed(dirs.config_dir(), installed)?;
+            utils::save_installed(config.mod_dir(), installed)?;
         }
         Commands::Remove { mod_names } => {
-            let re = Regex::new(r"(.+)\.(.+)").unwrap();
-            let mut installed = utils::get_installed(dirs.config_dir())?;
-            let mut installed_iter = installed.clone().into_iter().enumerate();
-            println!("{:#?}", mod_names);
-            let valid = mod_names
+            //let re = regex::new(r"(.+)\.(.+)").unwrap();
+            let mut installed = utils::get_installed(config.mod_dir())?;
+            let valid: Vec<Installed> = mod_names
                 .iter()
-                .filter(|f| re.is_match(f))
                 .map(|f| {
-                    installed_iter.find(|(i, e)| {
-                        let m = e.package_name == *f;
-                        if m {
-                            println!("Uninstalling {}", e.package_name);
-                            installed.remove(*i);
-                        }
-                        m
-                    })
+                    if let Some(i) = installed
+                        .iter()
+                        .position(|e| e.package_name.trim() == f.trim())
+                    {
+                        Some(installed.swap_remove(i))
+                    } else {
+                        None
+                    }
                 })
                 .filter(|f| f.is_some())
-                .map(|f| f.unwrap().1.path)
+                .map(|f| f.unwrap())
+                .collect();
+
+            let paths = valid
+                .iter()
+                .map(|f| f.path.clone())
                 .map(|f| PathBuf::from(f.clone()))
                 .collect();
 
-            actions::uninstall(valid)?;
-            utils::save_installed(dirs.config_dir(), installed)?;
+            actions::uninstall(paths)?;
+            utils::save_installed(config.mod_dir(), installed)?;
         }
         Commands::Clear { full } => {
             if full {
