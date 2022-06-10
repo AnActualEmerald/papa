@@ -40,7 +40,7 @@ pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File, String
 
     //setup the progress bar
     let pb = ProgressBar::new(file_size).with_style(ProgressStyle::default_bar().template(
-        "{msg}\n{spinner:.green} [{duration}] [{bar:30.cyan}] {bytes}/{total_bytes} {bytes_per_sec}",
+        "{spinner:.green} [{duration}] [{bar:30.cyan}] {bytes}/{total_bytes} {bytes_per_sec}\n{msg}",
     ).progress_chars("=>-"));
 
     //start download in chunks
@@ -73,7 +73,7 @@ pub fn uninstall(mods: Vec<PathBuf>) -> Result<(), String> {
 }
 
 pub fn install_mod(zip_file: &File, config: &Config) -> Result<Installed, String> {
-    let mods_dir = config.mod_dir().canon;
+    let mods_dir = config.mod_dir().canonicalize().map_err(|_| "Couldn't resolve mods directory path".to_string())?;
     let mut archive =
         ZipArchive::new(zip_file).map_err(|_| ("Unable to read zip archive".to_string()))?;
 
