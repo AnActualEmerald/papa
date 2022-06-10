@@ -84,35 +84,60 @@ async fn main() -> Result<(), String> {
             let index = &api::get_package_index().await?;
             println!(" Done!");
             let mut installed = utils::get_installed(config.mod_dir())?;
-            let mut ins = installed.clone().into_iter();
-            let outdated: Vec<(String, String)> = index
-                .iter()
-                .filter(|e| ins.any(|i| i.package_name == e.name && i.version != e.version))
-                .map(|e| (e.name.clone(), e.url.clone()))
+            let outdated: Vec<&model::Mod> = index
+                .into_iter()
+                .filter(|e| {
+                    installed.iter().any(|i| {
+                        i.package_name.trim() == e.name.trim()
+                            && i.version.trim() != e.version.trim()
+                    })
+                })
                 .collect();
 
+            if outdated.len() == 0 {
+                println!("Already up to date!");
+                return Ok(());
+            }
+
+            let size: i64 = outdated.iter().map(|f| f.file_size).sum();
+
+            if let Ok(line) = rl.readline(&format!(
+                "Will download ~{:.2} MIB (compressed), okay? [Y/n]: ",
+                size as f64 / 1_048_576f64
+            )) {
+                if line.to_lowercase() == "n" {
+                    return Ok(());
+                }
+            } else {
+                return Ok(());
+            }
+
             let mut downloaded = vec![];
-            for (name, url) in outdated {
+            for base in outdated {
+                let name = &base.name;
+                let url = &base.url;
                 let path = dirs.cache_dir().join(format!("{}.zip", name));
                 match actions::download_file(&url, path).await {
                     Ok(f) => downloaded.push(f),
                     Err(e) => eprintln!("{}", e),
                 }
             }
+
+            println!(
+                "Extracting mod{} to {}...",
+                if downloaded.len() > 1 { "s" } else { "" },
+                config.mod_dir().display()
+            );
             downloaded.into_iter().for_each(|f| {
                 let pkg = actions::install_mod(&f, &config).unwrap();
-                let mut i = 0usize;
-                installed.iter().enumerate().find(|(index, e)| {
-                    let m = e.package_name == pkg.package_name;
-                    if m {
-                        i = *index;
-                    }
-                    m
-                });
-
-                installed.get_mut(i).unwrap().version = pkg.version;
-                installed.get_mut(i).unwrap().path = pkg.path;
-                println!("Updated {}", pkg.package_name);
+                if let Some(i) = installed
+                    .iter()
+                    .position(|e| e.package_name == pkg.package_name)
+                {
+                    installed.get_mut(i).unwrap().version = pkg.version;
+                    installed.get_mut(i).unwrap().path = pkg.path;
+                    println!("Updated {}", pkg.package_name);
+                }
             });
             utils::save_installed(config.mod_dir(), installed)?;
         }
@@ -147,7 +172,7 @@ async fn main() -> Result<(), String> {
             if !mods.is_empty() {
                 println!("Installed mods:");
                 mods.into_iter()
-                    .for_each(|m| println!("\x1b[92m{}@{}\x1b[0m", m.package_name, m.version));
+                    .for_each(|m| println!(" \x1b[92m{}@{}\x1b[0m", m.package_name, m.version));
             } else {
                 println!("No mods currently installed");
             }
@@ -237,7 +262,7 @@ async fn main() -> Result<(), String> {
                 }
             }
             println!(
-                "Extracting mod{} to {}",
+                "Extracting mod{} to {}...",
                 if downloaded.len() > 1 { "s" } else { "" },
                 config.mod_dir().display()
             );
