@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand};
 use directories::ProjectDirs;
 use model::Installed;
 use regex::Regex;
-use std::path::PathBuf;
+use rustyline::Editor;
 
 mod actions;
 mod api;
@@ -27,7 +27,7 @@ enum Commands {
     ///Install a mod or mods from https://northstar.thunderstore.io/
     Install {
         #[clap(value_name = "MOD")]
-        #[clap(help = "Mod name(s) in Author.ModName@version format")]
+        #[clap(help = "Mod name(s) to install")]
         #[clap(required_unless_present = "url")]
         mod_names: Vec<String>,
 
@@ -39,7 +39,7 @@ enum Commands {
     ///Remove a mod or mods from the current mods directory
     Remove {
         #[clap(value_name = "MOD")]
-        #[clap(help = "Mod name(s) to remove in Author.ModName format")]
+        #[clap(help = "Mod name(s) to remove")]
         mod_names: Vec<String>,
     },
     ///List installed mods
@@ -76,6 +76,8 @@ async fn main() -> Result<(), String> {
     utils::ensure_dirs(&dirs);
     let mut config = config::load_config(dirs.config_dir()).unwrap();
 
+    let mut rl = Editor::<()>::new();
+
     match cli.command {
         Commands::Update {} => {
             print!("Updating package index...");
@@ -103,7 +105,7 @@ async fn main() -> Result<(), String> {
                 installed.iter().enumerate().find(|(index, e)| {
                     let m = e.package_name == pkg.package_name;
                     if m {
-                        i = index.clone();
+                        i = *index;
                     }
                     m
                 });
@@ -156,13 +158,13 @@ async fn main() -> Result<(), String> {
         } => {
             let file_name = url
                 .as_str()
-                .replace(":", "")
-                .split("/")
+                .replace(':', "")
+                .split('/')
                 .collect::<Vec<&str>>()
                 .join("");
             println!("Downloading to {}", file_name);
             let path = dirs.cache_dir().join(file_name);
-            match actions::download_file(format!("{}", url).as_str(), path.clone()).await {
+            match actions::download_file(url.to_string().as_str(), path.clone()).await {
                 Ok(f) => {
                     let _pkg = actions::install_mod(&f, &config).unwrap();
                     utils::remove_file(&path)?;
@@ -203,20 +205,43 @@ async fn main() -> Result<(), String> {
                     );
                     continue;
                 }
+                valid.push(base);
+            }
 
+            let size = valid.iter().map(|f| f.file_size).fold(0, |b, a| b + a);
+
+            if let Ok(line) = rl.readline(&format!(
+                "Will download ~{:.2} MIB (compressed), okay? [Y/n]: ",
+                size as f32 / 1_048_576f32
+            )) {
+                if line.to_lowercase() == "n" {
+                    return Ok(());
+                }
+            } else {
+                return Ok(());
+            }
+
+            let mut downloaded = vec![];
+            for base in valid {
+                let name = &base.name;
                 let path = dirs.cache_dir().join(format!("{}.zip", name));
 
                 if let Some(f) = utils::check_cache(&path) {
                     println!("Using cached version of {}", name);
-                    valid.push(f);
+                    downloaded.push(f);
                     continue;
                 }
                 match actions::download_file(&base.url, path).await {
-                    Ok(f) => valid.push(f),
+                    Ok(f) => downloaded.push(f),
                     Err(e) => eprintln!("{}", e),
                 }
             }
-            valid.iter().for_each(|f| {
+            println!(
+                "Extracting mod{} to {}",
+                if downloaded.len() > 1 { "s" } else { "" },
+                config.mod_dir().display()
+            );
+            downloaded.iter().for_each(|f| {
                 let pkg = actions::install_mod(f, &config).unwrap();
                 installed.push(pkg.clone());
                 println!("Installed {}", pkg.package_name);
@@ -228,25 +253,15 @@ async fn main() -> Result<(), String> {
             let mut installed = utils::get_installed(config.mod_dir())?;
             let valid: Vec<Installed> = mod_names
                 .iter()
-                .map(|f| {
-                    if let Some(i) = installed
+                .filter_map(|f| {
+                    installed
                         .iter()
                         .position(|e| e.package_name.trim() == f.trim())
-                    {
-                        Some(installed.swap_remove(i))
-                    } else {
-                        None
-                    }
+                        .map(|i| installed.swap_remove(i))
                 })
-                .filter(|f| f.is_some())
-                .map(|f| f.unwrap())
                 .collect();
 
-            let paths = valid
-                .iter()
-                .map(|f| f.path.clone())
-                .map(|f| PathBuf::from(f.clone()))
-                .collect();
+            let paths = valid.iter().map(|f| f.path.clone()).collect();
 
             actions::uninstall(paths)?;
             utils::save_installed(config.mod_dir(), installed)?;
@@ -268,7 +283,6 @@ mod utils {
     use crate::api;
     use crate::model;
     use crate::model::Installed;
-    use convert_case::{Converter, Pattern};
     use directories::ProjectDirs;
     use std::fs::{self, File, OpenOptions};
     use std::io::Write;
@@ -292,6 +306,12 @@ mod utils {
                     .map_err(|_| "Unable to parse installed packages".to_string())?,
             )
         } else {
+            if let Some(p) = path.parent() {
+                if !p.exists() {
+                    fs::create_dir_all(p)
+                        .map_err(|_| format!("Unable to create directory at {}", p.display()))?;
+                }
+            }
             File::create(path)
                 .map_err(|_| "Unable to create installed package index".to_string())?
                 .write_all(ron::to_string(&Vec::<Installed>::new()).unwrap().as_bytes())
@@ -327,12 +347,12 @@ mod utils {
         fs::remove_file(path).map_err(|_| format!("Unable to remove file {}", path.display()))
     }
 
-    pub fn remove_dir(dir: &Path) -> Result<(), String> {
-        fs::remove_dir_all(dir)
-            .map_err(|_| format!("Unable to remove directory {}", dir.display()))?;
-
-        Ok(())
-    }
+    //    pub fn remove_dir(dir: &Path) -> Result<(), String> {
+    //        fs::remove_dir_all(dir)
+    //            .map_err(|_| format!("Unable to remove directory {}", dir.display()))?;
+    //
+    //        Ok(())
+    //    }
 
     pub fn clear_cache(dir: &Path, force: bool) -> Result<(), String> {
         for entry in
@@ -360,15 +380,15 @@ mod utils {
         Ok(())
     }
 
-    pub fn list_dir(dir: &Path) -> Result<Vec<String>, String> {
-        Ok(fs::read_dir(dir)
-            .map_err(|_| format!("unable to read directory {}", dir.display()))
-            .map_err(|_| format!("Unable to read directory {}", dir.display()))?
-            .filter(|f| f.is_ok())
-            .map(|f| f.unwrap())
-            .map(|f| f.file_name().to_string_lossy().into_owned())
-            .collect())
-    }
+    //    pub fn list_dir(dir: &Path) -> Result<Vec<String>, String> {
+    //        Ok(fs::read_dir(dir)
+    //            .map_err(|_| format!("unable to read directory {}", dir.display()))
+    //            .map_err(|_| format!("Unable to read directory {}", dir.display()))?
+    //            .filter(|f| f.is_ok())
+    //            .map(|f| f.unwrap())
+    //            .map(|f| f.file_name().to_string_lossy().into_owned())
+    //            .collect())
+    //    }
 
     pub fn save_file(file: &Path, data: String) -> Result<(), String> {
         fs::write(file, data.as_bytes())
@@ -376,18 +396,18 @@ mod utils {
         Ok(())
     }
 
-    //supposing the mod name is formatted like Author.Mod@v1.0.0
-    pub fn parse_mod_name(name: &str) -> Option<String> {
-        let parts = name.split_once('.')?;
-        let author = parts.0;
-        //let parts = parts.1.split_once('@')?;
-        let m_name = parts.1;
-        //let ver = parts.1.replace('v', "");
-
-        let big_snake = Converter::new()
-            .set_delim("_")
-            .set_pattern(Pattern::Capital);
-
-        Some(format!("{}.{}", author, big_snake.convert(&m_name)))
-    }
+    //    //supposing the mod name is formatted like Author.Mod@v1.0.0
+    //    pub fn parse_mod_name(name: &str) -> Option<String> {
+    //        let parts = name.split_once('.')?;
+    //        let author = parts.0;
+    //        //let parts = parts.1.split_once('@')?;
+    //        let m_name = parts.1;
+    //        //let ver = parts.1.replace('v', "");
+    //
+    //        let big_snake = Converter::new()
+    //            .set_delim("_")
+    //            .set_pattern(Pattern::Capital);
+    //
+    //        Some(format!("{}.{}", author, big_snake.convert(&m_name)))
+    //    }
 }

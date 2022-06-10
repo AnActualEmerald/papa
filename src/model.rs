@@ -7,6 +7,7 @@ pub struct Mod {
     pub version: String,
     pub url: String,
     pub deps: Vec<Mod>,
+    pub file_size: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -16,15 +17,15 @@ pub struct Installed {
     pub path: PathBuf,
 }
 
-impl Installed {
-    pub fn new(package_name: &str, version: &str, path: &str) -> Self {
-        Installed {
-            package_name: package_name.to_string(),
-            version: version.to_string(),
-            path: PathBuf::from(path),
-        }
-    }
-}
+//impl Installed {
+//    pub fn new(package_name: &str, version: &str, path: &str) -> Self {
+//        Installed {
+//            package_name: package_name.to_string(),
+//            version: version.to_string(),
+//            path: PathBuf::from(path),
+//        }
+//    }
+//}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Manifest {

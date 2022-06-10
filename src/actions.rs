@@ -1,6 +1,6 @@
 use std::{
     cmp::min,
-    ffi::OsString,
+    ffi::{OsStr, OsString},
     fs::{self, File},
     io::{self, Read, Write},
     path::PathBuf,
@@ -8,7 +8,6 @@ use std::{
 
 use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
-use serde_json;
 
 use reqwest::Client;
 use zip::ZipArchive;
@@ -39,8 +38,8 @@ pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File, String
 
     //setup the progress bar
     let pb = ProgressBar::new(file_size).with_style(ProgressStyle::default_bar().template(
-        "{spinner:.green} [{duration}] [{bar:30.cyan}] {bytes}/{total_bytes} {bytes_per_sec}\n{msg}",
-    ).progress_chars("=>-"));
+        "{msg}\n{spinner:.green} [{duration}] [{bar:30.cyan}] {bytes}/{total_bytes} {bytes_per_sec}",
+    ).progress_chars("=>-")).with_message(format!("Downloading {}", url));
 
     //start download in chunks
     let mut file = File::create(&file_path)
@@ -59,7 +58,10 @@ pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File, String
     let finished = File::open(&file_path)
         .map_err(|_| (format!("Unable to open finished file {}", file_path.display())))?;
 
-    pb.finish_with_message(format!("Downloaded {}", url));
+    pb.finish_with_message(format!(
+        "Downloaded {}!",
+        file_path.file_name().unwrap().to_string_lossy()
+    ));
     Ok(finished)
 }
 
@@ -87,8 +89,6 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<Installed, String
         .read_to_string(&mut manifest)
         .unwrap();
 
-    println!("{}", manifest);
-
     let manifest: Manifest =
         serde_json::from_str(&manifest).map_err(|_| "Unable to parse manifest".to_string())?;
 
@@ -100,40 +100,44 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<Installed, String
             .by_index(i)
             .map_err(|_| ("Unable to get file from archive".to_string()))?;
 
-        let out = file
+        let mut out = file
             .enclosed_name()
             .ok_or_else(|| "Unable to get file name".to_string())?;
 
         if out.starts_with("mods/") {
-            let out = out.strip_prefix("mods/").unwrap().clone();
-            let mp = mods_dir.join(&out);
+            out = out.strip_prefix("mods/").unwrap();
+        }
 
-            if !deep {
-                if let Some(p) = out.iter().next() {
-                    path = p.to_owned();
-                    deep = true;
-                }
+        if let Some(p) = out.parent() {
+            if p.as_os_str() == OsStr::new("") {
+                continue;
+            }
+        }
+        let mp = mods_dir.join(&out);
+
+        if !deep {
+            if let Some(p) = out.iter().next() {
+                path = p.to_owned();
+                deep = true;
+            }
+        }
+
+        if (*file.name()).ends_with('/') {
+            fs::create_dir_all(&mp).unwrap();
+        } else {
+            if let Some(p) = mp.parent() {
+                fs::create_dir_all(&p).unwrap();
             }
 
-            if (*file.name()).ends_with('/') {
-                fs::create_dir_all(&mp).unwrap();
-            } else {
-                if let Some(p) = mp.parent() {
-                    fs::create_dir_all(&p).unwrap();
-                }
+            let mut outfile = fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(&mp)
+                .map_err(|_| (format!("Unable to open {}", &mp.display())))?;
 
-                let mut outfile = fs::OpenOptions::new()
-                    .write(true)
-                    .create(true)
-                    .truncate(true)
-                    .open(&mp)
-                    .map_err(|_| (format!("Unable to open {}", &mp.display())))?;
-
-                io::copy(&mut file, &mut outfile)
-                    .map_err(|_| ("Unable to write extracted file".to_string()))?;
-
-                println!("Write file {}", &mp.display());
-            }
+            io::copy(&mut file, &mut outfile)
+                .map_err(|_| ("Unable to write extracted file".to_string()))?;
         }
     }
 

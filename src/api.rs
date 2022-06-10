@@ -1,5 +1,5 @@
 use crate::model::Mod;
-use reqwest::{Client, RequestBuilder};
+use reqwest::Client;
 use serde_json::Value;
 
 pub async fn get_package_index() -> Result<Vec<Mod>, String> {
@@ -19,7 +19,7 @@ pub async fn get_package_index() -> Result<Vec<Mod>, String> {
             Err("Response body was malformed?".to_string())
         }
     } else {
-        Err(format!("{}", raw.status().as_str()))
+        Err(raw.status().as_str().to_string())
     }
 }
 
@@ -28,11 +28,12 @@ fn map_response(res: Value) -> Option<Vec<Mod>> {
         Value::Array(v) => Some(
             v.into_iter()
                 .map(|e| {
-                    let name = format!("{}", e["name"].as_str().unwrap());
+                    let name = e["name"].as_str().unwrap().to_string();
                     let latest = e["versions"][0].clone();
                     let version = latest["version_number"].as_str().unwrap().to_string();
                     let url = latest["download_url"].as_str().unwrap().to_string();
-                    let deps = if let Value::Array(d) = &latest["dependencies"] {
+                    let file_size = latest["file_size"].as_i64().unwrap();
+                    let deps = if let Value::Array(_d) = &latest["dependencies"] {
                         //TODO: Support dependencies
                         // d.into_iter().map(|e| e).collect()
                         vec![]
@@ -45,6 +46,7 @@ fn map_response(res: Value) -> Option<Vec<Mod>> {
                         version,
                         url,
                         deps,
+                        file_size,
                     }
                 })
                 .collect(),
