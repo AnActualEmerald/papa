@@ -208,11 +208,11 @@ async fn main() -> Result<(), String> {
                 valid.push(base);
             }
 
-            let size = valid.iter().map(|f| f.file_size).fold(0, |b, a| b + a);
+            let size: i64 = valid.iter().map(|f| f.file_size).sum();
 
             if let Ok(line) = rl.readline(&format!(
                 "Will download ~{:.2} MIB (compressed), okay? [Y/n]: ",
-                size as f32 / 1_048_576f32
+                size as f64 / 1_048_576f64
             )) {
                 if line.to_lowercase() == "n" {
                     return Ok(());
