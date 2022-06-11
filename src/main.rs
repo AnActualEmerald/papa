@@ -5,8 +5,6 @@ use model::Installed;
 use regex::Regex;
 use rustyline::Editor;
 
-use crate::model::Mod;
-
 mod actions;
 mod api;
 #[allow(dead_code)]
@@ -37,6 +35,10 @@ enum Commands {
         #[clap(short, long)]
         #[clap(value_name = "URL")]
         url: Option<String>,
+
+        ///Don't ask for confirmation
+        #[clap(short, long)]
+        yes: bool,
     },
     ///Remove a mod or mods from the current mods directory
     Remove {
@@ -64,7 +66,11 @@ enum Commands {
         ///Set whether or not to cache packages
         cache: Option<bool>,
     },
-    Update {},
+    Update {
+        ///Don't ask for confirmation
+        #[clap(short, long)]
+        yes: bool,
+    },
 }
 
 //There is an API for thunderstore but getting the download links from it is kind of annoying so this will do for now
@@ -81,7 +87,7 @@ async fn main() -> Result<(), String> {
     let mut rl = Editor::<()>::new();
 
     match cli.command {
-        Commands::Update {} => {
+        Commands::Update { yes } => {
             print!("Updating package index...");
             let index = &api::get_package_index().await?;
             println!(" Done!");
@@ -103,15 +109,17 @@ async fn main() -> Result<(), String> {
 
             let size: i64 = outdated.iter().map(|f| f.file_size).sum();
 
-            if let Ok(line) = rl.readline(&format!(
-                "Will download ~{:.2} MIB (compressed), okay? [Y/n]: ",
-                size as f64 / 1_048_576f64
-            )) {
-                if line.to_lowercase() == "n" {
+            if !yes {
+                if let Ok(line) = rl.readline(&format!(
+                    "Will download ~{:.2} MIB (compressed), okay? [Y/n]: ",
+                    size as f64 / 1_048_576f64
+                )) {
+                    if line.to_lowercase() == "n" {
+                        return Ok(());
+                    }
+                } else {
                     return Ok(());
                 }
-            } else {
-                return Ok(());
             }
 
             let mut downloaded = vec![];
@@ -167,7 +175,7 @@ async fn main() -> Result<(), String> {
                 }
             }
 
-            config::save_config(dirs.config_dir(), config)?;
+            config::save_config(dirs.config_dir(), &config)?;
         }
         Commands::List {} => {
             let mods = utils::get_installed(config.mod_dir())?;
@@ -182,6 +190,7 @@ async fn main() -> Result<(), String> {
         Commands::Install {
             mod_names: _,
             url: Some(url),
+            yes: _,
         } => {
             let file_name = url
                 .as_str()
@@ -203,6 +212,7 @@ async fn main() -> Result<(), String> {
         Commands::Install {
             mod_names,
             url: None,
+            yes,
         } => {
             let index = utils::update_index().await;
             let mut installed = utils::get_installed(config.mod_dir())?;
@@ -243,15 +253,19 @@ async fn main() -> Result<(), String> {
             valid.iter().for_each(|f| print!("{} ", f.name));
             println!("\n");
 
-            if let Ok(line) = rl.readline(&format!(
+            let msg = format!(
                 "Will download ~{:.2} MIB (compressed), okay? [Y/n]: ",
                 size as f64 / 1_048_576f64
-            )) {
-                if line.to_lowercase() == "n" {
+            );
+
+            if !yes {
+                if let Ok(line) = rl.readline(&msg) {
+                    if line.to_lowercase() == "n" {
+                        return Ok(());
+                    }
+                } else {
                     return Ok(());
                 }
-            } else {
-                return Ok(());
             }
 
             let mut downloaded = vec![];
@@ -259,10 +273,13 @@ async fn main() -> Result<(), String> {
                 let name = &base.name;
                 let path = dirs.cache_dir().join(format!("{}.zip", name));
 
-                if let Some(f) = utils::check_cache(&path) {
-                    println!("Using cached version of {}", name);
-                    downloaded.push(f);
-                    continue;
+                //would love to use this in the same if as the let but it's unstable so...
+                if config.cache() {
+                    if let Some(f) = utils::check_cache(&path) {
+                        println!("Using cached version of {}", name);
+                        downloaded.push(f);
+                        continue;
+                    }
                 }
                 match actions::download_file(&base.url, path).await {
                     Ok(f) => downloaded.push(f),
@@ -270,7 +287,7 @@ async fn main() -> Result<(), String> {
                 }
             }
             println!(
-                "Extracting mod{} to {}...",
+                "Extracting mod{} to {}",
                 if downloaded.len() > 1 { "s" } else { "" },
                 config.mod_dir().display()
             );
@@ -282,7 +299,6 @@ async fn main() -> Result<(), String> {
             utils::save_installed(config.mod_dir(), installed)?;
         }
         Commands::Remove { mod_names } => {
-            //let re = regex::new(r"(.+)\.(.+)").unwrap();
             let mut installed = utils::get_installed(config.mod_dir())?;
             let valid: Vec<Installed> = mod_names
                 .iter()
@@ -306,7 +322,12 @@ async fn main() -> Result<(), String> {
                 println!("Clearing cached packages...");
             }
             utils::clear_cache(dirs.cache_dir(), full)?;
+            println!("Done!");
         }
+    }
+
+    if !config.cache() {
+        utils::clear_cache(dirs.cache_dir(), false)?;
     }
 
     Ok(())
@@ -395,8 +416,6 @@ mod utils {
             let path = entry
                 .map_err(|_| "Error reading directory entry".to_string())?
                 .path();
-
-            println!("Removing {}", path.display());
 
             if path.is_dir() {
                 clear_cache(&path, force)?;

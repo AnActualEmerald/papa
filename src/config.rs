@@ -53,7 +53,7 @@ pub fn load_config(config_dir: &Path) -> Result<Config, String> {
     }
 }
 
-pub fn save_config(config_dir: &Path, config: Config) -> Result<(), String> {
+pub fn save_config(config_dir: &Path, config: &Config) -> Result<(), String> {
     let cfg_path = config_dir.join("config.toml");
 
     if cfg_path.exists() {
