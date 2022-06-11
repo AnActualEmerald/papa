@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added 
+- `update` command
+- Installed mod tracking
+- Support non-standard directory structures
+- Pre-installation confirmation
+
+### Changed
+- Get download URLs from thunderstore api
+- Use only package name for selecting packages
+
+
+
+
 ## v0.2.0
 
 ### Added
