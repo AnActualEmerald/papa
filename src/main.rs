@@ -5,6 +5,8 @@ use model::Installed;
 use regex::Regex;
 use rustyline::Editor;
 
+use crate::model::Mod;
+
 mod actions;
 mod api;
 #[allow(dead_code)]
@@ -153,7 +155,7 @@ async fn main() -> Result<(), String> {
         Commands::Config { mods_dir, cache } => {
             if let Some(dir) = mods_dir {
                 config.set_dir(&dir);
-                println!("Set mods parent directory to {}", dir);
+                println!("Set install directory to {}", dir);
             }
 
             if let Some(cache) = cache {
@@ -230,10 +232,16 @@ async fn main() -> Result<(), String> {
                     );
                     continue;
                 }
+
+                utils::resolve_deps(&mut valid, &base, &installed, &index)?;
                 valid.push(base);
             }
 
             let size: i64 = valid.iter().map(|f| f.file_size).sum();
+            println!("Installing:\n");
+            print!("\t");
+            valid.iter().for_each(|f| print!("{} ", f.name));
+            println!("\n");
 
             if let Ok(line) = rl.readline(&format!(
                 "Will download ~{:.2} MIB (compressed), okay? [Y/n]: ",
@@ -308,6 +316,7 @@ mod utils {
     use crate::api;
     use crate::model;
     use crate::model::Installed;
+    use crate::model::Mod;
     use directories::ProjectDirs;
     use std::fs::{self, File, OpenOptions};
     use std::io::Write;
@@ -435,4 +444,26 @@ mod utils {
     //
     //        Some(format!("{}.{}", author, big_snake.convert(&m_name)))
     //    }
+    pub fn resolve_deps<'a>(
+        valid: &mut Vec<&'a Mod>,
+        base: &'a Mod,
+        installed: &'a Vec<Installed>,
+        index: &'a Vec<Mod>,
+    ) -> Result<(), String> {
+        for dep in &base.deps {
+            let dep_name = dep.split("-").collect::<Vec<&str>>()[1];
+            if !installed.iter().any(|e| e.package_name == dep_name) {
+                if let Some(d) = index.iter().find(|f| f.name == dep_name) {
+                    resolve_deps(valid, d, installed, index)?;
+                    valid.push(d);
+                } else {
+                    return Err(format!(
+                        "Unable to resolve dependency {} of {}",
+                        dep, base.name
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
 }

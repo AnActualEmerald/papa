@@ -33,10 +33,12 @@ fn map_response(res: Value) -> Option<Vec<Mod>> {
                     let version = latest["version_number"].as_str().unwrap().to_string();
                     let url = latest["download_url"].as_str().unwrap().to_string();
                     let file_size = latest["file_size"].as_i64().unwrap();
-                    let deps = if let Value::Array(_d) = &latest["dependencies"] {
+                    let deps = if let Value::Array(d) = &latest["dependencies"] {
                         //TODO: Support dependencies
-                        // d.into_iter().map(|e| e).collect()
-                        vec![]
+                        d.into_iter()
+                            .map(|e| e.as_str().unwrap().to_string())
+                            .filter(|e| !e.starts_with("northstar-Northstar")) //Don't try to install northstar for any mods that "depend" on it
+                            .collect()
                     } else {
                         vec![]
                     };

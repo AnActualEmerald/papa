@@ -5,8 +5,8 @@ Papa Scorch's cli mod manager for Northstar clients and servers
 
 ```bash
 #must be as the URL appears on thunderstore e.g. /Fifty/Server_Utilities/ 
-papa install Fifty.ServerUtilities@v1.1.1 #can be Snake_Case or CamelCase
-papa list
-papa remove Fifty.ServerUtils
-papa clear
+papa install Server_Utilities #install a mod
+papa list #list installed mods
+papa remove Server_Utilitiess #uninstall a mod
+papa clear #clear the download cache
 ```
