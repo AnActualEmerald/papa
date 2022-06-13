@@ -219,6 +219,7 @@ async fn main() -> Result<(), String> {
             let mut installed = utils::get_installed(config.mod_dir())?;
             let mut valid = vec![];
             for name in mod_names {
+                let name = name.replace("papa://", "");
                 let re = Regex::new(r"(.+)@?(v?\d.\d.\d)?").unwrap();
 
                 if !re.is_match(&name) {
