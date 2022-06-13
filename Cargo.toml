@@ -26,3 +26,10 @@ serde_json = "1.0.81"
 tokio = { version = "1.18.2", features = ["full"] }
 toml = "0.5.9"
 zip = "0.6.2"
+
+[package.metadata.deb]
+section = "utility"
+assets = [ 
+  ["deb/papa.desktop", "usr/local/share/applications/", "644"],
+  ["target/release/papa", "usr/bin/", "755"]
+]
