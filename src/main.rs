@@ -66,6 +66,7 @@ enum Commands {
         ///Set whether or not to cache packages
         cache: Option<bool>,
     },
+    ///Update currently installed mods
     Update {
         ///Don't ask for confirmation
         #[clap(short, long)]
