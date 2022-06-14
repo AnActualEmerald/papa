@@ -383,7 +383,7 @@ mod utils {
     }
 
     pub fn save_installed(path: &Path, installed: Vec<Installed>) -> Result<(), String> {
-        let path = path.join(".installed.ron");
+        let path = path.join(".papa.ron");
 
         save_file(&path, ron::to_string(&installed).unwrap())?;
 
