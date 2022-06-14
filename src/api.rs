@@ -33,6 +33,7 @@ fn map_response(res: Value) -> Option<Vec<Mod>> {
                     let version = latest["version_number"].as_str().unwrap().to_string();
                     let url = latest["download_url"].as_str().unwrap().to_string();
                     let file_size = latest["file_size"].as_i64().unwrap();
+                    let desc = latest["description"].as_str().unwrap().to_string();
                     let deps = if let Value::Array(d) = &latest["dependencies"] {
                         //TODO: Support dependencies
                         d.into_iter()
@@ -48,6 +49,7 @@ fn map_response(res: Value) -> Option<Vec<Mod>> {
                         version,
                         url,
                         deps,
+                        desc,
                         file_size,
                     }
                 })

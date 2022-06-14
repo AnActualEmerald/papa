@@ -228,10 +228,13 @@ async fn main() -> Result<(), String> {
 
                 let parts = re.captures(&name).unwrap();
 
-                let base = index.iter().find(|e| e.name == parts[1]).ok_or_else(|| {
-                    println!("Couldn't find package {}", name);
-                    "No such package".to_string()
-                })?;
+                let base = index
+                    .iter()
+                    .find(|e| e.name.to_lowercase() == parts[1].to_lowercase())
+                    .ok_or_else(|| {
+                        println!("Couldn't find package {}", name);
+                        "No such package".to_string()
+                    })?;
 
                 if installed
                     .iter()
@@ -245,13 +248,15 @@ async fn main() -> Result<(), String> {
                 }
 
                 utils::resolve_deps(&mut valid, &base, &installed, &index)?;
-                valid.push(base);
+                valid.push(&base);
             }
 
             let size: i64 = valid.iter().map(|f| f.file_size).sum();
             println!("Installing:\n");
             print!("\t");
-            valid.iter().for_each(|f| print!("{} ", f.name));
+            valid
+                .iter()
+                .for_each(|f| print!("{}@{} ", f.name, f.version));
             println!("\n");
 
             let msg = format!(
@@ -353,7 +358,7 @@ mod utils {
     }
 
     pub fn get_installed(path: &Path) -> Result<Vec<Installed>, String> {
-        let path = path.join(".installed.ron");
+        let path = path.join(".papa.ron");
         if path.exists() {
             let raw = fs::read_to_string(path)
                 .map_err(|_| "Unable to read installed packages".to_string())?;

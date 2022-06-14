@@ -145,5 +145,6 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<Installed, String
         package_name: manifest.name,
         version: manifest.version_number,
         path: mods_dir.join(path),
+        enabled: true,
     })
 }

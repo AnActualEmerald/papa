@@ -6,6 +6,7 @@ pub struct Mod {
     pub name: String,
     pub version: String,
     pub url: String,
+    pub desc: String,
     pub deps: Vec<String>,
     pub file_size: i64,
 }
@@ -15,6 +16,7 @@ pub struct Installed {
     pub package_name: String,
     pub version: String,
     pub path: PathBuf,
+    pub enabled: bool,
 }
 
 //impl Installed {
