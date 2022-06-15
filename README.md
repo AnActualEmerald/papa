@@ -1,4 +1,6 @@
-# papa
+![scorch titan icon](https://static.wikia.nocookie.net/titanfall/images/d/d5/ScorchIcon.png/revision/latest?cb=20170627154342)
+
+# Papa command line mod manager
 Papa Scorch's cli mod manager for Northstar clients and servers
 
 ## Usage
@@ -18,13 +20,13 @@ papa config -m /PATH/TO/MODS/FOLDER/
 ```
 
 ### Ubuntu/Debian(& derivatives)
-Download the `.deb` file below and install it using whatever you usually use to install packages:
+Download the `.deb` file the latest release and install it using whatever you usually use to install packages:
 ```bash
 sudo apt install ./papa_1.0.0.rc.1.deb
 ```
 
 ### Windows
-Download and run the `.msi` installer below. It *should* install the program into your PATH so that you can call it from anywhere on your machine. This also makes for easy updates or uninstalls down the road.
+Download and run the `.msi` installer from the latest release.
 
 ### Using prebuilt binaries
 Download the appropriate binary for your system (make sure you get the `.exe` for Windows) and place it somewhere in your PATH. You should then be able to call the `papa` command from your favorite command line.
