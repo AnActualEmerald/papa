@@ -923,7 +923,6 @@ dependencies = [
  "directories",
  "futures-util",
  "indicatif",
- "lazy_static",
  "regex",
  "reqwest",
  "ron",

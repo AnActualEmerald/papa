@@ -9,7 +9,7 @@ use rustyline::Editor;
 
 use self::config::Config;
 use crate::api;
-use crate::api::model::{self, Installed};
+use crate::api::model::{self, Installed, Mod};
 
 pub struct Core {
     pub config: Config,
@@ -265,6 +265,26 @@ impl Core {
         }
 
         config::save_config(self.dirs.config_dir(), &self.config)?;
+        Ok(())
+    }
+
+    pub(crate) async fn search(&self, term: Vec<String>) -> Result<(), String> {
+        let index = utils::update_index().await;
+        println!("Searching...");
+        println!();
+        index
+            .iter()
+            .filter(|f| {
+                term.iter().any(|e| {
+                    f.name.to_lowercase().contains(&e.to_lowercase())
+                        || f.desc.to_lowercase().contains(&e.to_lowercase())
+                })
+            })
+            .for_each(|f| {
+                println!(" {}@{}\n\n    {}", f.name, f.version, f.desc);
+                println!();
+            });
+
         Ok(())
     }
 }

@@ -69,6 +69,11 @@ enum Commands {
         #[clap(short, long)]
         yes: bool,
     },
+    ///Search for a mod
+    Search {
+        ///The term to search for
+        term: Vec<String>,
+    },
 }
 
 #[tokio::main]
@@ -105,6 +110,7 @@ async fn main() -> Result<(), String> {
             url: None,
             yes,
         } => core.install(mod_names, yes).await?,
+        Commands::Search { term } => core.search(term).await?,
         Commands::Remove { mod_names } => core.remove(mod_names)?,
         Commands::Clear { full } => core.clear(full)?,
     }
