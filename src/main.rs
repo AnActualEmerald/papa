@@ -311,7 +311,9 @@ async fn main() -> Result<(), String> {
                 .filter_map(|f| {
                     installed
                         .iter()
-                        .position(|e| e.package_name.trim() == f.trim())
+                        .position(|e| {
+                            e.package_name.trim().to_lowercase() == f.trim().to_lowercase()
+                        })
                         .map(|i| installed.swap_remove(i))
                 })
                 .collect();
