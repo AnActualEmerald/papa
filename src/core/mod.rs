@@ -281,7 +281,7 @@ impl Core {
                 })
             })
             .for_each(|f| {
-                println!(" {}@{}\n\n    {}", f.name, f.version, f.desc);
+                println!(" \x1b[92m{}@{}\x1b[0m\n\n    {}", f.name, f.version, f.desc);
                 println!();
             });
 
