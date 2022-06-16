@@ -1,7 +1,7 @@
 ![scorch titan icon](https://static.wikia.nocookie.net/titanfall/images/d/d5/ScorchIcon.png/revision/latest?cb=20170627154342)
 
 # Papa command line mod manager
-Papa Scorch's cli mod manager for Northstar clients and servers
+Mod manager cli for [Northstar](https://github.com/R2Northstar/Northstar)
 
 ## Usage
 
@@ -9,7 +9,7 @@ Papa Scorch's cli mod manager for Northstar clients and servers
 #must be as the URL appears on thunderstore e.g. /Fifty/Server_Utilities/ 
 papa install Server_Utilities #install a mod
 papa list #list installed mods
-papa remove Server_Utilitiess #uninstall a mod
+papa remove Server_Utilities #uninstall a mod
 papa clear #clear the download cache
 ```
 
@@ -20,7 +20,7 @@ papa config -m /PATH/TO/MODS/FOLDER/
 ```
 
 ### Ubuntu/Debian(& derivatives)
-Download the `.deb` file the latest release and install it using whatever you usually use to install packages:
+Download the `.deb` file from the latest release and install it using whatever you usually use to install packages:
 ```bash
 sudo apt install ./papa_1.0.0.rc.1.deb
 ```
