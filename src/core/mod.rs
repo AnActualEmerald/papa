@@ -1,7 +1,7 @@
 pub mod actions;
 pub mod config;
 
-mod utils;
+pub(crate) mod utils;
 
 use directories::ProjectDirs;
 use regex::Regex;
@@ -46,7 +46,7 @@ impl Core {
 
         if !yes {
             if let Ok(line) = self.rl.readline(&format!(
-                "Will download ~{:.2} MIB (compressed), okay? [Y/n]: ",
+                "Will download ~{:.2} MB (compressed), okay? [Y/n]: ",
                 size as f64 / 1_048_576f64
             )) {
                 if line.to_lowercase() == "n" {
@@ -122,7 +122,7 @@ impl Core {
     }
 
     pub async fn install(&mut self, mod_names: Vec<String>, yes: bool) -> Result<(), String> {
-        let index = utils::update_index().await;
+        let index = utils::update_index(self.config.mod_dir()).await;
         let mut installed = utils::get_installed(self.config.mod_dir())?;
         let mut valid = vec![];
         for name in mod_names {
@@ -143,10 +143,7 @@ impl Core {
                     "No such package".to_string()
                 })?;
 
-            if installed
-                .iter()
-                .any(|e| e.package_name == base.name && e.version == base.version)
-            {
+            if base.installed {
                 println!(
                     "Package \x1b[36m{}\x1b[0m version \x1b[36m{}\x1b[0m already installed",
                     base.name, base.version
@@ -269,7 +266,7 @@ impl Core {
     }
 
     pub(crate) async fn search(&self, term: Vec<String>) -> Result<(), String> {
-        let index = utils::update_index().await;
+        let index = utils::update_index(self.config.mod_dir()).await;
         println!("Searching...");
         println!();
         index
@@ -281,7 +278,14 @@ impl Core {
                 })
             })
             .for_each(|f| {
-                println!(" \x1b[92m{}@{}\x1b[0m\n\n    {}", f.name, f.version, f.desc);
+                println!(
+                    " \x1b[92m{}@{}\x1b[0m   [{}]{}\n\n    {}",
+                    f.name,
+                    f.version,
+                    f.file_size_string(),
+                    if f.installed { "[installed]" } else { "" },
+                    f.desc
+                );
                 println!();
             });
 

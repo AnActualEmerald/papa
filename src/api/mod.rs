@@ -54,6 +54,7 @@ fn map_response(res: Value) -> Option<Vec<Mod>> {
                         deps,
                         desc,
                         file_size,
+                        installed: false,
                     }
                 })
                 .collect(),

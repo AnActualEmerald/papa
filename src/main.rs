@@ -28,7 +28,7 @@ enum Commands {
         #[clap(required_unless_present = "url")]
         mod_names: Vec<String>,
 
-        ///Alternate url to use
+        ///Alternate url to use - won't be tracked or updated
         #[clap(short, long)]
         #[clap(value_name = "URL")]
         url: Option<String>,

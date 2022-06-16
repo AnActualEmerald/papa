@@ -7,12 +7,18 @@ use std::fs::{self, File, OpenOptions};
 use std::io::Write;
 use std::path::Path;
 
-pub async fn update_index() -> Vec<model::Mod> {
+pub async fn update_index(path: &Path) -> Vec<model::Mod> {
     print!("Updating package index...");
-    let index = &api::get_package_index().await.unwrap();
+    let mut index = api::get_package_index().await.unwrap().to_vec();
     //        save_file(&dirs.cache_dir().join("index.ron"), index)?;
+    let installed = get_installed(path).unwrap();
+    for e in index.iter_mut() {
+        e.installed = installed
+            .iter()
+            .any(|f| f.package_name == e.name && f.version == e.version);
+    }
     println!(" Done!");
-    index.to_vec()
+    index
 }
 
 pub fn get_installed(path: &Path) -> Result<Vec<Installed>, String> {
