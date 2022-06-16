@@ -1,6 +1,9 @@
-use crate::model::Mod;
 use reqwest::Client;
 use serde_json::Value;
+
+pub mod model;
+
+use model::Mod;
 
 pub async fn get_package_index() -> Result<Vec<Mod>, String> {
     let client = Client::new();
@@ -51,6 +54,7 @@ fn map_response(res: Value) -> Option<Vec<Mod>> {
                         deps,
                         desc,
                         file_size,
+                        installed: false,
                     }
                 })
                 .collect(),
