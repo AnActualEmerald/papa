@@ -17,7 +17,7 @@ pub struct Mod {
 pub struct Installed {
     pub package_name: String,
     pub version: String,
-    pub path: PathBuf,
+    pub path: Vec<PathBuf>,
     pub enabled: bool,
 }
 

@@ -79,6 +79,7 @@ enum Commands {
 #[tokio::main]
 async fn main() -> Result<(), String> {
     let cli = Cli::parse();
+    env_logger::init();
 
     let dirs = ProjectDirs::from("me", "greenboi", "papa").unwrap();
     let config = config::load_config(dirs.config_dir()).unwrap();

@@ -9,7 +9,7 @@ use rustyline::Editor;
 
 use self::config::Config;
 use crate::api;
-use crate::api::model::{self, Installed, Mod};
+use crate::api::model::{self, Installed};
 
 pub struct Core {
     pub config: Config,
@@ -223,7 +223,7 @@ impl Core {
             })
             .collect();
 
-        let paths = valid.iter().map(|f| f.path.clone()).collect();
+        let paths = valid.iter().map(|f| f.path[0].clone()).collect();
 
         actions::uninstall(paths)?;
         utils::save_installed(self.config.mod_dir(), installed)?;

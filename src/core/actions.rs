@@ -17,6 +17,8 @@ use crate::{
     model::{Installed, Manifest},
 };
 
+use log::{debug, error, trace};
+
 pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File, String> {
     let client = Client::new();
 
@@ -28,6 +30,8 @@ pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File, String
         .map_err(|_| (format!("Unable to GET from {}", url)))?;
 
     if !res.status().is_success() {
+        error!("Got bad response from thunderstore");
+        error!("{:?}", res);
         return Err(format!("{} at URL {}", res.status(), url));
     }
 
@@ -35,6 +39,7 @@ pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File, String
         "Unable to read content length of response from {}",
         url
     ))?;
+    debug!("file_size: {}", file_size);
 
     //setup the progress bar
     let pb = ProgressBar::new(file_size).with_style(ProgressStyle::default_bar().template(
@@ -46,17 +51,21 @@ pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File, String
         .map_err(|_| (format!("Failed to create file {}", file_path.display())))?;
     let mut downloaded: u64 = 0;
     let mut stream = res.bytes_stream();
-
+    debug!("Starting download from {}", url);
     while let Some(item) = stream.next().await {
         let chunk = item.map_err(|_| ("Error downloading file :(".to_string()))?;
-        file.write_all(&chunk)
-            .map_err(|_| (format!("Error writing to file {}", file_path.display())))?;
+        file.write_all(&chunk).map_err(|e| {
+            error!("Error while writing download chunk to file");
+            error!("{}", e);
+            format!("Error writing to file {}", file_path.display())
+        })?;
         let new = min(downloaded + (chunk.len() as u64), file_size);
         downloaded = new;
         pb.set_position(new);
     }
     let finished = File::open(&file_path)
         .map_err(|_| (format!("Unable to open finished file {}", file_path.display())))?;
+    debug!("Finished download to {}", file_path.display());
 
     pb.finish_with_message(format!(
         "Downloaded {}!",
@@ -74,6 +83,7 @@ pub fn uninstall(mods: Vec<PathBuf>) -> Result<(), String> {
 }
 
 pub fn install_mod(zip_file: &File, config: &Config) -> Result<Installed, String> {
+    debug!("Starting mod insall");
     let mods_dir = config
         .mod_dir()
         .canonicalize()
@@ -99,7 +109,7 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<Installed, String
         let mut file = archive
             .by_index(i)
             .map_err(|_| ("Unable to get file from archive".to_string()))?;
-
+        trace!("Extracting file {}", file.name());
         let mut out = file
             .enclosed_name()
             .ok_or_else(|| "Unable to get file name".to_string())?;
@@ -118,6 +128,7 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<Installed, String
         if !deep {
             if let Some(p) = out.iter().next() {
                 path = p.to_owned();
+                debug!("Guessing install path is {}", path.to_string_lossy());
                 deep = true;
             }
         }
@@ -135,16 +146,18 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<Installed, String
                 .truncate(true)
                 .open(&mp)
                 .map_err(|_| (format!("Unable to open {}", &mp.display())))?;
+            trace!("Create file {}", mp.display());
 
             io::copy(&mut file, &mut outfile)
                 .map_err(|_| ("Unable to write extracted file".to_string()))?;
+            trace!("Wrote file {}", mp.display());
         }
     }
 
     Ok(Installed {
         package_name: manifest.name,
         version: manifest.version_number,
-        path: mods_dir.join(path),
+        path: vec![mods_dir.join(path)],
         enabled: true,
     })
 }
