@@ -202,11 +202,20 @@ impl Core {
             if downloaded.len() > 1 { "s" } else { "" },
             self.config.mod_dir().display()
         );
-        downloaded.iter().for_each(|f| {
-            let pkg = actions::install_mod(f, &self.config).unwrap();
-            installed.push(pkg.clone());
-            println!("Installed {}", pkg.package_name);
-        });
+        let errors: Vec<Result<(), String>> = downloaded
+            .iter()
+            .map(|f| -> Result<(), String> {
+                let pkg = actions::install_mod(f, &self.config)?;
+                installed.push(pkg.clone());
+                println!("Installed {}", pkg.package_name);
+                Ok(())
+            })
+            .filter(|f| f.is_err())
+            .collect();
+        if errors.len() > 0 {
+            return Err("Errors while installing".to_string());
+        }
+
         utils::save_installed(self.config.mod_dir(), installed)?;
         Ok(())
     }
@@ -223,7 +232,7 @@ impl Core {
             })
             .collect();
 
-        let paths = valid.iter().map(|f| f.path[0].clone()).collect();
+        let paths = valid.iter().map(|f| f.path.clone()).flatten().collect();
 
         actions::uninstall(paths)?;
         utils::save_installed(self.config.mod_dir(), installed)?;

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `search` command
+- Support "bundle" type mods
 
 
 ## v1.0.0
