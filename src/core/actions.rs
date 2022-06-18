@@ -14,6 +14,7 @@ use reqwest::Client;
 use zip::ZipArchive;
 
 use crate::{
+    api::model::SubMod,
     config::Config,
     model::{Installed, Manifest},
 };
@@ -132,36 +133,41 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<Installed, String
             io::copy(&mut file, &mut outfile).unwrap();
         }
     }
-    let mut paths = vec![];
+    let mut mods = vec![];
     if let Ok(entries) = temp_dir.read_dir() {
         for e in entries {
             let e = e.unwrap();
 
             if e.path().is_dir() {
                 if e.path().ends_with("mods") {
-                    let mut mods = e.path().read_dir().unwrap();
-                    while let Some(Ok(e)) = mods.next() {
-                        paths.push(e.path());
+                    let mut dirs = e.path().read_dir().unwrap();
+                    while let Some(Ok(e)) = dirs.next() {
+                        mods.push(SubMod::new(e.file_name().to_str().unwrap(), &e.path()));
                     }
                 } else {
-                    paths.push(e.path());
+                    mods.push(SubMod::new(e.file_name().to_str().unwrap(), &e.path()));
                 }
             }
         }
     }
 
-    if paths.len() == 0 {
+    if mods.len() == 0 {
         error!("Didn't find any directories in extracted archive");
         return Err("Couldn't find a directory to copy".to_string());
     }
 
-    paths
-        .iter()
-        .map(|p| (p, mods_dir.join(p.file_name().unwrap())))
+    mods.iter()
+        .map(|p| (&p.path, mods_dir.join(p.path.file_name().unwrap())))
         .for_each(|p| {
-            fs::remove_dir_all(&p.1).unwrap();
+            if p.1.exists() {
+                fs::remove_dir_all(&p.1).unwrap();
+            }
             fs::rename(p.0, p.1).unwrap();
         });
+
+    for mut m in mods.iter_mut() {
+        m.path = mods_dir.join(m.path.file_name().unwrap());
+    }
 
     let manifest: Manifest =
         serde_json::from_str(&manifest).map_err(|_| "Unable to parse manifest".to_string())?;
@@ -175,10 +181,7 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<Installed, String
     Ok(Installed {
         package_name: manifest.name,
         version: manifest.version_number,
-        path: paths
-            .iter()
-            .map(|p| mods_dir.join(p.file_name().unwrap()))
-            .collect(),
         enabled: true,
+        mods,
     })
 }

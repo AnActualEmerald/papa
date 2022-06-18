@@ -79,7 +79,7 @@ impl Core {
                 .position(|e| e.package_name == pkg.package_name)
             {
                 installed.get_mut(i).unwrap().version = pkg.version;
-                installed.get_mut(i).unwrap().path = pkg.path;
+                installed.get_mut(i).unwrap().mods = pkg.mods;
                 println!("Updated {}", pkg.package_name);
             }
         });
@@ -91,8 +91,18 @@ impl Core {
         let mods = utils::get_installed(self.config.mod_dir())?;
         if !mods.is_empty() {
             println!("Installed mods:");
-            mods.into_iter()
-                .for_each(|m| println!(" \x1b[92m{}@{}\x1b[0m", m.package_name, m.version));
+            mods.into_iter().for_each(|m| {
+                println!(" \x1b[92m{}@{}\x1b[0m", m.package_name, m.version);
+                if m.mods.len() > 1 {
+                    for (i, e) in m.mods.iter().enumerate() {
+                        let character = if i + 1 < m.mods.len() { "├" } else { "└" };
+                        println!(
+                            "   \x1b[92m{}─\x1b[0m \x1b[0;96m{}\x1b[0m",
+                            character, e.name
+                        );
+                    }
+                }
+            });
         } else {
             println!("No mods currently installed");
         }
@@ -232,7 +242,7 @@ impl Core {
             })
             .collect();
 
-        let paths = valid.iter().map(|f| f.path.clone()).flatten().collect();
+        let paths = valid.iter().map(|f| f.flatten_paths()).flatten().collect();
 
         actions::uninstall(paths)?;
         utils::save_installed(self.config.mod_dir(), installed)?;
