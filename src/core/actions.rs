@@ -75,7 +75,7 @@ pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File, String
     Ok(finished)
 }
 
-pub fn uninstall(mods: Vec<PathBuf>) -> Result<(), String> {
+pub fn uninstall(mods: Vec<&PathBuf>) -> Result<(), String> {
     mods.iter().for_each(|p| {
         fs::remove_dir_all(p).expect("Unable to remove directory");
         println!("Removed {}", p.display());
@@ -181,5 +181,7 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<InstalledMod, Str
         package_name: manifest.name,
         version: manifest.version_number,
         mods,
+        depends_on: vec![],
+        needed_by: vec![],
     })
 }

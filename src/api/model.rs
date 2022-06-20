@@ -34,11 +34,14 @@ pub struct InstalledMod {
     pub package_name: String,
     pub version: String,
     pub mods: Vec<SubMod>,
+    //TODO: Implement local dep tracking
+    pub depends_on: Vec<String>,
+    pub needed_by: Vec<String>,
 }
 
 impl InstalledMod {
-    pub fn flatten_paths(&self) -> Vec<PathBuf> {
-        self.mods.iter().map(|m| m.path.clone()).collect()
+    pub fn flatten_paths(&self) -> Vec<&PathBuf> {
+        self.mods.iter().map(|m| &m.path).collect()
     }
 
     pub fn any_disabled(&self) -> bool {
