@@ -9,7 +9,7 @@ use rustyline::Editor;
 
 use self::config::Config;
 use crate::api;
-use crate::api::model::{self, Installed};
+use crate::api::model::{self, InstalledMod};
 
 pub struct Core {
     pub config: Config,
@@ -31,7 +31,7 @@ impl Core {
         let outdated: Vec<&model::Mod> = index
             .into_iter()
             .filter(|e| {
-                installed.iter().any(|i| {
+                installed.mods.iter().any(|i| {
                     i.package_name.trim() == e.name.trim() && i.version.trim() != e.version.trim()
                 })
             })
@@ -75,30 +75,40 @@ impl Core {
         downloaded.into_iter().for_each(|f| {
             let pkg = actions::install_mod(&f, &self.config).unwrap();
             if let Some(i) = installed
+                .mods
                 .iter()
                 .position(|e| e.package_name == pkg.package_name)
             {
-                installed.get_mut(i).unwrap().version = pkg.version;
-                installed.get_mut(i).unwrap().mods = pkg.mods;
+                installed.mods.get_mut(i).unwrap().version = pkg.version;
+                installed.mods.get_mut(i).unwrap().mods = pkg.mods;
                 println!("Updated {}", pkg.package_name);
             }
         });
-        utils::save_installed(self.config.mod_dir(), installed)?;
+        utils::save_installed(self.config.mod_dir(), &installed)?;
         Ok(())
     }
 
     pub fn list(&self) -> Result<(), String> {
-        let mods = utils::get_installed(self.config.mod_dir())?;
+        let mods = utils::get_installed(self.config.mod_dir())?.mods;
         if !mods.is_empty() {
             println!("Installed mods:");
             mods.into_iter().for_each(|m| {
-                println!(" \x1b[92m{}@{}\x1b[0m", m.package_name, m.version);
+                let disabled = if !m.any_disabled() || m.mods.len() > 1 {
+                    ""
+                } else {
+                    "[disabled]"
+                };
+                println!(
+                    " \x1b[92m{}@{}\x1b[0m {}",
+                    m.package_name, m.version, disabled
+                );
                 if m.mods.len() > 1 {
                     for (i, e) in m.mods.iter().enumerate() {
                         let character = if i + 1 < m.mods.len() { "├" } else { "└" };
+                        let disabled = if e.disabled() { "[disabled]" } else { "" };
                         println!(
-                            "   \x1b[92m{}─\x1b[0m \x1b[0;96m{}\x1b[0m",
-                            character, e.name
+                            "   \x1b[92m{}─\x1b[0m \x1b[0;96m{}\x1b[0m {}",
+                            character, e.name, disabled
                         );
                     }
                 }
@@ -161,7 +171,7 @@ impl Core {
                 continue;
             }
 
-            utils::resolve_deps(&mut valid, &base, &installed, &index)?;
+            utils::resolve_deps(&mut valid, &base, &installed.mods, &index)?;
             valid.push(&base);
         }
 
@@ -216,7 +226,7 @@ impl Core {
             .iter()
             .map(|f| -> Result<(), String> {
                 let pkg = actions::install_mod(f, &self.config)?;
-                installed.push(pkg.clone());
+                installed.mods.push(pkg.clone());
                 println!("Installed {}", pkg.package_name);
                 Ok(())
             })
@@ -226,26 +236,27 @@ impl Core {
             return Err("Errors while installing".to_string());
         }
 
-        utils::save_installed(self.config.mod_dir(), installed)?;
+        utils::save_installed(self.config.mod_dir(), &installed)?;
         Ok(())
     }
 
     pub fn remove(&self, mod_names: Vec<String>) -> Result<(), String> {
         let mut installed = utils::get_installed(self.config.mod_dir())?;
-        let valid: Vec<Installed> = mod_names
+        let valid: Vec<InstalledMod> = mod_names
             .iter()
             .filter_map(|f| {
                 installed
+                    .mods
                     .iter()
                     .position(|e| e.package_name.trim().to_lowercase() == f.trim().to_lowercase())
-                    .map(|i| installed.swap_remove(i))
+                    .map(|i| installed.mods.swap_remove(i))
             })
             .collect();
 
         let paths = valid.iter().map(|f| f.flatten_paths()).flatten().collect();
 
         actions::uninstall(paths)?;
-        utils::save_installed(self.config.mod_dir(), installed)?;
+        utils::save_installed(self.config.mod_dir(), &installed)?;
         Ok(())
     }
 
@@ -308,6 +319,51 @@ impl Core {
                 println!();
             });
 
+        Ok(())
+    }
+
+    pub(crate) fn disable(&self, mods: Vec<String>) -> Result<(), String> {
+        let mut installed = utils::get_installed(self.config.mod_dir())?;
+        for m in mods {
+            let m = m.to_lowercase();
+            for i in installed.mods.iter_mut() {
+                if i.package_name.to_lowercase() == m {
+                    utils::disable_mod(&mut i.mods[0])?;
+                    println!("Disabled {}", m);
+                } else {
+                    for e in i.mods.iter_mut() {
+                        if e.name.to_lowercase() == m {
+                            utils::disable_mod(e)?;
+                            println!("Disabled {}", m);
+                        }
+                    }
+                }
+            }
+        }
+        utils::save_installed(self.config.mod_dir(), &installed)?;
+
+        Ok(())
+    }
+    pub(crate) fn enable(&self, mods: Vec<String>) -> Result<(), String> {
+        let mut installed = utils::get_installed(self.config.mod_dir())?;
+        for m in mods {
+            let m = m.to_lowercase();
+            for i in installed.mods.iter_mut() {
+                if i.package_name.to_lowercase() == m {
+                    utils::enable_mod(&mut i.mods[0], self.config.mod_dir())?;
+                    println!("Enabled {}", m);
+                } else {
+                    for e in i.mods.iter_mut() {
+                        if e.name.to_lowercase() == m {
+                            utils::enable_mod(e, self.config.mod_dir())?;
+                            println!("Enabled {}", m);
+                        }
+                    }
+                }
+            }
+        }
+
+        utils::save_installed(self.config.mod_dir(), &installed)?;
         Ok(())
     }
 }

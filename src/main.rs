@@ -74,6 +74,12 @@ enum Commands {
         ///The term to search for
         term: Vec<String>,
     },
+    Disable {
+        mods: Vec<String>,
+    },
+    Enable {
+        mods: Vec<String>,
+    },
 }
 
 #[tokio::main]
@@ -111,6 +117,8 @@ async fn main() -> Result<(), String> {
             url: None,
             yes,
         } => core.install(mod_names, yes).await?,
+        Commands::Disable { mods } => core.disable(mods)?,
+        Commands::Enable { mods } => core.enable(mods)?,
         Commands::Search { term } => core.search(term).await?,
         Commands::Remove { mod_names } => core.remove(mod_names)?,
         Commands::Clear { full } => core.clear(full)?,

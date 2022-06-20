@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::{
+    ffi::OsStr,
+    path::{Path, PathBuf},
+};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Mod {
@@ -27,16 +30,20 @@ impl Mod {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Installed {
+pub struct InstalledMod {
     pub package_name: String,
     pub version: String,
     pub mods: Vec<SubMod>,
-    pub enabled: bool,
 }
 
-impl Installed {
+impl InstalledMod {
     pub fn flatten_paths(&self) -> Vec<PathBuf> {
         self.mods.iter().map(|m| m.path.clone()).collect()
+    }
+
+    pub fn any_disabled(&self) -> bool {
+        let b = self.mods.iter().any(|m| m.disabled());
+        b
     }
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -52,6 +59,12 @@ impl SubMod {
             path: path.to_owned(),
         }
     }
+
+    pub fn disabled(&self) -> bool {
+        self.path
+            .components()
+            .any(|f| f.as_os_str() == OsStr::new(".disabled"))
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -61,4 +74,15 @@ pub struct Manifest {
     pub website_url: String,
     pub description: String,
     pub dependencies: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct LocalIndex {
+    pub mods: Vec<InstalledMod>,
+}
+
+impl LocalIndex {
+    pub fn new() -> Self {
+        Self { mods: vec![] }
+    }
 }

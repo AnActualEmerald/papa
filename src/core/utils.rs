@@ -1,8 +1,11 @@
 use crate::api;
+use crate::api::model::LocalIndex;
+use crate::api::model::SubMod;
 use crate::model;
-use crate::model::Installed;
+use crate::model::InstalledMod;
 use crate::model::Mod;
 use directories::ProjectDirs;
+use log::error;
 use std::fs::{self, File, OpenOptions};
 use std::io::Write;
 use std::path::Path;
@@ -14,6 +17,7 @@ pub async fn update_index(path: &Path) -> Vec<model::Mod> {
     let installed = get_installed(path).unwrap();
     for e in index.iter_mut() {
         e.installed = installed
+            .mods
             .iter()
             .any(|f| f.package_name == e.name && f.version == e.version);
     }
@@ -21,7 +25,7 @@ pub async fn update_index(path: &Path) -> Vec<model::Mod> {
     index
 }
 
-pub fn get_installed(path: &Path) -> Result<Vec<Installed>, String> {
+pub fn get_installed(path: &Path) -> Result<LocalIndex, String> {
     let path = path.join(".papa.ron");
     if path.exists() {
         let raw = fs::read_to_string(path)
@@ -36,17 +40,17 @@ pub fn get_installed(path: &Path) -> Result<Vec<Installed>, String> {
         }
         File::create(path)
             .map_err(|_| "Unable to create installed package index".to_string())?
-            .write_all(ron::to_string(&Vec::<Installed>::new()).unwrap().as_bytes())
+            .write_all(ron::to_string(&LocalIndex::new()).unwrap().as_bytes())
             .unwrap();
 
-        Ok(vec![])
+        Ok(LocalIndex::new())
     }
 }
 
-pub fn save_installed(path: &Path, installed: Vec<Installed>) -> Result<(), String> {
+pub fn save_installed(path: &Path, installed: &LocalIndex) -> Result<(), String> {
     let path = path.join(".papa.ron");
 
-    save_file(&path, ron::to_string(&installed).unwrap())?;
+    save_file(&path, ron::to_string(installed).unwrap())?;
 
     Ok(())
 }
@@ -133,7 +137,7 @@ pub fn save_file(file: &Path, data: String) -> Result<(), String> {
 pub fn resolve_deps<'a>(
     valid: &mut Vec<&'a Mod>,
     base: &'a Mod,
-    installed: &'a Vec<Installed>,
+    installed: &'a Vec<InstalledMod>,
     index: &'a Vec<Mod>,
 ) -> Result<(), String> {
     for dep in &base.deps {
@@ -151,4 +155,46 @@ pub fn resolve_deps<'a>(
         }
     }
     Ok(())
+}
+
+pub fn disable_mod(m: &mut SubMod) -> Result<bool, String> {
+    if m.disabled() {
+        return Ok(false);
+    }
+
+    let name = &m.name;
+    let old_path = m.path.clone();
+
+    let dir = m.path.parent().unwrap().join(".disabled");
+
+    if !dir.exists() {
+        fs::create_dir_all(&dir).map_err(|_| "Failed to create disable directory")?;
+    }
+
+    m.path = dir.join(name);
+
+    fs::rename(old_path, &m.path).map_err(|e| {
+        error!("Error moving mod to disabled directory");
+        error!("{}", e);
+        "Couldn't move mod".to_string()
+    })?;
+
+    Ok(true)
+}
+
+pub fn enable_mod(m: &mut SubMod, mods_dir: &Path) -> Result<bool, String> {
+    if !m.disabled() {
+        return Ok(false);
+    }
+
+    let old_path = m.path.clone();
+    m.path = mods_dir.join(&m.name);
+
+    fs::rename(old_path, &m.path).map_err(|e| {
+        error!("Error moving mod from disabled directory");
+        error!("{}", e);
+        "Couldn't move mod".to_string()
+    })?;
+
+    Ok(true)
 }

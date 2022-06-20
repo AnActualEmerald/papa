@@ -1,6 +1,5 @@
 use std::{
     cmp::min,
-    ffi::{OsStr, OsString},
     fs::{self, File, OpenOptions},
     io::{self, Read, Write},
     path::PathBuf,
@@ -16,10 +15,10 @@ use zip::ZipArchive;
 use crate::{
     api::model::SubMod,
     config::Config,
-    model::{Installed, Manifest},
+    model::{InstalledMod, Manifest},
 };
 
-use log::{debug, error, trace};
+use log::{debug, error};
 
 pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File, String> {
     let client = Client::new();
@@ -84,7 +83,7 @@ pub fn uninstall(mods: Vec<PathBuf>) -> Result<(), String> {
     Ok(())
 }
 
-pub fn install_mod(zip_file: &File, config: &Config) -> Result<Installed, String> {
+pub fn install_mod(zip_file: &File, config: &Config) -> Result<InstalledMod, String> {
     debug!("Starting mod insall");
     let mods_dir = config
         .mod_dir()
@@ -178,10 +177,9 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<Installed, String
         "Unable to remove temp directory".to_string()
     })?;
 
-    Ok(Installed {
+    Ok(InstalledMod {
         package_name: manifest.name,
         version: manifest.version_number,
-        enabled: true,
         mods,
     })
 }
