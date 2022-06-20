@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::{
+    ffi::OsStr,
+    path::{Path, PathBuf},
+};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Mod {
@@ -11,14 +14,6 @@ pub struct Mod {
     pub file_size: i64,
     #[serde(skip)]
     pub installed: bool,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Installed {
-    pub package_name: String,
-    pub version: String,
-    pub path: Vec<PathBuf>,
-    pub enabled: bool,
 }
 
 impl Mod {
@@ -34,15 +29,46 @@ impl Mod {
     }
 }
 
-//impl Installed {
-//    pub fn new(package_name: &str, version: &str, path: &str) -> Self {
-//        Installed {
-//            package_name: package_name.to_string(),
-//            version: version.to_string(),
-//            path: PathBuf::from(path),
-//        }
-//    }
-//}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct InstalledMod {
+    pub package_name: String,
+    pub version: String,
+    pub mods: Vec<SubMod>,
+    //TODO: Implement local dep tracking
+    pub depends_on: Vec<String>,
+    pub needed_by: Vec<String>,
+}
+
+impl InstalledMod {
+    pub fn flatten_paths(&self) -> Vec<&PathBuf> {
+        self.mods.iter().map(|m| &m.path).collect()
+    }
+
+    pub fn any_disabled(&self) -> bool {
+        let b = self.mods.iter().any(|m| m.disabled());
+        b
+    }
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SubMod {
+    pub path: PathBuf,
+    pub name: String,
+}
+
+impl SubMod {
+    pub fn new(name: &str, path: &Path) -> Self {
+        SubMod {
+            name: name.to_string(),
+            path: path.to_owned(),
+        }
+    }
+
+    pub fn disabled(&self) -> bool {
+        self.path
+            .components()
+            .any(|f| f.as_os_str() == OsStr::new(".disabled"))
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Manifest {
@@ -51,4 +77,15 @@ pub struct Manifest {
     pub website_url: String,
     pub description: String,
     pub dependencies: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct LocalIndex {
+    pub mods: Vec<InstalledMod>,
+}
+
+impl LocalIndex {
+    pub fn new() -> Self {
+        Self { mods: vec![] }
+    }
 }

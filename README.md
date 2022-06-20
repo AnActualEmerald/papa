@@ -3,12 +3,19 @@
 # Papa command line mod manager
 Mod manager cli for [Northstar](https://github.com/R2Northstar/Northstar)
 
+## Features
+- Search Thunderstore for mods from the command line
+- Download a mod *and* its dependencies with one command
+- Easily keep your mods up to date
+- Per-directory tracking
+- Enable and disable mods 
+
 ## Usage
 
 ```bash
-#must be as the URL appears on thunderstore e.g. /Fifty/Server_Utilities/ 
 papa install Server_Utilities #install a mod
 papa list #list installed mods
+papa update #update any out of date mods
 papa remove Server_Utilities #uninstall a mod
 papa clear #clear the download cache
 ```

@@ -1,9 +1,9 @@
 use std::{
     cmp::min,
-    ffi::{OsStr, OsString},
-    fs::{self, File},
+    fs::{self, File, OpenOptions},
     io::{self, Read, Write},
     path::PathBuf,
+    time::SystemTime,
 };
 
 use futures_util::StreamExt;
@@ -13,11 +13,12 @@ use reqwest::Client;
 use zip::ZipArchive;
 
 use crate::{
+    api::model::SubMod,
     config::Config,
-    model::{Installed, Manifest},
+    model::{InstalledMod, Manifest},
 };
 
-use log::{debug, error, trace};
+use log::{debug, error};
 
 pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File, String> {
     let client = Client::new();
@@ -74,7 +75,7 @@ pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File, String
     Ok(finished)
 }
 
-pub fn uninstall(mods: Vec<PathBuf>) -> Result<(), String> {
+pub fn uninstall(mods: Vec<&PathBuf>) -> Result<(), String> {
     mods.iter().for_each(|p| {
         fs::remove_dir_all(p).expect("Unable to remove directory");
         println!("Removed {}", p.display());
@@ -82,82 +83,105 @@ pub fn uninstall(mods: Vec<PathBuf>) -> Result<(), String> {
     Ok(())
 }
 
-pub fn install_mod(zip_file: &File, config: &Config) -> Result<Installed, String> {
+pub fn install_mod(zip_file: &File, config: &Config) -> Result<InstalledMod, String> {
     debug!("Starting mod insall");
     let mods_dir = config
         .mod_dir()
         .canonicalize()
         .map_err(|_| "Couldn't resolve mods directory path".to_string())?;
-    let mut archive =
-        ZipArchive::new(zip_file).map_err(|_| ("Unable to read zip archive".to_string()))?;
-
     //Get the package manifest
     let mut manifest = String::new();
-    archive
-        .by_name("manifest.json")
-        .map_err(|_| "Couldn't find manifest file".to_string())?
-        .read_to_string(&mut manifest)
-        .unwrap();
+    let temp_dir = mods_dir.join(
+        SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            .to_string(),
+    );
+    {
+        let mut archive =
+            ZipArchive::new(zip_file).map_err(|_| ("Unable to read zip archive".to_string()))?;
+
+        archive
+            .by_name("manifest.json")
+            .map_err(|_| "Couldn't find manifest file".to_string())?
+            .read_to_string(&mut manifest)
+            .unwrap();
+
+        fs::create_dir_all(&temp_dir).map_err(|e| {
+            error!("Unable to create temp directory");
+            error!("{}", e);
+            "Unable to create temp directory".to_string()
+        })?;
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i).unwrap();
+            let out = temp_dir.join(&file.enclosed_name().unwrap());
+            debug!("Extracting file to {}", out.display());
+            if (*file.name()).ends_with("/") {
+                fs::create_dir_all(&out).unwrap();
+                continue;
+            } else if let Some(p) = out.parent() {
+                fs::create_dir_all(&p).unwrap();
+            }
+            let mut outfile = OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(&out)
+                .unwrap();
+            io::copy(&mut file, &mut outfile).unwrap();
+        }
+    }
+    let mut mods = vec![];
+    if let Ok(entries) = temp_dir.read_dir() {
+        for e in entries {
+            let e = e.unwrap();
+
+            if e.path().is_dir() {
+                if e.path().ends_with("mods") {
+                    let mut dirs = e.path().read_dir().unwrap();
+                    while let Some(Ok(e)) = dirs.next() {
+                        mods.push(SubMod::new(e.file_name().to_str().unwrap(), &e.path()));
+                    }
+                } else {
+                    mods.push(SubMod::new(e.file_name().to_str().unwrap(), &e.path()));
+                }
+            }
+        }
+    }
+
+    if mods.len() == 0 {
+        error!("Didn't find any directories in extracted archive");
+        return Err("Couldn't find a directory to copy".to_string());
+    }
+
+    mods.iter()
+        .map(|p| (&p.path, mods_dir.join(p.path.file_name().unwrap())))
+        .for_each(|p| {
+            if p.1.exists() {
+                fs::remove_dir_all(&p.1).unwrap();
+            }
+            fs::rename(p.0, p.1).unwrap();
+        });
+
+    for mut m in mods.iter_mut() {
+        m.path = mods_dir.join(m.path.file_name().unwrap());
+    }
 
     let manifest: Manifest =
         serde_json::from_str(&manifest).map_err(|_| "Unable to parse manifest".to_string())?;
 
-    //Extract each file in the archive that is in the mods directory
-    let mut deep = false;
-    let mut path = OsString::new();
-    for i in 0..archive.len() {
-        let mut file = archive
-            .by_index(i)
-            .map_err(|_| ("Unable to get file from archive".to_string()))?;
-        trace!("Extracting file {}", file.name());
-        let mut out = file
-            .enclosed_name()
-            .ok_or_else(|| "Unable to get file name".to_string())?;
+    fs::remove_dir_all(&temp_dir).map_err(|e| {
+        error!("Unable to remove temp directory");
+        error!("{}", e);
+        "Unable to remove temp directory".to_string()
+    })?;
 
-        if out.starts_with("mods/") {
-            out = out.strip_prefix("mods/").unwrap();
-        }
-
-        if let Some(p) = out.parent() {
-            if p.as_os_str() == OsStr::new("") {
-                continue;
-            }
-        }
-        let mp = mods_dir.join(&out);
-
-        if !deep {
-            if let Some(p) = out.iter().next() {
-                path = p.to_owned();
-                debug!("Guessing install path is {}", path.to_string_lossy());
-                deep = true;
-            }
-        }
-
-        if (*file.name()).ends_with('/') {
-            fs::create_dir_all(&mp).unwrap();
-        } else {
-            if let Some(p) = mp.parent() {
-                fs::create_dir_all(&p).unwrap();
-            }
-
-            let mut outfile = fs::OpenOptions::new()
-                .write(true)
-                .create(true)
-                .truncate(true)
-                .open(&mp)
-                .map_err(|_| (format!("Unable to open {}", &mp.display())))?;
-            trace!("Create file {}", mp.display());
-
-            io::copy(&mut file, &mut outfile)
-                .map_err(|_| ("Unable to write extracted file".to_string()))?;
-            trace!("Wrote file {}", mp.display());
-        }
-    }
-
-    Ok(Installed {
+    Ok(InstalledMod {
         package_name: manifest.name,
         version: manifest.version_number,
-        path: vec![mods_dir.join(path)],
-        enabled: true,
+        mods,
+        depends_on: vec![],
+        needed_by: vec![],
     })
 }
