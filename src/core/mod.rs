@@ -181,7 +181,7 @@ impl Core {
         print!("\t");
         valid
             .iter()
-            .for_each(|f| print!("{}@{} ", f.name, f.version));
+            .for_each(|f| print!("\x1b[36m{}@{}\x1b[0m ", f.name, f.version));
         println!("\n");
 
         let msg = format!(
