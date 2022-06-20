@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support "bundle" type mods
 - `enable` and `disable` commands
 
+### Changed
+- Improved list formatting
+- More colorful output for readability
+
 
 ## v1.0.0
 
