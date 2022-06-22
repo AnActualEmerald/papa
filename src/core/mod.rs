@@ -1,7 +1,12 @@
 pub mod actions;
 pub mod config;
+pub mod northstar;
 
 pub(crate) mod utils;
+
+mod error;
+
+pub use error::*;
 
 use directories::ProjectDirs;
 use regex::Regex;

@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::{Parser, Subcommand};
 
 use crate::api::model;
@@ -80,6 +82,16 @@ enum Commands {
     Enable {
         mods: Vec<String>,
     },
+
+    Northstar {
+        #[clap(subcommand)]
+        command: NstarCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum NstarCommands {
+    Install { game_path: PathBuf },
 }
 
 #[tokio::main]
@@ -122,6 +134,12 @@ async fn main() -> Result<(), String> {
         Commands::Search { term } => core.search(term).await?,
         Commands::Remove { mod_names } => core.remove(mod_names)?,
         Commands::Clear { full } => core.clear(full)?,
+        Commands::Northstar { command } => match command {
+            NstarCommands::Install { game_path } => {
+                core.install_northstar(&game_path.canonicalize().unwrap())
+                    .await?;
+            }
+        },
     }
 
     Ok(())

@@ -20,6 +20,8 @@ use crate::{
 
 use log::{debug, error};
 
+///URL to download
+///file name to save to
 pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File, String> {
     let client = Client::new();
 
