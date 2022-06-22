@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Northstar `install`, `init`, and `update` commands
+
+
+## v2.0.0
+
+### Added
 - `search` command
 - Support "bundle" type mods
 - `enable` and `disable` commands
