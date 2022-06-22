@@ -91,12 +91,14 @@ enum Commands {
 
 #[derive(Subcommand)]
 enum NstarCommands {
-    ///Installs northstar to provided path, or current directory.
-    Install { game_path: Option<PathBuf> },
+    //    ///Installs northstar to provided path, or current directory.
+    //    Install { game_path: Option<PathBuf> },
     ///Initializes a new northstar installation in the provided path, or current directory.
     Init { game_path: Option<PathBuf> },
     ///Updats the current northstar install. Must have been installed with `papa northstar init`.
     Update {},
+    ///Start the Northstar client
+    Start {},
 }
 
 #[tokio::main]
@@ -140,14 +142,14 @@ async fn main() -> Result<(), String> {
         Commands::Remove { mod_names } => core.remove(mod_names)?,
         Commands::Clear { full } => core.clear(full)?,
         Commands::Northstar { command } => match command {
-            NstarCommands::Install { game_path } => {
-                let game_path = if let Some(p) = game_path {
-                    p.canonicalize().unwrap()
-                } else {
-                    std::env::current_dir().unwrap()
-                };
-                core.install_northstar(&game_path).await?;
-            }
+            //      NstarCommands::Install { game_path } => {
+            //          let game_path = if let Some(p) = game_path {
+            //              p.canonicalize().unwrap()
+            //          } else {
+            //              std::env::current_dir().unwrap()
+            //          };
+            //          core.install_northstar(&game_path).await?;
+            //      }
             NstarCommands::Init { game_path } => {
                 let game_path = if let Some(p) = game_path {
                     p.canonicalize().unwrap()
@@ -158,6 +160,9 @@ async fn main() -> Result<(), String> {
             }
             NstarCommands::Update {} => {
                 core.update_northstar().await?;
+            }
+            NstarCommands::Start {} => {
+                core.start_northstar()?;
             }
         },
     }

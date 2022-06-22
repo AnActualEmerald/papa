@@ -2,9 +2,11 @@ use std::{
     fs::{self, File, OpenOptions},
     io,
     path::{Path, PathBuf},
+    process::Stdio,
 };
 
 use log::debug;
+use std::process::Command;
 use zip::ZipArchive;
 
 use crate::api::model::Mod;
@@ -12,6 +14,23 @@ use crate::api::model::Mod;
 use super::{actions, config, utils, Core};
 
 impl Core {
+    pub fn start_northstar(&self) -> Result<(), String> {
+        let game = self.config.game_path.join("NorthstarLauncher.exe");
+
+        if cfg!(target_os = "windows") {
+            Command::new(game)
+                // .stderr(Stdio::null())
+                // .stdin(Stdio::null())
+                // .stdout(Stdio::null())
+                .spawn()
+                .expect("Unable to start game");
+        } else if cfg!(target_os = "linux") {
+            println!("Thinking of the best way to handle this");
+        }
+
+        Ok(())
+    }
+
     pub async fn update_northstar(&mut self) -> Result<(), String> {
         if let Some(current) = &self.config.nstar_version {
             let index = utils::update_index(self.config.mod_dir()).await;
