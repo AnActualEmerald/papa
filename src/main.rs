@@ -91,7 +91,12 @@ enum Commands {
 
 #[derive(Subcommand)]
 enum NstarCommands {
-    Install { game_path: PathBuf },
+    ///Installs northstar to provided path, or current directory.
+    Install { game_path: Option<PathBuf> },
+    ///Initializes a new northstar installation in the provided path, or current directory.
+    Init { game_path: Option<PathBuf> },
+    ///Updats the current northstar install. Must have been installed with `papa northstar init`.
+    Update {},
 }
 
 #[tokio::main]
@@ -136,8 +141,23 @@ async fn main() -> Result<(), String> {
         Commands::Clear { full } => core.clear(full)?,
         Commands::Northstar { command } => match command {
             NstarCommands::Install { game_path } => {
-                core.install_northstar(&game_path.canonicalize().unwrap())
-                    .await?;
+                let game_path = if let Some(p) = game_path {
+                    p.canonicalize().unwrap()
+                } else {
+                    std::env::current_dir().unwrap()
+                };
+                core.install_northstar(&game_path).await?;
+            }
+            NstarCommands::Init { game_path } => {
+                let game_path = if let Some(p) = game_path {
+                    p.canonicalize().unwrap()
+                } else {
+                    std::env::current_dir().unwrap()
+                };
+                core.init_northstar(&game_path).await?;
+            }
+            NstarCommands::Update {} => {
+                core.update_northstar().await?;
             }
         },
     }

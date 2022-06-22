@@ -7,18 +7,58 @@ use std::{
 use log::debug;
 use zip::ZipArchive;
 
-use super::{actions, utils, Core};
+use crate::api::model::Mod;
+
+use super::{actions, config, utils, Core};
 
 impl Core {
-    pub async fn install_northstar(&self, game_path: &Path) -> Result<(), String> {
-        let index = utils::update_index(self.config.mod_dir()).await;
+    pub async fn update_northstar(&mut self) -> Result<(), String> {
+        if let Some(current) = &self.config.nstar_version {
+            let index = utils::update_index(self.config.mod_dir()).await;
+            let nmod = index
+                .iter()
+                .find(|f| f.name.to_lowercase() == "northstar")
+                .ok_or("Couldn't find Northstar on thunderstore???")?;
 
+            if nmod.version == *current {
+                println!("Northstar is already up to date ({})", current);
+                return Ok(());
+            }
+
+            if let Ok(s) = self.rl.readline(&format!(
+                "Update Northstar to version {}? [Y/n]",
+                nmod.version
+            )) {
+                if &s.to_lowercase() == "n" {
+                    return Ok(());
+                }
+            }
+
+            self.do_install(&nmod, &self.config.game_path).await?;
+            self.config.nstar_version = Some(nmod.version.clone());
+            config::save_config(self.dirs.config_dir(), &self.config)?;
+
+            Ok(())
+        } else {
+            println!("Only Northstar installations done with `papa northstar init` can be updated this way");
+            Ok(())
+        }
+    }
+
+    pub async fn install_northstar(&self, game_path: &Path) -> Result<String, String> {
+        let index = utils::update_index(self.config.mod_dir()).await;
         let nmod = index
             .iter()
             .find(|f| f.name.to_lowercase() == "northstar")
             .ok_or("Couldn't find Northstar on thunderstore???")?;
-        let filename = format!("northstar-{}.zip", nmod.version);
 
+        self.do_install(&nmod, game_path).await?;
+
+        Ok(nmod.version.clone())
+    }
+
+    async fn do_install(&self, nmod: &Mod, game_path: &Path) -> Result<(), String> {
+        let filename = format!("northstar-{}.zip", nmod.version);
         let nfile = if let Some(f) = utils::check_cache(&self.dirs.cache_dir().join(&filename)) {
             println!("Using cached verision of Northstar@{}...", nmod.version);
             f

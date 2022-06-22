@@ -1,6 +1,6 @@
 use std::fs::{read_to_string, File};
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -8,13 +8,18 @@ use serde::{Deserialize, Serialize};
 pub struct Config {
     mod_dir: String,
     cache: bool,
+    #[serde(default)]
+    pub game_path: PathBuf,
+    pub nstar_version: Option<String>,
 }
 
 impl Config {
-    pub fn new(dir: String, cache: bool) -> Self {
+    pub fn new(dir: String, cache: bool, game_path: String, nstar_version: Option<String>) -> Self {
         Config {
             mod_dir: dir,
             cache,
+            game_path: PathBuf::from(game_path),
+            nstar_version,
         }
     }
 
@@ -44,7 +49,7 @@ pub fn load_config(config_dir: &Path) -> Result<Config, String> {
     } else {
         let mut cfg =
             File::create(cfg_path).map_err(|_| ("Unable to create config file".to_string()))?;
-        let def = Config::new(String::from("./mods"), true);
+        let def = Config::new(String::from("./mods"), true, String::new(), None);
         let parsed = toml::to_string_pretty(&def)
             .map_err(|_| "Failed to serialize default config".to_string())?;
         cfg.write_all(parsed.as_bytes())
