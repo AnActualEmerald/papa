@@ -34,7 +34,7 @@ impl Core {
         println!(" Done!");
         let mut installed = utils::get_installed(self.config.mod_dir())?;
         let outdated: Vec<&model::Mod> = index
-            .into_iter()
+            .iter()
             .filter(|e| {
                 installed.mods.iter().any(|i| {
                     i.package_name.trim() == e.name.trim() && i.version.trim() != e.version.trim()
@@ -44,52 +44,59 @@ impl Core {
 
         if outdated.len() == 0 {
             println!("Already up to date!");
-            return Ok(());
-        }
+        } else {
+            let size: i64 = outdated.iter().map(|f| f.file_size).sum();
 
-        let size: i64 = outdated.iter().map(|f| f.file_size).sum();
-
-        if !yes {
-            if let Ok(line) = self.rl.readline(&format!(
-                "Will download ~{:.2} MB (compressed), okay? [Y/n]: ",
-                size as f64 / 1_048_576f64
-            )) {
-                if line.to_lowercase() == "n" {
+            if !yes {
+                if let Ok(line) = self.rl.readline(&format!(
+                    "Will download ~{:.2} MB (compressed), okay? [Y/n]: ",
+                    size as f64 / 1_048_576f64
+                )) {
+                    if line.to_lowercase() == "n" {
+                        return Ok(());
+                    }
+                } else {
                     return Ok(());
                 }
-            } else {
-                return Ok(());
             }
-        }
-        let mut downloaded = vec![];
-        for base in outdated {
-            let name = &base.name;
-            let url = &base.url;
-            let path = self.dirs.cache_dir().join(format!("{}.zip", name));
-            match actions::download_file(&url, path).await {
-                Ok(f) => downloaded.push(f),
-                Err(e) => eprintln!("{}", e),
+            let mut downloaded = vec![];
+            for base in outdated {
+                let name = &base.name;
+                let url = &base.url;
+                let path = self.dirs.cache_dir().join(format!("{}.zip", name));
+                match actions::download_file(&url, path).await {
+                    Ok(f) => downloaded.push(f),
+                    Err(e) => eprintln!("{}", e),
+                }
             }
-        }
 
-        println!(
-            "Extracting mod{} to {}...",
-            if downloaded.len() > 1 { "s" } else { "" },
-            self.config.mod_dir().display()
-        );
-        downloaded.into_iter().for_each(|f| {
-            let pkg = actions::install_mod(&f, &self.config).unwrap();
-            if let Some(i) = installed
-                .mods
-                .iter()
-                .position(|e| e.package_name == pkg.package_name)
-            {
-                installed.mods.get_mut(i).unwrap().version = pkg.version;
-                installed.mods.get_mut(i).unwrap().mods = pkg.mods;
-                println!("Updated {}", pkg.package_name);
+            println!(
+                "Extracting mod{} to {}...",
+                if downloaded.len() > 1 { "s" } else { "" },
+                self.config.mod_dir().display()
+            );
+            downloaded.into_iter().for_each(|f| {
+                let pkg = actions::install_mod(&f, &self.config).unwrap();
+                if let Some(i) = installed
+                    .mods
+                    .iter()
+                    .position(|e| e.package_name == pkg.package_name)
+                {
+                    installed.mods.get_mut(i).unwrap().version = pkg.version;
+                    installed.mods.get_mut(i).unwrap().mods = pkg.mods;
+                    println!("Updated {}", pkg.package_name);
+                }
+            });
+            utils::save_installed(self.config.mod_dir(), &installed)?;
+        }
+        if let Some(current) = &self.config.nstar_version {
+            if let Some(nmod) = index.iter().find(|e| e.name.to_lowercase() == "northstar") {
+                if *current != nmod.version {
+                    println!("An update for Northstar is available! \x1b[93m{}\x1b[0m -> \x1b[93m{}\x1b[0m", current, nmod.version);
+                    println!("Run \"\x1b[96mpapa northstar update\x1b[0m\" to install it!");
+                }
             }
-        });
-        utils::save_installed(self.config.mod_dir(), &installed)?;
+        }
         Ok(())
     }
 
