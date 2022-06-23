@@ -39,7 +39,7 @@ fn map_response(res: Value) -> Option<Vec<Mod>> {
                     let desc = latest["description"].as_str().unwrap().to_string();
                     let deps = if let Value::Array(d) = &latest["dependencies"] {
                         //TODO: Support dependencies
-                        d.into_iter()
+                        d.iter()
                             .map(|e| e.as_str().unwrap().to_string())
                             .filter(|e| !e.starts_with("northstar-Northstar")) //Don't try to install northstar for any mods that "depend" on it
                             .collect()

@@ -141,7 +141,7 @@ pub fn resolve_deps<'a>(
     index: &'a Vec<Mod>,
 ) -> Result<(), String> {
     for dep in &base.deps {
-        let dep_name = dep.split("-").collect::<Vec<&str>>()[1];
+        let dep_name = dep.split('-').collect::<Vec<&str>>()[1];
         if !installed.iter().any(|e| e.package_name == dep_name) {
             if let Some(d) = index.iter().find(|f| f.name == dep_name) {
                 resolve_deps(valid, d, installed, index)?;

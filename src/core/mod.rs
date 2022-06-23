@@ -6,7 +6,9 @@ pub(crate) mod utils;
 
 mod error;
 
-pub use error::*;
+use std::path::Path;
+
+//pub use error::*;
 
 use directories::ProjectDirs;
 use regex::Regex;
@@ -42,14 +44,14 @@ impl Core {
             })
             .collect();
 
-        if outdated.len() == 0 {
+        if outdated.is_empty() {
             println!("Already up to date!");
         } else {
             let size: i64 = outdated.iter().map(|f| f.file_size).sum();
 
             if !yes {
                 if let Ok(line) = self.rl.readline(&format!(
-                    "Will download ~{:.2} MB (compressed), okay? [Y/n]: ",
+                    "Will download ~{:.2} MB (compressed), okay? (This will overwrite any changes made to mod files) [Y/n]: ",
                     size as f64 / 1_048_576f64
                 )) {
                     if line.to_lowercase() == "n" {
@@ -64,7 +66,7 @@ impl Core {
                 let name = &base.name;
                 let url = &base.url;
                 let path = self.dirs.cache_dir().join(format!("{}.zip", name));
-                match actions::download_file(&url, path).await {
+                match actions::download_file(url, path).await {
                     Ok(f) => downloaded.push(f),
                     Err(e) => eprintln!("{}", e),
                 }
@@ -183,8 +185,8 @@ impl Core {
                 continue;
             }
 
-            utils::resolve_deps(&mut valid, &base, &installed.mods, &index)?;
-            valid.push(&base);
+            utils::resolve_deps(&mut valid, base, &installed.mods, &index)?;
+            valid.push(base);
         }
 
         let size: i64 = valid.iter().map(|f| f.file_size).sum();
@@ -234,7 +236,7 @@ impl Core {
             if downloaded.len() > 1 { "s" } else { "" },
             self.config.mod_dir().display()
         );
-        let errors: Vec<Result<(), String>> = downloaded
+        if downloaded
             .iter()
             .map(|f| -> Result<(), String> {
                 let pkg = actions::install_mod(f, &self.config)?;
@@ -243,8 +245,9 @@ impl Core {
                 Ok(())
             })
             .filter(|f| f.is_err())
-            .collect();
-        if errors.len() > 0 {
+            .count()
+            > 0
+        {
             return Err("Errors while installing".to_string());
         }
 
@@ -265,7 +268,7 @@ impl Core {
             })
             .collect();
 
-        let paths = valid.iter().map(|f| f.flatten_paths()).flatten().collect();
+        let paths = valid.iter().flat_map(|f| f.flatten_paths()).collect();
 
         actions::uninstall(paths)?;
         utils::save_installed(self.config.mod_dir(), &installed)?;
@@ -379,13 +382,10 @@ impl Core {
         Ok(())
     }
 
-    pub(crate) async fn init_northstar(
-        &mut self,
-        game_path: &std::path::PathBuf,
-    ) -> Result<(), String> {
+    pub(crate) async fn init_northstar(&mut self, game_path: &Path) -> Result<(), String> {
         let version = self.install_northstar(game_path).await?;
 
-        self.config.game_path = game_path.clone();
+        self.config.game_path = game_path.to_path_buf();
         self.config.nstar_version = Some(version);
         self.config
             .set_dir(game_path.join("R2Northstar").join("mods").to_str().unwrap());

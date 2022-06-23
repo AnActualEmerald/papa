@@ -119,7 +119,7 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<InstalledMod, Str
             let mut file = archive.by_index(i).unwrap();
             let out = temp_dir.join(&file.enclosed_name().unwrap());
             debug!("Extracting file to {}", out.display());
-            if (*file.name()).ends_with("/") {
+            if (*file.name()).ends_with('/') {
                 fs::create_dir_all(&out).unwrap();
                 continue;
             } else if let Some(p) = out.parent() {
@@ -152,7 +152,7 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<InstalledMod, Str
         }
     }
 
-    if mods.len() == 0 {
+    if mods.is_empty() {
         error!("Didn't find any directories in extracted archive");
         return Err("Couldn't find a directory to copy".to_string());
     }

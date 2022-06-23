@@ -2,7 +2,6 @@ use std::{
     fs::{self, File, OpenOptions},
     io,
     path::{Path, PathBuf},
-    process::Stdio,
 };
 
 use log::debug;
@@ -53,7 +52,7 @@ impl Core {
                 }
             }
 
-            self.do_install(&nmod, &self.config.game_path).await?;
+            self.do_install(nmod, &self.config.game_path).await?;
             self.config.nstar_version = Some(nmod.version.clone());
             config::save_config(self.dirs.config_dir(), &self.config)?;
 
@@ -71,7 +70,7 @@ impl Core {
             .find(|f| f.name.to_lowercase() == "northstar")
             .ok_or("Couldn't find Northstar on thunderstore???")?;
 
-        self.do_install(&nmod, game_path).await?;
+        self.do_install(nmod, game_path).await?;
 
         Ok(nmod.version.clone())
     }
@@ -106,30 +105,27 @@ impl Core {
     }
 
     ///Recurses through a directory and moves each entry to the target, keeping the directory structure
-    fn copy_dirs(&self, root: &PathBuf, dir: &PathBuf, target: &Path) -> Result<(), String> {
-        for f in dir
+    fn copy_dirs(&self, root: &Path, dir: &Path, target: &Path) -> Result<(), String> {
+        for entry in (dir
             .read_dir()
-            .map_err(|_| "Unable to read directory".to_string())?
+            .map_err(|_| "Unable to read directory".to_string())?)
+        .flatten()
         {
-            if let Ok(entry) = f {
-                if entry.path().is_dir() {
-                    self.copy_dirs(root, &entry.path(), target)?;
-                    continue;
-                } else if let Some(p) = entry.path().parent() {
-                    let target = target.join(p.strip_prefix(&root).unwrap());
-                    debug!("Create dir {}", target.display());
-                    fs::create_dir_all(target)
-                        .map_err(|_| "Failed to create directory".to_string())?;
-                }
-                let target = target.join(entry.path().strip_prefix(root).unwrap());
-                debug!(
-                    "Moving file {} to {}",
-                    entry.path().display(),
-                    target.display()
-                );
-                fs::rename(entry.path(), target)
-                    .map_err(|e| format!("Unable to move file: {}", e))?;
+            if entry.path().is_dir() {
+                self.copy_dirs(root, &entry.path(), target)?;
+                continue;
+            } else if let Some(p) = entry.path().parent() {
+                let target = target.join(p.strip_prefix(&root).unwrap());
+                debug!("Create dir {}", target.display());
+                fs::create_dir_all(target).map_err(|_| "Failed to create directory".to_string())?;
             }
+            let target = target.join(entry.path().strip_prefix(root).unwrap());
+            debug!(
+                "Moving file {} to {}",
+                entry.path().display(),
+                target.display()
+            );
+            fs::rename(entry.path(), target).map_err(|e| format!("Unable to move file: {}", e))?;
         }
 
         Ok(())
@@ -143,7 +139,7 @@ impl Core {
             let mut f = archive.by_index(i).unwrap();
             let out = npath.join(f.name());
 
-            if (*f.name()).ends_with("/") {
+            if (*f.name()).ends_with('/') {
                 fs::create_dir_all(npath.join(f.name()))
                     .map_err(|_| "Unable to create directory".to_string())?;
                 continue;
