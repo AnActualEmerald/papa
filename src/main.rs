@@ -19,6 +19,8 @@ mod core;
 struct Cli {
     #[clap(subcommand)]
     command: Commands,
+    #[clap(short, long)]
+    debug: bool,
 }
 
 #[derive(Subcommand)]
@@ -104,6 +106,9 @@ enum NstarCommands {
 #[tokio::main]
 async fn main() -> Result<(), String> {
     let cli = Cli::parse();
+    if cli.debug {
+        std::env::set_var("RUST_LOG", "DEBUG");
+    }
     env_logger::init();
 
     let dirs = ProjectDirs::from("me", "greenboi", "papa").unwrap();

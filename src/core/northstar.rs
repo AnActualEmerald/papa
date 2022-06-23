@@ -84,9 +84,9 @@ impl Core {
             actions::download_file(&nmod.url, self.dirs.cache_dir().join(&filename)).await?
         };
         println!("Extracting Northstar...");
-        let extracted = self.extract(nfile)?;
-        println!("Copying Files...");
-        self.move_files(game_path, extracted)?;
+        let extracted = self.extract(nfile, game_path)?;
+        // println!("Copying Files...");
+        // self.move_files(game_path, extracted)?;
         println!("Done!");
 
         Ok(())
@@ -131,32 +131,43 @@ impl Core {
         Ok(())
     }
 
-    fn extract(&self, zip_file: File) -> Result<PathBuf, String> {
+    fn extract(&self, zip_file: File, target: &Path) -> Result<PathBuf, String> {
         let mut archive =
             ZipArchive::new(&zip_file).map_err(|_| "Unable to open zip archive".to_string())?;
-        let npath = self.dirs.cache_dir().join("northstar");
         for i in 0..archive.len() {
             let mut f = archive.by_index(i).unwrap();
-            let out = npath.join(f.name());
+            //This should work fine for N* because the dir structure *should* always be the same
+            if f.enclosed_name().unwrap().starts_with("Northstar") {
+                let out = target.join(
+                    f.enclosed_name()
+                        .unwrap()
+                        .strip_prefix("Northstar")
+                        .unwrap(),
+                );
 
-            if (*f.name()).ends_with('/') {
-                fs::create_dir_all(npath.join(f.name()))
-                    .map_err(|_| "Unable to create directory".to_string())?;
-                continue;
-            } else if let Some(p) = out.parent() {
-                fs::create_dir_all(&p).map_err(|_| "Unable to create directory".to_string())?;
+                if (*f.name()).ends_with('/') {
+                    debug!("Create directory {}", f.name());
+                    fs::create_dir_all(target.join(f.name()))
+                        .map_err(|_| "Unable to create directory".to_string())?;
+                    continue;
+                } else if let Some(p) = out.parent() {
+                    fs::create_dir_all(&p).map_err(|_| "Unable to create directory".to_string())?;
+                }
+
+                let mut outfile = OpenOptions::new()
+                    .create(true)
+                    .write(true)
+                    .truncate(true)
+                    .open(&out)
+                    .unwrap();
+
+                debug!("Write file {}", out.display());
+
+                io::copy(&mut f, &mut outfile)
+                    .map_err(|_| "Unable to write to file".to_string())?;
             }
-
-            let mut outfile = OpenOptions::new()
-                .create(true)
-                .write(true)
-                .truncate(true)
-                .open(&out)
-                .unwrap();
-
-            io::copy(&mut f, &mut outfile).map_err(|_| "Unable to write to file".to_string())?;
         }
 
-        Ok(npath)
+        Ok(target.to_path_buf())
     }
 }
