@@ -85,6 +85,7 @@ enum Commands {
         mods: Vec<String>,
     },
 
+    #[clap(alias("ns"))]
     Northstar {
         #[clap(subcommand)]
         command: NstarCommands,
