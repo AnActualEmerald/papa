@@ -1,12 +1,11 @@
 pub mod actions;
 pub mod config;
+#[cfg(feature = "northstar")]
 pub mod northstar;
 
 pub(crate) mod utils;
 
 mod error;
-
-use std::path::Path;
 
 // pub use error::*;
 
@@ -379,20 +378,6 @@ impl Core {
         }
 
         utils::save_installed(self.config.mod_dir(), &installed)?;
-        Ok(())
-    }
-
-    pub(crate) async fn init_northstar(&mut self, game_path: &Path) -> Result<(), String> {
-        let version = self.install_northstar(game_path).await?;
-
-        self.config.game_path = game_path.to_path_buf();
-        self.config.nstar_version = Some(version);
-        self.config
-            .set_dir(game_path.join("R2Northstar").join("mods").to_str().unwrap());
-
-        println!("Set mod directory to {}", self.config.mod_dir().display());
-        config::save_config(self.dirs.config_dir(), &self.config)?;
-
         Ok(())
     }
 }

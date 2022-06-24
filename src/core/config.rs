@@ -11,6 +11,8 @@ pub struct Config {
     #[serde(default)]
     pub game_path: PathBuf,
     pub nstar_version: Option<String>,
+    #[serde(default)]
+    pub exclude: Vec<String>,
 }
 
 impl Config {
@@ -20,6 +22,10 @@ impl Config {
             cache,
             game_path: PathBuf::from(game_path),
             nstar_version,
+            exclude: vec![
+                "ns_startup_args.txt".to_string(),
+                "ns_startup_args_dedi.txt".to_string(),
+            ],
         }
     }
 

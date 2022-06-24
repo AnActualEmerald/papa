@@ -85,6 +85,7 @@ enum Commands {
         mods: Vec<String>,
     },
 
+    #[cfg(feature = "northstar")]
     #[clap(alias("ns"))]
     Northstar {
         #[clap(subcommand)]
@@ -147,6 +148,7 @@ async fn main() -> Result<(), String> {
         Commands::Search { term } => core.search(term).await?,
         Commands::Remove { mod_names } => core.remove(mod_names)?,
         Commands::Clear { full } => core.clear(full)?,
+        #[cfg(feature = "northstar")]
         Commands::Northstar { command } => match command {
             //      NstarCommands::Install { game_path } => {
             //          let game_path = if let Some(p) = game_path {

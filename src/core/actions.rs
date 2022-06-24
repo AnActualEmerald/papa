@@ -93,6 +93,8 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<InstalledMod, Str
         .map_err(|_| "Couldn't resolve mods directory path".to_string())?;
     //Get the package manifest
     let mut manifest = String::new();
+    //Extract mod to a temp directory so that we can easily see any sub-mods
+    //This wouldn't be needed if the ZipArchive recreated directories, but oh well
     let temp_dir = mods_dir.join(
         SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)

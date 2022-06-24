@@ -28,3 +28,9 @@ serde_json = "1.0.81"
 tokio = { version = "1.19.2", features = ["full"] }
 toml = "0.5.9"
 zip = "0.6.2"
+
+[features]
+default = ["launcher"]
+northstar = []
+launcher = ["northstar"]
+
