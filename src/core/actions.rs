@@ -120,6 +120,14 @@ pub fn install_mod(zip_file: &File, config: &Config) -> Result<InstalledMod, Str
         for i in 0..archive.len() {
             let mut file = archive.by_index(i).unwrap();
             let out = temp_dir.join(&file.enclosed_name().unwrap());
+
+            if let Some(e) = out.extension() {
+                if out.exists() && e == std::ffi::OsStr::new("cfg") {
+                    debug!("Skipping existing config file {}", out.display());
+                    continue;
+                }
+            }
+
             debug!("Extracting file to {}", out.display());
             if (*file.name()).ends_with('/') {
                 fs::create_dir_all(&out).unwrap();

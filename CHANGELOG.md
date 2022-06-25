@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Northstar `install`, `init`, and `update` commands
 - File overwrite warning on `update`
+- Overwrite protection for `.cfg` files
 
+### Fixed
+- `update` not respecting disabled status
 
 
 ## v2.0.0

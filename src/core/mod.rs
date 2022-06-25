@@ -9,7 +9,10 @@ mod error;
 
 // pub use error::*;
 
+use std::fs;
+
 use directories::ProjectDirs;
+use log::{debug, trace};
 use regex::Regex;
 use rustyline::Editor;
 
@@ -77,14 +80,36 @@ impl Core {
                 self.config.mod_dir().display()
             );
             downloaded.into_iter().for_each(|f| {
-                let pkg = actions::install_mod(&f, &self.config).unwrap();
+                let mut pkg = actions::install_mod(&f, &self.config).unwrap();
                 if let Some(i) = installed
                     .mods
                     .iter()
                     .position(|e| e.package_name == pkg.package_name)
                 {
-                    installed.mods.get_mut(i).unwrap().version = pkg.version;
-                    installed.mods.get_mut(i).unwrap().mods = pkg.mods;
+                    let mut inst = installed.mods.get_mut(i).unwrap();
+                    inst.version = pkg.version;
+                    inst.mods
+                        .sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+                    pkg.mods
+                        .sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+
+                    for (a, b) in inst.mods.iter().zip(pkg.mods.iter()) {
+                        trace!("a mod: {:#?} | b mod: {:#?}", a, b);
+                        if a.disabled() {
+                            fs::remove_dir_all(&a.path).unwrap();
+                            debug!(
+                                "Moving mod from {} to {}",
+                                b.path.display(),
+                                a.path.display()
+                            );
+                            fs::rename(&b.path, &a.path).unwrap_or_else(|e| {
+                                debug!("Unable to move sub-mod to old path");
+                                debug!("{}", e);
+                            });
+                        }
+                    }
+
+                    inst.mods = pkg.mods;
                     println!("Updated {}", pkg.package_name);
                 }
             });

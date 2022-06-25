@@ -111,7 +111,7 @@ async fn main() -> Result<(), String> {
     if cli.debug {
         std::env::set_var("RUST_LOG", "DEBUG");
     }
-    env_logger::init();
+    env_logger::builder().format_timestamp(None).init();
 
     let dirs = ProjectDirs::from("me", "greenboi", "papa").unwrap();
     let config = config::load_config(dirs.config_dir()).unwrap();
