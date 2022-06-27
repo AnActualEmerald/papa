@@ -20,9 +20,11 @@ use crate::{
 
 use log::{debug, error};
 
+use super::error::ScorchError;
+
 ///URL to download
 ///file name to save to
-pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File, String> {
+pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File, ScorchError> {
     let client = Client::new();
 
     //send the request
@@ -35,7 +37,7 @@ pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File, String
     if !res.status().is_success() {
         error!("Got bad response from thunderstore");
         error!("{:?}", res);
-        return Err(format!("{} at URL {}", res.status(), url));
+        return Err(format!("{} at URL {}", res.status(), url).into());
     }
 
     let file_size = res.content_length().ok_or(format!(
@@ -50,8 +52,8 @@ pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File, String
     ).progress_chars("=>-")).with_message(format!("Downloading {}", url));
 
     //start download in chunks
-    let mut file = File::create(&file_path)
-        .map_err(|_| (format!("Failed to create file {}", file_path.display())))?;
+    let mut file = File::create(&file_path)?;
+    // .map_err(|_| (format!("Failed to create file {}", file_path.display())))?;
     let mut downloaded: u64 = 0;
     let mut stream = res.bytes_stream();
     debug!("Starting download from {}", url);

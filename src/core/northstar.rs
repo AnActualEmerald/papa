@@ -9,10 +9,10 @@ use zip::ZipArchive;
 
 use crate::api::model::Mod;
 
-use super::{actions, config, utils, Core};
+use super::{actions, config, error::ScorchError, utils, Core};
 
 impl Core {
-    pub(crate) async fn init_northstar(&mut self, game_path: &Path) -> Result<(), String> {
+    pub(crate) async fn init_northstar(&mut self, game_path: &Path) -> Result<(), ScorchError> {
         let version = self.install_northstar(game_path).await?;
 
         self.config.game_path = game_path.to_path_buf();
@@ -26,6 +26,7 @@ impl Core {
         Ok(())
     }
 
+    #[cfg(feature = "launcher")]
     pub fn start_northstar(&self) -> Result<(), String> {
         let game = self.config.game_path.join("NorthstarLauncher.exe");
 
@@ -42,7 +43,7 @@ impl Core {
     ///Update N* at the path that was initialized
     ///
     ///Returns OK if the path isn't set, but notifies the user
-    pub async fn update_northstar(&mut self) -> Result<(), String> {
+    pub async fn update_northstar(&mut self) -> Result<(), ScorchError> {
         if let Some(current) = &self.config.nstar_version {
             let index = utils::update_index(self.config.mod_dir()).await;
             let nmod = index
@@ -78,7 +79,7 @@ impl Core {
     ///Install N* to the provided path
     ///
     ///Returns the version that was installed
-    pub async fn install_northstar(&self, game_path: &Path) -> Result<String, String> {
+    pub async fn install_northstar(&self, game_path: &Path) -> Result<String, ScorchError> {
         let index = utils::update_index(self.config.mod_dir()).await;
         let nmod = index
             .iter()
@@ -93,7 +94,7 @@ impl Core {
     ///Install N* from the provided mod
     ///
     ///Checks cache, else downloads the latest version
-    async fn do_install(&self, nmod: &Mod, game_path: &Path) -> Result<(), String> {
+    async fn do_install(&self, nmod: &Mod, game_path: &Path) -> Result<(), ScorchError> {
         let filename = format!("northstar-{}.zip", nmod.version);
         let nfile = if let Some(f) = utils::check_cache(&self.dirs.cache_dir().join(&filename)) {
             println!("Using cached verision of Northstar@{}...", nmod.version);
@@ -150,7 +151,7 @@ impl Core {
     // }
 
     ///Extract N* zip file to target game path
-    fn extract(&self, zip_file: File, target: &Path) -> Result<(), String> {
+    fn extract(&self, zip_file: File, target: &Path) -> Result<(), ScorchError> {
         let mut archive =
             ZipArchive::new(&zip_file).map_err(|_| "Unable to open zip archive".to_string())?;
         for i in 0..archive.len() {
@@ -162,10 +163,7 @@ impl Core {
                     continue;
                 }
             } else {
-                return Err(format!(
-                    "Unable to read name of compressed file {}",
-                    f.name()
-                ));
+                return Err(format!("Unable to read name of compressed file {}", f.name()).into());
             }
 
             //This should work fine for N* because the dir structure *should* always be the same

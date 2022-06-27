@@ -101,6 +101,7 @@ enum NstarCommands {
     Init { game_path: Option<PathBuf> },
     ///Updats the current northstar install. Must have been installed with `papa northstar init`.
     Update {},
+    #[cfg(feature = "launcher")]
     ///Start the Northstar client
     Start {},
 }
@@ -169,6 +170,7 @@ async fn main() -> Result<(), String> {
             NstarCommands::Update {} => {
                 core.update_northstar().await?;
             }
+            #[cfg(feature = "launcher")]
             NstarCommands::Start {} => {
                 core.start_northstar()?;
             }
