@@ -79,13 +79,12 @@ enum Commands {
         ///The term to search for
         term: Vec<String>,
     },
-    Disable {
-        mods: Vec<String>,
-    },
-    Enable {
-        mods: Vec<String>,
-    },
+    ///Disable mod(s) or sub-mod(s)
+    Disable { mods: Vec<String> },
+    ///Enable mod(s) or sub-mod(s)
+    Enable { mods: Vec<String> },
 
+    ///Commands for managing Northstar itself
     #[cfg(feature = "northstar")]
     #[clap(alias("ns"))]
     Northstar {

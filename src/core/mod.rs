@@ -235,7 +235,10 @@ impl Core {
         let mut downloaded = vec![];
         for base in valid {
             let name = &base.name;
-            let path = self.dirs.cache_dir().join(format!("{}.zip", name));
+            let path = self
+                .dirs
+                .cache_dir()
+                .join(format!("{}_{}.zip", name, base.version));
 
             //would love to use this in the same if as the let but it's unstable so...
             if self.config.cache() {

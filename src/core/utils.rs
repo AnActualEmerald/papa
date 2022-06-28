@@ -44,6 +44,7 @@ pub fn get_installed(path: &Path) -> Result<LocalIndex> {
     }
 }
 
+#[inline]
 pub fn save_installed(path: &Path, installed: &LocalIndex) -> Result<()> {
     let path = path.join(".papa.ron");
 
@@ -52,9 +53,9 @@ pub fn save_installed(path: &Path, installed: &LocalIndex) -> Result<()> {
     Ok(())
 }
 
+#[inline]
 pub fn check_cache(path: &Path) -> Option<File> {
-    let opt = OpenOptions::new().read(true).open(path);
-    if let Ok(f) = opt {
+    if let Ok(f) = OpenOptions::new().read(true).open(path) {
         Some(f)
     } else {
         None
@@ -103,6 +104,7 @@ pub fn clear_cache(dir: &Path, force: bool) -> Result<()> {
 //            .collect())
 //    }
 
+#[inline]
 pub fn save_file(file: &Path, data: String) -> Result<()> {
     fs::write(file, data.as_bytes())?;
     Ok(())
