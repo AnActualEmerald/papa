@@ -356,7 +356,9 @@ impl Core {
             let m = m.to_lowercase();
             for i in installed.mods.iter_mut() {
                 if i.package_name.to_lowercase() == m {
-                    utils::disable_mod(&mut i.mods[0])?;
+                    for mut sub in i.mods.iter_mut() {
+                        utils::disable_mod(&mut sub)?;
+                    }
                     println!("Disabled {}", m);
                 } else {
                     for e in i.mods.iter_mut() {
@@ -378,7 +380,9 @@ impl Core {
             let m = m.to_lowercase();
             for i in installed.mods.iter_mut() {
                 if i.package_name.to_lowercase() == m {
-                    utils::enable_mod(&mut i.mods[0], self.config.mod_dir())?;
+                    for mut sub in i.mods.iter_mut() {
+                        utils::enable_mod(&mut sub, self.config.mod_dir())?;
+                    }
                     println!("Enabled {}", m);
                 } else {
                     for e in i.mods.iter_mut() {

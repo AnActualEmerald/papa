@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - `update` not respecting disabled status
+- `disable` and `enable` not properly modifying all sub mods if the parent mod's name was used
 
 
 ## v2.0.0

@@ -76,7 +76,10 @@ pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File> {
 
 pub fn uninstall(mods: Vec<&PathBuf>) -> Result<()> {
     for p in mods {
-        fs::remove_dir_all(p).context("Unable to remove directory")?;
+        if let Err(_) = fs::remove_dir_all(p) {
+            //try removing a file too, just in case
+            fs::remove_file(p).context(format!("Unable to remove directory {}", p.display()))?
+        }
         println!("Removed {}", p.display());
     }
     Ok(())
