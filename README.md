@@ -1,4 +1,4 @@
-![scorch titan icon](https://static.wikia.nocookie.net/titanfall/images/d/d5/ScorchIcon.png/revision/latest?cb=20170627154342)
+![scorch titan icon](https://static.wikia.nocookie.net/titanfall/images/d/d5/ScorchIcon.png)
 
 # Papa command line mod manager
 Mod manager cli for [Northstar](https://github.com/R2Northstar/Northstar)
@@ -34,7 +34,9 @@ papa ns init /PATH/TO/TITANFALL2/
 ### Ubuntu/Debian(& derivatives)
 Download the `.deb` file from the latest release and install it using whatever you usually use to install packages:
 ```bash
+
 sudo apt install ./papa_2.1.0.deb
+
 ```
 
 ### Windows
