@@ -1,4 +1,7 @@
+use std::path::PathBuf;
+
 use clap::{Parser, Subcommand};
+use log::debug;
 
 use crate::api::model;
 use crate::core::config;
@@ -17,6 +20,8 @@ mod core;
 struct Cli {
     #[clap(subcommand)]
     command: Commands,
+    #[clap(short, long)]
+    debug: bool,
 }
 
 #[derive(Subcommand)]
@@ -74,18 +79,40 @@ enum Commands {
         ///The term to search for
         term: Vec<String>,
     },
-    Disable {
-        mods: Vec<String>,
-    },
-    Enable {
-        mods: Vec<String>,
+    ///Disable mod(s) or sub-mod(s)
+    Disable { mods: Vec<String> },
+    ///Enable mod(s) or sub-mod(s)
+    Enable { mods: Vec<String> },
+
+    ///Commands for managing Northstar itself
+    #[cfg(feature = "northstar")]
+    #[clap(alias("ns"))]
+    Northstar {
+        #[clap(subcommand)]
+        command: NstarCommands,
     },
 }
 
+#[derive(Subcommand)]
+enum NstarCommands {
+    //    ///Installs northstar to provided path, or current directory.
+    //    Install { game_path: Option<PathBuf> },
+    ///Initializes a new northstar installation in the provided path, or current directory.
+    Init { game_path: Option<PathBuf> },
+    ///Updats the current northstar install. Must have been installed with `papa northstar init`.
+    Update {},
+    #[cfg(feature = "launcher")]
+    ///Start the Northstar client
+    Start {},
+}
+
 #[tokio::main]
-async fn main() -> Result<(), String> {
+async fn main() {
     let cli = Cli::parse();
-    env_logger::init();
+    if cli.debug {
+        std::env::set_var("RUST_LOG", "DEBUG");
+    }
+    env_logger::builder().format_timestamp(None).init();
 
     let dirs = ProjectDirs::from("me", "greenboi", "papa").unwrap();
     let config = config::load_config(dirs.config_dir()).unwrap();
@@ -94,8 +121,8 @@ async fn main() -> Result<(), String> {
 
     let mut core = core::Core::new(config, dirs, rl);
 
-    match cli.command {
-        Commands::Update { yes } => core.update(yes).await?,
+    let res = match cli.command {
+        Commands::Update { yes } => core.update(yes).await,
         Commands::Config {
             mods_dir: None,
             cache: None,
@@ -104,25 +131,61 @@ async fn main() -> Result<(), String> {
                 "Current config:\n{}",
                 toml::to_string_pretty(&core.config).unwrap()
             );
+            Ok(())
         }
-        Commands::Config { mods_dir, cache } => core.update_config(mods_dir, cache)?,
-        Commands::List {} => core.list()?,
+        Commands::Config { mods_dir, cache } => core.update_config(mods_dir, cache),
+        Commands::List {} => core.list(),
         Commands::Install {
             mod_names: _,
             url: Some(url),
             yes: _,
-        } => core.install_from_url(url).await?,
+        } => core.install_from_url(url).await,
         Commands::Install {
             mod_names,
             url: None,
             yes,
-        } => core.install(mod_names, yes).await?,
-        Commands::Disable { mods } => core.disable(mods)?,
-        Commands::Enable { mods } => core.enable(mods)?,
-        Commands::Search { term } => core.search(term).await?,
-        Commands::Remove { mod_names } => core.remove(mod_names)?,
-        Commands::Clear { full } => core.clear(full)?,
-    }
+        } => core.install(mod_names, yes).await,
+        Commands::Disable { mods } => core.disable(mods),
+        Commands::Enable { mods } => core.enable(mods),
+        Commands::Search { term } => core.search(term).await,
+        Commands::Remove { mod_names } => core.remove(mod_names),
+        Commands::Clear { full } => core.clear(full),
+        #[cfg(feature = "northstar")]
+        Commands::Northstar { command } => match command {
+            //      NstarCommands::Install { game_path } => {
+            //          let game_path = if let Some(p) = game_path {
+            //              p.canonicalize().unwrap()
+            //          } else {
+            //              std::env::current_dir().unwrap()
+            //          };
+            //          core.install_northstar(&game_path).await
+            //      }
+            NstarCommands::Init { game_path } => {
+                let game_path = if let Some(p) = game_path {
+                    match p.canonicalize() {
+                        Ok(p) => p,
+                        Err(e) => {
+                            debug!("{:#?}", e);
+                            println!("{}", e);
+                            return;
+                        }
+                    }
+                } else {
+                    std::env::current_dir().unwrap()
+                };
+                core.init_northstar(&game_path).await
+            }
+            NstarCommands::Update {} => core.update_northstar().await,
+            #[cfg(feature = "launcher")]
+            NstarCommands::Start {} => core.start_northstar(),
+        },
+    };
 
-    Ok(())
+    if let Some(e) = res.err() {
+        if cli.debug {
+            debug!("{:#?}", e);
+        } else {
+            println!("{}", e);
+        }
+    }
 }

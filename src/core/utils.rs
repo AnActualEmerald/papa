@@ -4,8 +4,8 @@ use crate::api::model::SubMod;
 use crate::model;
 use crate::model::InstalledMod;
 use crate::model::Mod;
+use anyhow::{anyhow, Context, Result};
 use directories::ProjectDirs;
-use log::error;
 use std::fs::{self, File, OpenOptions};
 use std::io::Write;
 use std::path::Path;
@@ -25,29 +25,27 @@ pub async fn update_index(path: &Path) -> Vec<model::Mod> {
     index
 }
 
-pub fn get_installed(path: &Path) -> Result<LocalIndex, String> {
+pub fn get_installed(path: &Path) -> Result<LocalIndex> {
     let path = path.join(".papa.ron");
     if path.exists() {
-        let raw = fs::read_to_string(path)
-            .map_err(|_| "Unable to read installed packages".to_string())?;
-        Ok(ron::from_str(&raw).map_err(|_| "Unable to parse installed packages".to_string())?)
+        let raw = fs::read_to_string(path).context("Unable to read installed packages")?;
+        Ok(ron::from_str(&raw)?)
     } else {
         if let Some(p) = path.parent() {
             if !p.exists() {
-                fs::create_dir_all(p)
-                    .map_err(|_| format!("Unable to create directory at {}", p.display()))?;
+                fs::create_dir_all(p)?;
             }
         }
         File::create(path)
-            .map_err(|_| "Unable to create installed package index".to_string())?
-            .write_all(ron::to_string(&LocalIndex::new()).unwrap().as_bytes())
-            .unwrap();
+            .context("Unable to create installed package index")?
+            .write_all(ron::to_string(&LocalIndex::new()).unwrap().as_bytes())?;
 
         Ok(LocalIndex::new())
     }
 }
 
-pub fn save_installed(path: &Path, installed: &LocalIndex) -> Result<(), String> {
+#[inline]
+pub fn save_installed(path: &Path, installed: &LocalIndex) -> Result<()> {
     let path = path.join(".papa.ron");
 
     save_file(&path, ron::to_string(installed).unwrap())?;
@@ -55,9 +53,9 @@ pub fn save_installed(path: &Path, installed: &LocalIndex) -> Result<(), String>
     Ok(())
 }
 
+#[inline]
 pub fn check_cache(path: &Path) -> Option<File> {
-    let opt = OpenOptions::new().read(true).open(path);
-    if let Ok(f) = opt {
+    if let Ok(f) = OpenOptions::new().read(true).open(path) {
         Some(f)
     } else {
         None
@@ -69,8 +67,8 @@ pub fn ensure_dirs(dirs: &ProjectDirs) {
     fs::create_dir_all(dirs.config_dir()).unwrap();
 }
 
-pub fn remove_file(path: &Path) -> Result<(), String> {
-    fs::remove_file(path).map_err(|_| format!("Unable to remove file {}", path.display()))
+pub fn remove_file(path: &Path) -> Result<()> {
+    fs::remove_file(path).context(format!("Unable to remove file {}", path.display()))
 }
 
 //    pub fn remove_dir(dir: &Path) -> Result<(), String> {
@@ -80,24 +78,16 @@ pub fn remove_file(path: &Path) -> Result<(), String> {
 //        Ok(())
 //    }
 
-pub fn clear_cache(dir: &Path, force: bool) -> Result<(), String> {
-    for entry in
-        fs::read_dir(dir).map_err(|_| format!("unable to read directory {}", dir.display()))?
-    {
-        let path = entry
-            .map_err(|_| "Error reading directory entry".to_string())?
-            .path();
+pub fn clear_cache(dir: &Path, force: bool) -> Result<()> {
+    for entry in fs::read_dir(dir).context(format!("unable to read directory {}", dir.display()))? {
+        let path = entry.context("Error reading directory entry")?.path();
 
         if path.is_dir() {
             clear_cache(&path, force)?;
             fs::remove_dir(&path)
-                .map_err(|_| format!("Unable to remove directory {}", path.display()))?;
-        } else if path.ends_with(".zip") {
-            fs::remove_file(&path)
-                .map_err(|_| format!("Unable to remove file {}", path.display()))?;
-        } else {
-            fs::remove_file(&path)
-                .map_err(|_| format!("Unable to remove file {}", path.display()))?;
+                .context(format!("Unable to remove directory {}", path.display()))?;
+        } else if path.ends_with(".zip") || force {
+            fs::remove_file(&path).context(format!("Unable to remove file {}", path.display()))?;
         }
     }
 
@@ -114,9 +104,9 @@ pub fn clear_cache(dir: &Path, force: bool) -> Result<(), String> {
 //            .collect())
 //    }
 
-pub fn save_file(file: &Path, data: String) -> Result<(), String> {
-    fs::write(file, data.as_bytes())
-        .map_err(|_| format!("Unable to write file {}", file.display()))?;
+#[inline]
+pub fn save_file(file: &Path, data: String) -> Result<()> {
+    fs::write(file, data.as_bytes())?;
     Ok(())
 }
 
@@ -139,17 +129,18 @@ pub fn resolve_deps<'a>(
     base: &'a Mod,
     installed: &'a Vec<InstalledMod>,
     index: &'a Vec<Mod>,
-) -> Result<(), String> {
+) -> Result<()> {
     for dep in &base.deps {
-        let dep_name = dep.split("-").collect::<Vec<&str>>()[1];
+        let dep_name = dep.split('-').collect::<Vec<&str>>()[1];
         if !installed.iter().any(|e| e.package_name == dep_name) {
             if let Some(d) = index.iter().find(|f| f.name == dep_name) {
                 resolve_deps(valid, d, installed, index)?;
                 valid.push(d);
             } else {
-                return Err(format!(
+                return Err(anyhow!(
                     "Unable to resolve dependency {} of {}",
-                    dep, base.name
+                    dep,
+                    base.name
                 ));
             }
         }
@@ -157,7 +148,7 @@ pub fn resolve_deps<'a>(
     Ok(())
 }
 
-pub fn disable_mod(m: &mut SubMod) -> Result<bool, String> {
+pub fn disable_mod(m: &mut SubMod) -> Result<bool> {
     if m.disabled() {
         return Ok(false);
     }
@@ -168,21 +159,17 @@ pub fn disable_mod(m: &mut SubMod) -> Result<bool, String> {
     let dir = m.path.parent().unwrap().join(".disabled");
 
     if !dir.exists() {
-        fs::create_dir_all(&dir).map_err(|_| "Failed to create disable directory")?;
+        fs::create_dir_all(&dir)?;
     }
 
     m.path = dir.join(name);
 
-    fs::rename(old_path, &m.path).map_err(|e| {
-        error!("Error moving mod to disabled directory");
-        error!("{}", e);
-        "Couldn't move mod".to_string()
-    })?;
+    fs::rename(old_path, &m.path).context("Failed to rename mod")?;
 
     Ok(true)
 }
 
-pub fn enable_mod(m: &mut SubMod, mods_dir: &Path) -> Result<bool, String> {
+pub fn enable_mod(m: &mut SubMod, mods_dir: &Path) -> Result<bool> {
     if !m.disabled() {
         return Ok(false);
     }
@@ -190,11 +177,7 @@ pub fn enable_mod(m: &mut SubMod, mods_dir: &Path) -> Result<bool, String> {
     let old_path = m.path.clone();
     m.path = mods_dir.join(&m.name);
 
-    fs::rename(old_path, &m.path).map_err(|e| {
-        error!("Error moving mod from disabled directory");
-        error!("{}", e);
-        "Couldn't move mod".to_string()
-    })?;
+    fs::rename(old_path, &m.path).context("Failed to reanem mod")?;
 
     Ok(true)
 }

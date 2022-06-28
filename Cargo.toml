@@ -1,6 +1,6 @@
 [package]
 name = "papa"
-version = "2.0.0"
+version = "2.1.0"
 edition = "2021"
 license = "MIT"
 description = "A cli mod manager for the Northstar launcher"
@@ -12,7 +12,8 @@ repository = "https://github.com/AnActualEmerald/papa"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-clap = { version = "3.2.5", features = ["derive", "color"] }
+anyhow = "1.0.58"
+clap = { version = "3.2.6", features = ["derive", "color"] }
 convert_case = "0.5.0"
 directories = "4.0.1"
 env_logger = "0.9.0"
@@ -28,3 +29,13 @@ serde_json = "1.0.81"
 tokio = { version = "1.19.2", features = ["full"] }
 toml = "0.5.9"
 zip = "0.6.2"
+
+[features]
+default = ["northstar"]
+northstar = []
+launcher = ["northstar"]
+
+[profile.release]
+strip = true
+lto = true
+opt-level = "z"

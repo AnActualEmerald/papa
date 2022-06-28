@@ -1,15 +1,22 @@
 pub mod actions;
 pub mod config;
+#[cfg(feature = "northstar")]
+pub mod northstar;
 
 pub(crate) mod utils;
 
+use std::fs;
+
 use directories::ProjectDirs;
+use log::{debug, trace};
 use regex::Regex;
 use rustyline::Editor;
 
 use self::config::Config;
 use crate::api;
 use crate::api::model::{self, InstalledMod};
+
+use anyhow::{anyhow, Result};
 
 pub struct Core {
     pub config: Config,
@@ -23,13 +30,13 @@ impl Core {
         Core { config, dirs, rl }
     }
 
-    pub async fn update(&mut self, yes: bool) -> Result<(), String> {
+    pub async fn update(&mut self, yes: bool) -> Result<()> {
         print!("Updating package index...");
         let index = &api::get_package_index().await?;
         println!(" Done!");
         let mut installed = utils::get_installed(self.config.mod_dir())?;
         let outdated: Vec<&model::Mod> = index
-            .into_iter()
+            .iter()
             .filter(|e| {
                 installed.mods.iter().any(|i| {
                     i.package_name.trim() == e.name.trim() && i.version.trim() != e.version.trim()
@@ -37,58 +44,87 @@ impl Core {
             })
             .collect();
 
-        if outdated.len() == 0 {
+        if outdated.is_empty() {
             println!("Already up to date!");
-            return Ok(());
-        }
+        } else {
+            let size: i64 = outdated.iter().map(|f| f.file_size).sum();
 
-        let size: i64 = outdated.iter().map(|f| f.file_size).sum();
-
-        if !yes {
-            if let Ok(line) = self.rl.readline(&format!(
-                "Will download ~{:.2} MB (compressed), okay? [Y/n]: ",
-                size as f64 / 1_048_576f64
-            )) {
-                if line.to_lowercase() == "n" {
+            if !yes {
+                if let Ok(line) = self.rl.readline(&format!(
+                    "Will download ~{:.2} MB (compressed), okay? (This will overwrite any changes made to mod files) [Y/n]: ",
+                    size as f64 / 1_048_576f64
+                )) {
+                    if line.to_lowercase() == "n" {
+                        return Ok(());
+                    }
+                } else {
                     return Ok(());
                 }
-            } else {
-                return Ok(());
             }
-        }
-        let mut downloaded = vec![];
-        for base in outdated {
-            let name = &base.name;
-            let url = &base.url;
-            let path = self.dirs.cache_dir().join(format!("{}.zip", name));
-            match actions::download_file(&url, path).await {
-                Ok(f) => downloaded.push(f),
-                Err(e) => eprintln!("{}", e),
+            let mut downloaded = vec![];
+            for base in outdated {
+                let name = &base.name;
+                let url = &base.url;
+                let path = self.dirs.cache_dir().join(format!("{}.zip", name));
+                match actions::download_file(url, path).await {
+                    Ok(f) => downloaded.push(f),
+                    Err(e) => eprintln!("{}", e),
+                }
             }
-        }
 
-        println!(
-            "Extracting mod{} to {}...",
-            if downloaded.len() > 1 { "s" } else { "" },
-            self.config.mod_dir().display()
-        );
-        downloaded.into_iter().for_each(|f| {
-            let pkg = actions::install_mod(&f, &self.config).unwrap();
-            if let Some(i) = installed
-                .mods
-                .iter()
-                .position(|e| e.package_name == pkg.package_name)
-            {
-                installed.mods.get_mut(i).unwrap().version = pkg.version;
-                installed.mods.get_mut(i).unwrap().mods = pkg.mods;
-                println!("Updated {}", pkg.package_name);
+            println!(
+                "Extracting mod{} to {}...",
+                if downloaded.len() > 1 { "s" } else { "" },
+                self.config.mod_dir().display()
+            );
+            downloaded.into_iter().for_each(|f| {
+                let mut pkg = actions::install_mod(&f, &self.config).unwrap();
+                if let Some(i) = installed
+                    .mods
+                    .iter()
+                    .position(|e| e.package_name == pkg.package_name)
+                {
+                    let mut inst = installed.mods.get_mut(i).unwrap();
+                    inst.version = pkg.version;
+                    inst.mods
+                        .sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+                    pkg.mods
+                        .sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+
+                    for (a, b) in inst.mods.iter().zip(pkg.mods.iter()) {
+                        trace!("a mod: {:#?} | b mod: {:#?}", a, b);
+                        if a.disabled() {
+                            fs::remove_dir_all(&a.path).unwrap();
+                            debug!(
+                                "Moving mod from {} to {}",
+                                b.path.display(),
+                                a.path.display()
+                            );
+                            fs::rename(&b.path, &a.path).unwrap_or_else(|e| {
+                                debug!("Unable to move sub-mod to old path");
+                                debug!("{}", e);
+                            });
+                        }
+                    }
+
+                    inst.mods = pkg.mods;
+                    println!("Updated {}", pkg.package_name);
+                }
+            });
+            utils::save_installed(self.config.mod_dir(), &installed)?;
+        }
+        if let Some(current) = &self.config.nstar_version {
+            if let Some(nmod) = index.iter().find(|e| e.name.to_lowercase() == "northstar") {
+                if *current != nmod.version {
+                    println!("An update for Northstar is available! \x1b[93m{}\x1b[0m -> \x1b[93m{}\x1b[0m", current, nmod.version);
+                    println!("Run \"\x1b[96mpapa northstar update\x1b[0m\" to install it!");
+                }
             }
-        });
-        utils::save_installed(self.config.mod_dir(), &installed)?;
+        }
         Ok(())
     }
 
-    pub fn list(&self) -> Result<(), String> {
+    pub fn list(&self) -> Result<()> {
         let mods = utils::get_installed(self.config.mod_dir())?.mods;
         if !mods.is_empty() {
             println!("Installed mods:");
@@ -120,7 +156,7 @@ impl Core {
         Ok(())
     }
 
-    pub async fn install_from_url(&self, url: String) -> Result<(), String> {
+    pub async fn install_from_url(&self, url: String) -> Result<()> {
         let file_name = url
             .as_str()
             .replace(':', "")
@@ -141,7 +177,7 @@ impl Core {
         Ok(())
     }
 
-    pub async fn install(&mut self, mod_names: Vec<String>, yes: bool) -> Result<(), String> {
+    pub async fn install(&mut self, mod_names: Vec<String>, yes: bool) -> Result<()> {
         let index = utils::update_index(self.config.mod_dir()).await;
         let mut installed = utils::get_installed(self.config.mod_dir())?;
         let mut valid = vec![];
@@ -158,10 +194,7 @@ impl Core {
             let base = index
                 .iter()
                 .find(|e| e.name.to_lowercase() == parts[1].to_lowercase())
-                .ok_or_else(|| {
-                    println!("Couldn't find package {}", name);
-                    "No such package".to_string()
-                })?;
+                .ok_or_else(|| anyhow!("No such package {}", &parts[1]))?;
 
             if base.installed {
                 println!(
@@ -171,8 +204,8 @@ impl Core {
                 continue;
             }
 
-            utils::resolve_deps(&mut valid, &base, &installed.mods, &index)?;
-            valid.push(&base);
+            utils::resolve_deps(&mut valid, base, &installed.mods, &index)?;
+            valid.push(base);
         }
 
         let size: i64 = valid.iter().map(|f| f.file_size).sum();
@@ -202,7 +235,10 @@ impl Core {
         let mut downloaded = vec![];
         for base in valid {
             let name = &base.name;
-            let path = self.dirs.cache_dir().join(format!("{}.zip", name));
+            let path = self
+                .dirs
+                .cache_dir()
+                .join(format!("{}_{}.zip", name, base.version));
 
             //would love to use this in the same if as the let but it's unstable so...
             if self.config.cache() {
@@ -222,25 +258,24 @@ impl Core {
             if downloaded.len() > 1 { "s" } else { "" },
             self.config.mod_dir().display()
         );
-        let errors: Vec<Result<(), String>> = downloaded
+        for e in downloaded
             .iter()
-            .map(|f| -> Result<(), String> {
+            .map(|f| -> Result<()> {
                 let pkg = actions::install_mod(f, &self.config)?;
                 installed.mods.push(pkg.clone());
                 println!("Installed {}", pkg.package_name);
                 Ok(())
             })
             .filter(|f| f.is_err())
-            .collect();
-        if errors.len() > 0 {
-            return Err("Errors while installing".to_string());
+        {
+            println!("Encountered errors while installing mods:");
+            println!("{}", e.unwrap_err());
         }
-
         utils::save_installed(self.config.mod_dir(), &installed)?;
         Ok(())
     }
 
-    pub fn remove(&self, mod_names: Vec<String>) -> Result<(), String> {
+    pub fn remove(&self, mod_names: Vec<String>) -> Result<()> {
         let mut installed = utils::get_installed(self.config.mod_dir())?;
         let valid: Vec<InstalledMod> = mod_names
             .iter()
@@ -253,14 +288,14 @@ impl Core {
             })
             .collect();
 
-        let paths = valid.iter().map(|f| f.flatten_paths()).flatten().collect();
+        let paths = valid.iter().flat_map(|f| f.flatten_paths()).collect();
 
         actions::uninstall(paths)?;
         utils::save_installed(self.config.mod_dir(), &installed)?;
         Ok(())
     }
 
-    pub fn clear(&self, full: bool) -> Result<(), String> {
+    pub fn clear(&self, full: bool) -> Result<()> {
         if full {
             println!("Clearing cache files...");
         } else {
@@ -272,11 +307,7 @@ impl Core {
         Ok(())
     }
 
-    pub fn update_config(
-        &mut self,
-        mods_dir: Option<String>,
-        cache: Option<bool>,
-    ) -> Result<(), String> {
+    pub fn update_config(&mut self, mods_dir: Option<String>, cache: Option<bool>) -> Result<()> {
         if let Some(dir) = mods_dir {
             self.config.set_dir(&dir);
             println!("Set install directory to {}", dir);
@@ -295,7 +326,7 @@ impl Core {
         Ok(())
     }
 
-    pub(crate) async fn search(&self, term: Vec<String>) -> Result<(), String> {
+    pub(crate) async fn search(&self, term: Vec<String>) -> Result<()> {
         let index = utils::update_index(self.config.mod_dir()).await;
         println!("Searching...");
         println!();
@@ -322,13 +353,15 @@ impl Core {
         Ok(())
     }
 
-    pub(crate) fn disable(&self, mods: Vec<String>) -> Result<(), String> {
+    pub(crate) fn disable(&self, mods: Vec<String>) -> Result<()> {
         let mut installed = utils::get_installed(self.config.mod_dir())?;
         for m in mods {
             let m = m.to_lowercase();
             for i in installed.mods.iter_mut() {
                 if i.package_name.to_lowercase() == m {
-                    utils::disable_mod(&mut i.mods[0])?;
+                    for mut sub in i.mods.iter_mut() {
+                        utils::disable_mod(&mut sub)?;
+                    }
                     println!("Disabled {}", m);
                 } else {
                     for e in i.mods.iter_mut() {
@@ -344,13 +377,15 @@ impl Core {
 
         Ok(())
     }
-    pub(crate) fn enable(&self, mods: Vec<String>) -> Result<(), String> {
+    pub(crate) fn enable(&self, mods: Vec<String>) -> Result<()> {
         let mut installed = utils::get_installed(self.config.mod_dir())?;
         for m in mods {
             let m = m.to_lowercase();
             for i in installed.mods.iter_mut() {
                 if i.package_name.to_lowercase() == m {
-                    utils::enable_mod(&mut i.mods[0], self.config.mod_dir())?;
+                    for mut sub in i.mods.iter_mut() {
+                        utils::enable_mod(&mut sub, self.config.mod_dir())?;
+                    }
                     println!("Enabled {}", m);
                 } else {
                     for e in i.mods.iter_mut() {

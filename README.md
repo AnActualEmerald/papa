@@ -4,19 +4,20 @@
 Mod manager cli for [Northstar](https://github.com/R2Northstar/Northstar)
 
 ## Features
+- Install and update Northstar from the command line
 - Search Thunderstore for mods from the command line
 - Download a mod *and* its dependencies with one command
 - Easily keep your mods up to date
-- Per-directory tracking
-- Enable and disable mods 
+- Per-directory tracking makes hosting multiple servers with different mods from one machine easy
+- Enable and disable mods independent of N*'s own enabling and disabling
 
 ## Usage
 
 ```bash
-papa install Server_Utilities #install a mod
+papa install server_utilities #install a mod
 papa list #list installed mods
 papa update #update any out of date mods
-papa remove Server_Utilities #uninstall a mod
+papa remove server_utilities #uninstall a mod
 papa clear #clear the download cache
 ```
 
@@ -25,11 +26,17 @@ Regardless of which method you use, I recommend setting your mods directory to s
 ```bash
 papa config -m /PATH/TO/MODS/FOLDER/
 ```
+Or initialize Northstar to set everything up automatically
+```bash
+papa ns init /PATH/TO/TITANFALL2/
+```
 
 ### Ubuntu/Debian(& derivatives)
 Download the `.deb` file from the latest release and install it using whatever you usually use to install packages:
 ```bash
-sudo apt install ./papa_2.0.0.deb
+
+sudo apt install ./papa_2.1.0.deb
+
 ```
 
 ### Windows

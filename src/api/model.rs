@@ -12,8 +12,10 @@ pub struct Mod {
     pub desc: String,
     pub deps: Vec<String>,
     pub file_size: i64,
-    #[serde(skip)]
+    #[serde(default)]
     pub installed: bool,
+    #[serde(default)]
+    pub upgradable: bool,
 }
 
 impl Mod {
