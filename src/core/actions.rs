@@ -40,10 +40,9 @@ pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File> {
         return Err(anyhow!("{} at URL {}", res.status(), url));
     }
 
-    let file_size = res.content_length().ok_or(anyhow!(
-        "Unable to read content length of response from {}",
-        url
-    ))?;
+    let file_size = res
+        .content_length()
+        .ok_or_else(|| anyhow!("Unable to read content length of response from {}", url))?;
     debug!("file_size: {}", file_size);
 
     //setup the progress bar

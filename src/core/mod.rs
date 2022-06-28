@@ -194,7 +194,7 @@ impl Core {
             let base = index
                 .iter()
                 .find(|e| e.name.to_lowercase() == parts[1].to_lowercase())
-                .ok_or(anyhow!("No such package {}", &parts[1]))?;
+                .ok_or_else(|| anyhow!("No such package {}", &parts[1]))?;
 
             if base.installed {
                 println!(

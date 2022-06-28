@@ -19,7 +19,7 @@ pub async fn get_package_index() -> Result<Vec<Mod>> {
         let parsed: Value = serde_json::from_str(&raw.text().await.unwrap())
             .context("Unable to parse response body")?;
         map_response(&parsed)
-            .ok_or(anyhow!("{}", serde_json::to_string(&parsed)?))
+            .ok_or_else(|| anyhow!("{}", serde_json::to_string(&parsed).unwrap()))
             .context("Response body was malformed?")
     } else {
         Err(anyhow!("{}", raw.status().as_str()))
@@ -29,7 +29,7 @@ pub async fn get_package_index() -> Result<Vec<Mod>> {
 fn map_response(res: &Value) -> Option<Vec<Mod>> {
     match res {
         Value::Array(v) => Some(
-            v.into_iter()
+            v.iter()
                 .map(|e| {
                     let name = e["name"].as_str().unwrap().to_string();
                     let latest = e["versions"][0].clone();

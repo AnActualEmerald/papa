@@ -6,7 +6,6 @@ use crate::model::InstalledMod;
 use crate::model::Mod;
 use anyhow::{anyhow, Context, Result};
 use directories::ProjectDirs;
-use log::error;
 use std::fs::{self, File, OpenOptions};
 use std::io::Write;
 use std::path::Path;
@@ -86,9 +85,7 @@ pub fn clear_cache(dir: &Path, force: bool) -> Result<()> {
             clear_cache(&path, force)?;
             fs::remove_dir(&path)
                 .context(format!("Unable to remove directory {}", path.display()))?;
-        } else if path.ends_with(".zip") {
-            fs::remove_file(&path).context(format!("Unable to remove file {}", path.display()))?;
-        } else {
+        } else if path.ends_with(".zip") || force {
             fs::remove_file(&path).context(format!("Unable to remove file {}", path.display()))?;
         }
     }

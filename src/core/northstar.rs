@@ -51,7 +51,7 @@ impl Core {
             let nmod = index
                 .iter()
                 .find(|f| f.name.to_lowercase() == "northstar")
-                .ok_or(anyhow!("Couldn't find Northstar on thunderstore???"))?;
+                .ok_or_else(|| anyhow!("Couldn't find Northstar on thunderstore???"))?;
 
             if nmod.version == *current {
                 println!("Northstar is already up to date ({})", current);
@@ -86,7 +86,7 @@ impl Core {
         let nmod = index
             .iter()
             .find(|f| f.name.to_lowercase() == "northstar")
-            .ok_or(anyhow!("Couldn't find Northstar on thunderstore???"))?;
+            .ok_or_else(|| anyhow!("Couldn't find Northstar on thunderstore???"))?;
 
         self.do_install(nmod, game_path).await?;
 
