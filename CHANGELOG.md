@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Chagned
 - Internal error handling
+- Slimmed binary sized a bit 
 
 ### Fixed
 - `update` not respecting disabled status
