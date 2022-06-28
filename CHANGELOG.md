@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Northstar `install`, `init`, and `update` commands
 - File overwrite warning on `update`
 - Overwrite protection for `.cfg` files
+- debug flag for base command
+
+### Chagned
+- Internal error handling
 
 ### Fixed
 - `update` not respecting disabled status

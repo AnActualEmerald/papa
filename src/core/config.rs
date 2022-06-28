@@ -4,6 +4,8 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+use anyhow::{anyhow, Context, Result};
+
 #[derive(Serialize, Deserialize)]
 pub struct Config {
     mod_dir: String,
@@ -46,36 +48,31 @@ impl Config {
     }
 }
 
-pub fn load_config(config_dir: &Path) -> Result<Config, String> {
+pub fn load_config(config_dir: &Path) -> Result<Config> {
     let cfg_path = config_dir.join("config.toml");
     if cfg_path.exists() {
-        let cfg =
-            read_to_string(cfg_path).map_err(|_| ("Unable to read config file".to_string()))?;
-        toml::from_str(&cfg).map_err(|_| ("Unable to parse config".to_string()))
+        let cfg = read_to_string(cfg_path).context("Unable to read config file")?;
+        toml::from_str(&cfg).context("Unable to parse config")
     } else {
-        let mut cfg =
-            File::create(cfg_path).map_err(|_| ("Unable to create config file".to_string()))?;
+        let mut cfg = File::create(cfg_path).context("Unable to create config file")?;
         let def = Config::new(String::from("./mods"), true, String::new(), None);
-        let parsed = toml::to_string_pretty(&def)
-            .map_err(|_| "Failed to serialize default config".to_string())?;
+        let parsed = toml::to_string_pretty(&def).context("Failed to serialize default config")?;
         cfg.write_all(parsed.as_bytes())
-            .map_err(|_| "Unable to write config file".to_string())?;
+            .context("Unable to write config file")?;
         Ok(def)
     }
 }
 
-pub fn save_config(config_dir: &Path, config: &Config) -> Result<(), String> {
+pub fn save_config(config_dir: &Path, config: &Config) -> Result<()> {
     let cfg_path = config_dir.join("config.toml");
 
     if cfg_path.exists() {
-        let mut cfg =
-            File::create(&cfg_path).map_err(|_| ("Error opening config file".to_string()))?;
-        let parsed = toml::to_string_pretty(&config)
-            .map_err(|_| ("Error serializing config".to_string()))?;
+        let mut cfg = File::create(&cfg_path).context("Error opening config file")?;
+        let parsed = toml::to_string_pretty(&config).context("Error serializing config")?;
         cfg.write_all(parsed.as_bytes())
-            .map_err(|_| ("Unable to write config file".to_string()))?;
+            .context("Unable to write config file")?;
     } else {
-        return Err("Config file does not exist to write to".to_string());
+        return Err(anyhow!("Config file does not exist to write to"));
     }
     Ok(())
 }

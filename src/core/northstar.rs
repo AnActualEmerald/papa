@@ -9,10 +9,12 @@ use zip::ZipArchive;
 
 use crate::api::model::Mod;
 
-use super::{actions, config, error::ScorchError, utils, Core};
+use anyhow::{anyhow, Context, Result};
+
+use super::{actions, config, utils, Core};
 
 impl Core {
-    pub(crate) async fn init_northstar(&mut self, game_path: &Path) -> Result<(), ScorchError> {
+    pub(crate) async fn init_northstar(&mut self, game_path: &Path) -> Result<()> {
         let version = self.install_northstar(game_path).await?;
 
         self.config.game_path = game_path.to_path_buf();
@@ -43,13 +45,13 @@ impl Core {
     ///Update N* at the path that was initialized
     ///
     ///Returns OK if the path isn't set, but notifies the user
-    pub async fn update_northstar(&mut self) -> Result<(), ScorchError> {
+    pub async fn update_northstar(&mut self) -> Result<()> {
         if let Some(current) = &self.config.nstar_version {
             let index = utils::update_index(self.config.mod_dir()).await;
             let nmod = index
                 .iter()
                 .find(|f| f.name.to_lowercase() == "northstar")
-                .ok_or("Couldn't find Northstar on thunderstore???")?;
+                .ok_or(anyhow!("Couldn't find Northstar on thunderstore???"))?;
 
             if nmod.version == *current {
                 println!("Northstar is already up to date ({})", current);
@@ -79,12 +81,12 @@ impl Core {
     ///Install N* to the provided path
     ///
     ///Returns the version that was installed
-    pub async fn install_northstar(&self, game_path: &Path) -> Result<String, ScorchError> {
+    pub async fn install_northstar(&self, game_path: &Path) -> Result<String> {
         let index = utils::update_index(self.config.mod_dir()).await;
         let nmod = index
             .iter()
             .find(|f| f.name.to_lowercase() == "northstar")
-            .ok_or("Couldn't find Northstar on thunderstore???")?;
+            .ok_or(anyhow!("Couldn't find Northstar on thunderstore???"))?;
 
         self.do_install(nmod, game_path).await?;
 
@@ -94,7 +96,7 @@ impl Core {
     ///Install N* from the provided mod
     ///
     ///Checks cache, else downloads the latest version
-    async fn do_install(&self, nmod: &Mod, game_path: &Path) -> Result<(), ScorchError> {
+    async fn do_install(&self, nmod: &Mod, game_path: &Path) -> Result<()> {
         let filename = format!("northstar-{}.zip", nmod.version);
         let nfile = if let Some(f) = utils::check_cache(&self.dirs.cache_dir().join(&filename)) {
             println!("Using cached verision of Northstar@{}...", nmod.version);
@@ -151,9 +153,8 @@ impl Core {
     // }
 
     ///Extract N* zip file to target game path
-    fn extract(&self, zip_file: File, target: &Path) -> Result<(), ScorchError> {
-        let mut archive =
-            ZipArchive::new(&zip_file).map_err(|_| "Unable to open zip archive".to_string())?;
+    fn extract(&self, zip_file: File, target: &Path) -> Result<()> {
+        let mut archive = ZipArchive::new(&zip_file).context("Unable to open zip archive")?;
         for i in 0..archive.len() {
             let mut f = archive.by_index(i).unwrap();
 
@@ -163,7 +164,10 @@ impl Core {
                     continue;
                 }
             } else {
-                return Err(format!("Unable to read name of compressed file {}", f.name()).into());
+                return Err(anyhow!(
+                    "Unable to read name of compressed file {}",
+                    f.name()
+                ));
             }
 
             //This should work fine for N* because the dir structure *should* always be the same
@@ -178,23 +182,21 @@ impl Core {
                 if (*f.name()).ends_with('/') {
                     debug!("Create directory {}", f.name());
                     fs::create_dir_all(target.join(f.name()))
-                        .map_err(|_| "Unable to create directory".to_string())?;
+                        .context("Unable to create directory")?;
                     continue;
                 } else if let Some(p) = out.parent() {
-                    fs::create_dir_all(&p).map_err(|_| "Unable to create directory".to_string())?;
+                    fs::create_dir_all(&p).context("Unable to create directory")?;
                 }
 
                 let mut outfile = OpenOptions::new()
                     .create(true)
                     .write(true)
                     .truncate(true)
-                    .open(&out)
-                    .unwrap();
+                    .open(&out)?;
 
                 debug!("Write file {}", out.display());
 
-                io::copy(&mut f, &mut outfile)
-                    .map_err(|_| "Unable to write to file".to_string())?;
+                io::copy(&mut f, &mut outfile).context("Unable to write to file")?;
             }
         }
 

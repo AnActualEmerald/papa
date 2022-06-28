@@ -5,28 +5,28 @@ pub mod model;
 
 use model::Mod;
 
-pub async fn get_package_index() -> Result<Vec<Mod>, String> {
+use anyhow::{anyhow, Context, Result};
+
+pub async fn get_package_index() -> Result<Vec<Mod>> {
     let client = Client::new();
     let raw = client
         .get("https://northstar.thunderstore.io/c/northstar/api/v1/package/")
         .header("accept", "application/json")
         .send()
         .await
-        .map_err(|_| "Error making request to update package index".to_string())?;
+        .context("Error making request to update package index")?;
     if raw.status().is_success() {
         let parsed: Value = serde_json::from_str(&raw.text().await.unwrap())
-            .map_err(|_| "Unable to parse response body".to_string())?;
-        if let Some(v) = map_response(parsed) {
-            Ok(v)
-        } else {
-            Err("Response body was malformed?".to_string())
-        }
+            .context("Unable to parse response body")?;
+        map_response(&parsed)
+            .ok_or(anyhow!("{}", serde_json::to_string(&parsed)?))
+            .context("Response body was malformed?")
     } else {
-        Err(raw.status().as_str().to_string())
+        Err(anyhow!("{}", raw.status().as_str()))
     }
 }
 
-fn map_response(res: Value) -> Option<Vec<Mod>> {
+fn map_response(res: &Value) -> Option<Vec<Mod>> {
     match res {
         Value::Array(v) => Some(
             v.into_iter()
@@ -55,6 +55,7 @@ fn map_response(res: Value) -> Option<Vec<Mod>> {
                         desc,
                         file_size,
                         installed: false,
+                        upgradable: false,
                     }
                 })
                 .collect(),

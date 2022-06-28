@@ -5,10 +5,6 @@ pub mod northstar;
 
 pub(crate) mod utils;
 
-mod error;
-
-// pub use error::*;
-
 use std::fs;
 
 use directories::ProjectDirs;
@@ -19,6 +15,8 @@ use rustyline::Editor;
 use self::config::Config;
 use crate::api;
 use crate::api::model::{self, InstalledMod};
+
+use anyhow::{anyhow, Result};
 
 pub struct Core {
     pub config: Config,
@@ -32,7 +30,7 @@ impl Core {
         Core { config, dirs, rl }
     }
 
-    pub async fn update(&mut self, yes: bool) -> Result<(), String> {
+    pub async fn update(&mut self, yes: bool) -> Result<()> {
         print!("Updating package index...");
         let index = &api::get_package_index().await?;
         println!(" Done!");
@@ -126,7 +124,7 @@ impl Core {
         Ok(())
     }
 
-    pub fn list(&self) -> Result<(), String> {
+    pub fn list(&self) -> Result<()> {
         let mods = utils::get_installed(self.config.mod_dir())?.mods;
         if !mods.is_empty() {
             println!("Installed mods:");
@@ -158,7 +156,7 @@ impl Core {
         Ok(())
     }
 
-    pub async fn install_from_url(&self, url: String) -> Result<(), String> {
+    pub async fn install_from_url(&self, url: String) -> Result<()> {
         let file_name = url
             .as_str()
             .replace(':', "")
@@ -179,7 +177,7 @@ impl Core {
         Ok(())
     }
 
-    pub async fn install(&mut self, mod_names: Vec<String>, yes: bool) -> Result<(), String> {
+    pub async fn install(&mut self, mod_names: Vec<String>, yes: bool) -> Result<()> {
         let index = utils::update_index(self.config.mod_dir()).await;
         let mut installed = utils::get_installed(self.config.mod_dir())?;
         let mut valid = vec![];
@@ -196,10 +194,7 @@ impl Core {
             let base = index
                 .iter()
                 .find(|e| e.name.to_lowercase() == parts[1].to_lowercase())
-                .ok_or_else(|| {
-                    println!("Couldn't find package {}", name);
-                    "No such package".to_string()
-                })?;
+                .ok_or(anyhow!("No such package {}", &parts[1]))?;
 
             if base.installed {
                 println!(
@@ -260,26 +255,24 @@ impl Core {
             if downloaded.len() > 1 { "s" } else { "" },
             self.config.mod_dir().display()
         );
-        if downloaded
+        for e in downloaded
             .iter()
-            .map(|f| -> Result<(), String> {
+            .map(|f| -> Result<()> {
                 let pkg = actions::install_mod(f, &self.config)?;
                 installed.mods.push(pkg.clone());
                 println!("Installed {}", pkg.package_name);
                 Ok(())
             })
             .filter(|f| f.is_err())
-            .count()
-            > 0
         {
-            return Err("Errors while installing".to_string());
+            println!("Encountered errors while installing mods:");
+            println!("{}", e.unwrap_err());
         }
-
         utils::save_installed(self.config.mod_dir(), &installed)?;
         Ok(())
     }
 
-    pub fn remove(&self, mod_names: Vec<String>) -> Result<(), String> {
+    pub fn remove(&self, mod_names: Vec<String>) -> Result<()> {
         let mut installed = utils::get_installed(self.config.mod_dir())?;
         let valid: Vec<InstalledMod> = mod_names
             .iter()
@@ -299,7 +292,7 @@ impl Core {
         Ok(())
     }
 
-    pub fn clear(&self, full: bool) -> Result<(), String> {
+    pub fn clear(&self, full: bool) -> Result<()> {
         if full {
             println!("Clearing cache files...");
         } else {
@@ -311,11 +304,7 @@ impl Core {
         Ok(())
     }
 
-    pub fn update_config(
-        &mut self,
-        mods_dir: Option<String>,
-        cache: Option<bool>,
-    ) -> Result<(), String> {
+    pub fn update_config(&mut self, mods_dir: Option<String>, cache: Option<bool>) -> Result<()> {
         if let Some(dir) = mods_dir {
             self.config.set_dir(&dir);
             println!("Set install directory to {}", dir);
@@ -334,7 +323,7 @@ impl Core {
         Ok(())
     }
 
-    pub(crate) async fn search(&self, term: Vec<String>) -> Result<(), String> {
+    pub(crate) async fn search(&self, term: Vec<String>) -> Result<()> {
         let index = utils::update_index(self.config.mod_dir()).await;
         println!("Searching...");
         println!();
@@ -361,7 +350,7 @@ impl Core {
         Ok(())
     }
 
-    pub(crate) fn disable(&self, mods: Vec<String>) -> Result<(), String> {
+    pub(crate) fn disable(&self, mods: Vec<String>) -> Result<()> {
         let mut installed = utils::get_installed(self.config.mod_dir())?;
         for m in mods {
             let m = m.to_lowercase();
@@ -383,7 +372,7 @@ impl Core {
 
         Ok(())
     }
-    pub(crate) fn enable(&self, mods: Vec<String>) -> Result<(), String> {
+    pub(crate) fn enable(&self, mods: Vec<String>) -> Result<()> {
         let mut installed = utils::get_installed(self.config.mod_dir())?;
         for m in mods {
             let m = m.to_lowercase();

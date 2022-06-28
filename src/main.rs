@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
+use log::debug;
 
 use crate::api::model;
 use crate::core::config;
@@ -107,7 +108,7 @@ enum NstarCommands {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), String> {
+async fn main() {
     let cli = Cli::parse();
     if cli.debug {
         std::env::set_var("RUST_LOG", "DEBUG");
@@ -121,8 +122,8 @@ async fn main() -> Result<(), String> {
 
     let mut core = core::Core::new(config, dirs, rl);
 
-    match cli.command {
-        Commands::Update { yes } => core.update(yes).await?,
+    let res = match cli.command {
+        Commands::Update { yes } => core.update(yes).await,
         Commands::Config {
             mods_dir: None,
             cache: None,
@@ -131,24 +132,25 @@ async fn main() -> Result<(), String> {
                 "Current config:\n{}",
                 toml::to_string_pretty(&core.config).unwrap()
             );
+            Ok(())
         }
-        Commands::Config { mods_dir, cache } => core.update_config(mods_dir, cache)?,
-        Commands::List {} => core.list()?,
+        Commands::Config { mods_dir, cache } => core.update_config(mods_dir, cache),
+        Commands::List {} => core.list(),
         Commands::Install {
             mod_names: _,
             url: Some(url),
             yes: _,
-        } => core.install_from_url(url).await?,
+        } => core.install_from_url(url).await,
         Commands::Install {
             mod_names,
             url: None,
             yes,
-        } => core.install(mod_names, yes).await?,
-        Commands::Disable { mods } => core.disable(mods)?,
-        Commands::Enable { mods } => core.enable(mods)?,
-        Commands::Search { term } => core.search(term).await?,
-        Commands::Remove { mod_names } => core.remove(mod_names)?,
-        Commands::Clear { full } => core.clear(full)?,
+        } => core.install(mod_names, yes).await,
+        Commands::Disable { mods } => core.disable(mods),
+        Commands::Enable { mods } => core.enable(mods),
+        Commands::Search { term } => core.search(term).await,
+        Commands::Remove { mod_names } => core.remove(mod_names),
+        Commands::Clear { full } => core.clear(full),
         #[cfg(feature = "northstar")]
         Commands::Northstar { command } => match command {
             //      NstarCommands::Install { game_path } => {
@@ -157,25 +159,34 @@ async fn main() -> Result<(), String> {
             //          } else {
             //              std::env::current_dir().unwrap()
             //          };
-            //          core.install_northstar(&game_path).await?;
+            //          core.install_northstar(&game_path).await
             //      }
             NstarCommands::Init { game_path } => {
                 let game_path = if let Some(p) = game_path {
-                    p.canonicalize().unwrap()
+                    match p.canonicalize() {
+                        Ok(p) => p,
+                        Err(e) => {
+                            debug!("{:#?}", e);
+                            println!("{}", e);
+                            return;
+                        }
+                    }
                 } else {
                     std::env::current_dir().unwrap()
                 };
-                core.init_northstar(&game_path).await?;
+                core.init_northstar(&game_path).await
             }
-            NstarCommands::Update {} => {
-                core.update_northstar().await?;
-            }
+            NstarCommands::Update {} => core.update_northstar().await,
             #[cfg(feature = "launcher")]
-            NstarCommands::Start {} => {
-                core.start_northstar()?;
-            }
+            NstarCommands::Start {} => core.start_northstar(),
         },
-    }
+    };
 
-    Ok(())
+    if let Some(e) = res.err() {
+        if cli.debug {
+            debug!("{:#?}", e);
+        } else {
+            println!("{}", e);
+        }
+    }
 }
