@@ -1,7 +1,12 @@
-![scorch titan icon](https://static.wikia.nocookie.net/titanfall/images/d/d5/ScorchIcon.png)
+<h1 align="center">
+ <!-- Formatting idea shamelessly stolen from https://github.com/OneGal/viper ty for the idea :) -->
+ <img src="https://static.wikia.nocookie.net/titanfall/images/d/d5/ScorchIcon.png" />
+ <br>
+ Papa
+</h1>
 
-# Papa command line mod manager
-Mod manager cli for [Northstar](https://github.com/R2Northstar/Northstar)
+
+<p align="center">Mod manager CLI for <a href="https://github.com/R2Northstar/Northstar">Northstar</a></p>
 
 ## Features
 - Install and update Northstar from the command line
