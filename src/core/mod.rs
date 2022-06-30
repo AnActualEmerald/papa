@@ -14,7 +14,7 @@ use rustyline::Editor;
 
 use self::config::Config;
 use crate::api;
-use crate::api::model::{self, InstalledMod};
+use crate::api::model::{self, InstalledMod, Mod};
 
 use anyhow::{anyhow, Result};
 
@@ -328,28 +328,35 @@ impl Core {
 
     pub(crate) async fn search(&self, term: Vec<String>) -> Result<()> {
         let index = utils::update_index(self.config.mod_dir()).await;
+
+        let print = |f: &Mod| {
+            println!(
+                " \x1b[92m{}@{}\x1b[0m   [{}]{}\n\n    {}",
+                f.name,
+                f.version,
+                f.file_size_string(),
+                if f.installed { "[installed]" } else { "" },
+                f.desc
+            );
+            println!();
+        };
+
         println!("Searching...");
         println!();
-        index
-            .iter()
-            .filter(|f| {
-                term.iter().any(|e| {
-                    f.name.to_lowercase().contains(&e.to_lowercase())
-                        || f.desc.to_lowercase().contains(&e.to_lowercase())
+        if term.len() > 0 {
+            index
+                .iter()
+                .filter(|f| {
+                    //TODO: Use better method to match strings
+                    term.iter().any(|e| {
+                        f.name.to_lowercase().contains(&e.to_lowercase())
+                            || f.desc.to_lowercase().contains(&e.to_lowercase())
+                    })
                 })
-            })
-            .for_each(|f| {
-                println!(
-                    " \x1b[92m{}@{}\x1b[0m   [{}]{}\n\n    {}",
-                    f.name,
-                    f.version,
-                    f.file_size_string(),
-                    if f.installed { "[installed]" } else { "" },
-                    f.desc
-                );
-                println!();
-            });
-
+                .for_each(print);
+        } else {
+            index.iter().for_each(print)
+        }
         Ok(())
     }
 
