@@ -184,7 +184,7 @@ impl Core {
         Ok(())
     }
 
-    pub async fn install(&mut self, mod_names: Vec<String>, yes: bool) -> Result<()> {
+    pub async fn install(&mut self, mod_names: Vec<String>, yes: bool, force: bool) -> Result<()> {
         let index = utils::update_index(self.config.mod_dir()).await;
         let mut installed = utils::get_installed(self.config.mod_dir())?;
         let mut valid = vec![];
@@ -203,7 +203,7 @@ impl Core {
                 .find(|e| e.name.to_lowercase() == parts[1].to_lowercase())
                 .ok_or_else(|| anyhow!("No such package {}", &parts[1]))?;
 
-            if base.installed {
+            if base.installed && !force {
                 println!(
                     "Package \x1b[36m{}\x1b[0m version \x1b[36m{}\x1b[0m already installed",
                     base.name, base.version
@@ -213,6 +213,11 @@ impl Core {
 
             utils::resolve_deps(&mut valid, base, &installed.mods, &index)?;
             valid.push(base);
+        }
+
+        //Gaurd against an empty list (maybe all the mods are already installed?)
+        if valid.len() == 0 {
+            return Ok(());
         }
 
         let size: i64 = valid.iter().map(|f| f.file_size).sum();
