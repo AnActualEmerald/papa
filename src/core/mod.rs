@@ -18,6 +18,8 @@ use crate::api::model::{self, Cache, InstalledMod, Mod};
 
 use anyhow::{anyhow, Result};
 
+use anyhow::{anyhow, Result};
+
 pub struct Core {
     pub config: Config,
     dirs: ProjectDirs,

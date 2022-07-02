@@ -6,6 +6,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+## v2.1.0
+
+### Added
+- Northstar `install`, `init`, and `update` commands
+- File overwrite warning on `update`
+- Overwrite protection for `.cfg` files
+- debug flag for base command
+
+### Chagned
+- Internal error handling
+- Slimmed binary sized a bit 
+
+### Fixed
+- `update` not respecting disabled status
+- `disable` and `enable` not properly modifying all sub mods if the parent mod's name was used
+- `install` potentially using an outdated version from the cache
+
+
+## v2.0.0
+
 ### Added
 - Northstar `install`, `init`, and `update` commands
 - File overwrite warning on `update`
