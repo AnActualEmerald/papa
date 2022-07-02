@@ -14,7 +14,7 @@ use rustyline::Editor;
 
 use self::config::Config;
 use crate::api;
-use crate::api::model::{self, InstalledMod, Mod};
+use crate::api::model::{self, Cache, InstalledMod, Mod};
 
 use anyhow::{anyhow, Result};
 
@@ -22,12 +22,19 @@ pub struct Core {
     pub config: Config,
     dirs: ProjectDirs,
     rl: Editor<()>,
+    cache: Cache,
 }
 
 impl Core {
     pub fn new(config: Config, dirs: ProjectDirs, rl: Editor<()>) -> Self {
         utils::ensure_dirs(&dirs);
-        Core { config, dirs, rl }
+        let cache = Cache::build(dirs.cache_dir()).unwrap();
+        Core {
+            config,
+            dirs,
+            rl,
+            cache,
+        }
     }
 
     pub async fn update(&mut self, yes: bool) -> Result<()> {
@@ -242,7 +249,7 @@ impl Core {
 
             //would love to use this in the same if as the let but it's unstable so...
             if self.config.cache() {
-                if let Some(f) = utils::check_cache(&path) {
+                if let Some(f) = self.cache.check(&path) {
                     println!("Using cached version of {}", name);
                     downloaded.push(f);
                     continue;

@@ -1,6 +1,10 @@
+use anyhow::{Context, Result};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::HashMap,
     ffi::OsStr,
+    fs::{self, File, OpenOptions},
     path::{Path, PathBuf},
 };
 
@@ -89,5 +93,63 @@ pub struct LocalIndex {
 impl LocalIndex {
     pub fn new() -> Self {
         Self { mods: vec![] }
+    }
+}
+
+pub struct Cache {
+    pkgs: HashMap<String, String>,
+}
+
+impl Cache {
+    pub fn build(dir: &Path) -> Result<Self> {
+        let cache = fs::read_dir(dir)?;
+        let mut pkgs = HashMap::new();
+        for e in cache {
+            if let Ok(e) = e {
+                if !e.path().is_dir() {
+                    let file_name = e.file_name();
+                    let re =
+                        Regex::new(r"(.+)_(.+)(\.zip)?").context("Unable to create cache regex")?;
+                    if let Some(c) = re.captures(file_name.to_str().unwrap()) {
+                        let name = c.get(1).unwrap().as_str();
+                        let ver = c.get(2).unwrap().as_str();
+                        pkgs.insert(name.to_string(), ver.to_string());
+                    }
+                }
+            }
+        }
+        Ok(Cache { pkgs })
+    }
+
+    ///Checks if a path is in the current cache
+    pub fn check(&self, path: &Path) -> Option<File> {
+        if self.has(path) {
+            self.open_file(path)
+        } else {
+            None
+        }
+    }
+
+    fn has(&self, path: &Path) -> bool {
+        if let Some(name) = path.file_name() {
+            let parts: Vec<&str> = name.to_str().unwrap().split('_').collect();
+            let name = parts[0];
+            let ver = parts[1];
+            if let Some(c) = self.pkgs.get(name) {
+                if c == &ver {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    #[inline(always)]
+    fn open_file(&self, path: &Path) -> Option<File> {
+        if let Ok(f) = OpenOptions::new().read(true).open(path) {
+            Some(f)
+        } else {
+            None
+        }
     }
 }
