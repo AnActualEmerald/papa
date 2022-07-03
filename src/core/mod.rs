@@ -14,7 +14,7 @@ use rustyline::Editor;
 
 use self::config::Config;
 use crate::api;
-use crate::api::model::{self, InstalledMod};
+use crate::api::model::{self, Cache, InstalledMod, Mod};
 
 use anyhow::{anyhow, Result};
 
@@ -22,12 +22,19 @@ pub struct Core {
     pub config: Config,
     dirs: ProjectDirs,
     rl: Editor<()>,
+    cache: Cache,
 }
 
 impl Core {
     pub fn new(config: Config, dirs: ProjectDirs, rl: Editor<()>) -> Self {
         utils::ensure_dirs(&dirs);
-        Core { config, dirs, rl }
+        let cache = Cache::build(dirs.cache_dir()).unwrap();
+        Core {
+            config,
+            dirs,
+            rl,
+            cache,
+        }
     }
 
     pub async fn update(&mut self, yes: bool) -> Result<()> {
@@ -77,8 +84,9 @@ impl Core {
                 if downloaded.len() > 1 { "s" } else { "" },
                 self.config.mod_dir().display()
             );
-            downloaded.into_iter().for_each(|f| {
+            for f in downloaded.into_iter() {
                 let mut pkg = actions::install_mod(&f, &self.config).unwrap();
+                self.cache.clean(&pkg.package_name, &pkg.version)?;
                 if let Some(i) = installed
                     .mods
                     .iter()
@@ -86,6 +94,7 @@ impl Core {
                 {
                     let mut inst = installed.mods.get_mut(i).unwrap();
                     inst.version = pkg.version;
+                    //Don't know if sorting is needed here but seems like a good assumption
                     inst.mods
                         .sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
                     pkg.mods
@@ -110,7 +119,7 @@ impl Core {
                     inst.mods = pkg.mods;
                     println!("Updated {}", pkg.package_name);
                 }
-            });
+            }
             utils::save_installed(self.config.mod_dir(), &installed)?;
         }
         if let Some(current) = &self.config.nstar_version {
@@ -177,7 +186,7 @@ impl Core {
         Ok(())
     }
 
-    pub async fn install(&mut self, mod_names: Vec<String>, yes: bool) -> Result<()> {
+    pub async fn install(&mut self, mod_names: Vec<String>, yes: bool, force: bool) -> Result<()> {
         let index = utils::update_index(self.config.mod_dir()).await;
         let mut installed = utils::get_installed(self.config.mod_dir())?;
         let mut valid = vec![];
@@ -196,7 +205,7 @@ impl Core {
                 .find(|e| e.name.to_lowercase() == parts[1].to_lowercase())
                 .ok_or_else(|| anyhow!("No such package {}", &parts[1]))?;
 
-            if base.installed {
+            if base.installed && !force {
                 println!(
                     "Package \x1b[36m{}\x1b[0m version \x1b[36m{}\x1b[0m already installed",
                     base.name, base.version
@@ -206,6 +215,11 @@ impl Core {
 
             utils::resolve_deps(&mut valid, base, &installed.mods, &index)?;
             valid.push(base);
+        }
+
+        //Gaurd against an empty list (maybe all the mods are already installed?)
+        if valid.is_empty() {
+            return Ok(());
         }
 
         let size: i64 = valid.iter().map(|f| f.file_size).sum();
@@ -242,7 +256,7 @@ impl Core {
 
             //would love to use this in the same if as the let but it's unstable so...
             if self.config.cache() {
-                if let Some(f) = utils::check_cache(&path) {
+                if let Some(f) = self.cache.check(&path) {
                     println!("Using cached version of {}", name);
                     downloaded.push(f);
                     continue;
@@ -263,6 +277,7 @@ impl Core {
             .map(|f| -> Result<()> {
                 let pkg = actions::install_mod(f, &self.config)?;
                 installed.mods.push(pkg.clone());
+                self.cache.clean(&pkg.package_name, &pkg.version)?;
                 println!("Installed {}", pkg.package_name);
                 Ok(())
             })
@@ -328,28 +343,35 @@ impl Core {
 
     pub(crate) async fn search(&self, term: Vec<String>) -> Result<()> {
         let index = utils::update_index(self.config.mod_dir()).await;
+
+        let print = |f: &Mod| {
+            println!(
+                " \x1b[92m{}@{}\x1b[0m   [{}]{}\n\n    {}",
+                f.name,
+                f.version,
+                f.file_size_string(),
+                if f.installed { "[installed]" } else { "" },
+                f.desc
+            );
+            println!();
+        };
+
         println!("Searching...");
         println!();
-        index
-            .iter()
-            .filter(|f| {
-                term.iter().any(|e| {
-                    f.name.to_lowercase().contains(&e.to_lowercase())
-                        || f.desc.to_lowercase().contains(&e.to_lowercase())
+        if !term.is_empty() {
+            index
+                .iter()
+                .filter(|f| {
+                    //TODO: Use better method to match strings
+                    term.iter().any(|e| {
+                        f.name.to_lowercase().contains(&e.to_lowercase())
+                            || f.desc.to_lowercase().contains(&e.to_lowercase())
+                    })
                 })
-            })
-            .for_each(|f| {
-                println!(
-                    " \x1b[92m{}@{}\x1b[0m   [{}]{}\n\n    {}",
-                    f.name,
-                    f.version,
-                    f.file_size_string(),
-                    if f.installed { "[installed]" } else { "" },
-                    f.desc
-                );
-                println!();
-            });
-
+                .for_each(print);
+        } else {
+            index.iter().for_each(print)
+        }
         Ok(())
     }
 
@@ -359,8 +381,8 @@ impl Core {
             let m = m.to_lowercase();
             for i in installed.mods.iter_mut() {
                 if i.package_name.to_lowercase() == m {
-                    for mut sub in i.mods.iter_mut() {
-                        utils::disable_mod(&mut sub)?;
+                    for sub in i.mods.iter_mut() {
+                        utils::disable_mod(sub)?;
                     }
                     println!("Disabled {}", m);
                 } else {
@@ -383,8 +405,8 @@ impl Core {
             let m = m.to_lowercase();
             for i in installed.mods.iter_mut() {
                 if i.package_name.to_lowercase() == m {
-                    for mut sub in i.mods.iter_mut() {
-                        utils::enable_mod(&mut sub, self.config.mod_dir())?;
+                    for sub in i.mods.iter_mut() {
+                        utils::enable_mod(sub, self.config.mod_dir())?;
                     }
                     println!("Enabled {}", m);
                 } else {

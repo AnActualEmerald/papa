@@ -10,6 +10,14 @@ use std::fs::{self, File, OpenOptions};
 use std::io::Write;
 use std::path::Path;
 
+#[macro_export]
+macro_rules! g2re {
+    ($e:expr) => {{
+        let re = $e.replace('*', ".+");
+        regex::Regex::new(&re)
+    }};
+}
+
 pub async fn update_index(path: &Path) -> Vec<model::Mod> {
     print!("Updating package index...");
     let mut index = api::get_package_index().await.unwrap().to_vec();

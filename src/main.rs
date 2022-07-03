@@ -41,6 +41,10 @@ enum Commands {
         ///Don't ask for confirmation
         #[clap(short, long)]
         yes: bool,
+
+        ///Force installation
+        #[clap(short, long)]
+        force: bool,
     },
     ///Remove a mod or mods from the current mods directory
     Remove {
@@ -139,12 +143,14 @@ async fn main() {
             mod_names: _,
             url: Some(url),
             yes: _,
+            force: _,
         } => core.install_from_url(url).await,
         Commands::Install {
             mod_names,
             url: None,
             yes,
-        } => core.install(mod_names, yes).await,
+            force,
+        } => core.install(mod_names, yes, force).await,
         Commands::Disable { mods } => core.disable(mods),
         Commands::Enable { mods } => core.enable(mods),
         Commands::Search { term } => core.search(term).await,
