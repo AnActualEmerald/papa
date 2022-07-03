@@ -2,7 +2,6 @@ use anyhow::{Context, Result};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::HashMap,
     ffi::OsStr,
     fs::{self, File, OpenOptions},
     path::{Path, PathBuf},
@@ -129,17 +128,15 @@ impl Cache {
     pub fn build(dir: &Path) -> Result<Self> {
         let cache = fs::read_dir(dir)?;
         let mut pkgs = vec![];
-        for e in cache {
-            if let Ok(e) = e {
-                if !e.path().is_dir() {
-                    let file_name = e.file_name();
-                    let re =
-                        Regex::new(r"(.+)_(.+)(\.zip)?").context("Unable to create cache regex")?;
-                    if let Some(c) = re.captures(file_name.to_str().unwrap()) {
-                        let name = c.get(1).unwrap().as_str();
-                        let ver = c.get(2).unwrap().as_str();
-                        pkgs.push(CachedMod::new(name, ver, dir));
-                    }
+        for e in cache.flatten() {
+            if !e.path().is_dir() {
+                let file_name = e.file_name();
+                let re =
+                    Regex::new(r"(.+)_(.+)(\.zip)?").context("Unable to create cache regex")?;
+                if let Some(c) = re.captures(file_name.to_str().unwrap()) {
+                    let name = c.get(1).unwrap().as_str();
+                    let ver = c.get(2).unwrap().as_str();
+                    pkgs.push(CachedMod::new(name, ver, dir));
                 }
             }
         }
