@@ -18,8 +18,6 @@ use crate::api::model::{self, Cache, InstalledMod, Mod};
 
 use anyhow::{anyhow, Result};
 
-use anyhow::{anyhow, Result};
-
 pub struct Core {
     pub config: Config,
     dirs: ProjectDirs,
@@ -86,8 +84,9 @@ impl Core {
                 if downloaded.len() > 1 { "s" } else { "" },
                 self.config.mod_dir().display()
             );
-            downloaded.into_iter().for_each(|f| {
+            for f in downloaded.into_iter() {
                 let mut pkg = actions::install_mod(&f, &self.config).unwrap();
+                self.cache.clean(&pkg.package_name, &pkg.version)?;
                 if let Some(i) = installed
                     .mods
                     .iter()
@@ -95,6 +94,7 @@ impl Core {
                 {
                     let mut inst = installed.mods.get_mut(i).unwrap();
                     inst.version = pkg.version;
+                    //Don't know if sorting is needed here but seems like a good assumption
                     inst.mods
                         .sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
                     pkg.mods
@@ -119,7 +119,7 @@ impl Core {
                     inst.mods = pkg.mods;
                     println!("Updated {}", pkg.package_name);
                 }
-            });
+            }
             utils::save_installed(self.config.mod_dir(), &installed)?;
         }
         if let Some(current) = &self.config.nstar_version {
@@ -277,6 +277,7 @@ impl Core {
             .map(|f| -> Result<()> {
                 let pkg = actions::install_mod(f, &self.config)?;
                 installed.mods.push(pkg.clone());
+                self.cache.clean(&pkg.package_name, &pkg.version)?;
                 println!("Installed {}", pkg.package_name);
                 Ok(())
             })

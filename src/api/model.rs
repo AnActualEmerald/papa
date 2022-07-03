@@ -8,6 +8,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::core::utils;
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Mod {
     pub name: String,
@@ -96,14 +98,37 @@ impl LocalIndex {
     }
 }
 
+#[derive(Clone)]
+struct CachedMod {
+    name: String,
+    version: String,
+    path: PathBuf,
+}
+
+impl PartialEq for CachedMod {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.version == other.version
+    }
+}
+
+impl CachedMod {
+    fn new(name: &str, version: &str, path: &Path) -> Self {
+        CachedMod {
+            name: name.to_string(),
+            version: version.to_string(),
+            path: path.to_owned(),
+        }
+    }
+}
+
 pub struct Cache {
-    pkgs: HashMap<String, String>,
+    pkgs: Vec<CachedMod>,
 }
 
 impl Cache {
     pub fn build(dir: &Path) -> Result<Self> {
         let cache = fs::read_dir(dir)?;
-        let mut pkgs = HashMap::new();
+        let mut pkgs = vec![];
         for e in cache {
             if let Ok(e) = e {
                 if !e.path().is_dir() {
@@ -113,12 +138,32 @@ impl Cache {
                     if let Some(c) = re.captures(file_name.to_str().unwrap()) {
                         let name = c.get(1).unwrap().as_str();
                         let ver = c.get(2).unwrap().as_str();
-                        pkgs.insert(name.to_string(), ver.to_string());
+                        pkgs.push(CachedMod::new(name, ver, dir));
                     }
                 }
             }
         }
         Ok(Cache { pkgs })
+    }
+
+    ///Cleans all cached versions of a package except the version provided
+    pub fn clean(&mut self, name: &str, version: &str) -> Result<bool> {
+        let mut res = false;
+
+        for m in self
+            .pkgs
+            .clone()
+            .into_iter()
+            .filter(|e| e.name == name && e.version != version)
+        {
+            if let Some(index) = self.pkgs.iter().position(|e| e == &m) {
+                utils::remove_file(&m.path)?;
+                self.pkgs.swap_remove(index);
+                res = true
+            }
+        }
+
+        Ok(res)
     }
 
     ///Checks if a path is in the current cache
@@ -135,8 +180,8 @@ impl Cache {
             let parts: Vec<&str> = name.to_str().unwrap().split('_').collect();
             let name = parts[0];
             let ver = parts[1];
-            if let Some(c) = self.pkgs.get(name) {
-                if c == &ver {
+            if let Some(c) = self.pkgs.iter().find(|e| e.name == name) {
+                if c.version == ver {
                     return true;
                 }
             }

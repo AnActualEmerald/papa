@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added 
+- `force` option to `install` command
+- Cache now cleans older versions of packages
+
+### Fixed
+- Running `search` with no terms returning no results rather than everything
+- `install` asking to install nothing
+
+
 
 ## v2.1.0
 
