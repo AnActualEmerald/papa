@@ -27,6 +27,7 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     ///Install a mod or mods from https://northstar.thunderstore.io/
+    #[clap(alias = "i")]
     Install {
         #[clap(value_name = "MOD")]
         #[clap(help = "Mod name(s) to install")]
@@ -47,14 +48,17 @@ enum Commands {
         force: bool,
     },
     ///Remove a mod or mods from the current mods directory
+    #[clap(alias = "r")]
     Remove {
         #[clap(value_name = "MOD")]
         #[clap(help = "Mod name(s) to remove")]
         mod_names: Vec<String>,
     },
     ///List installed mods
+    #[clap(alias = "l", alias = "ls")]
     List {},
     ///Clear mod cache
+    #[clap(alias = "c")]
     Clear {
         #[clap(
             help = "Force removal of all files in the cahce directory, not just downloaded packages"
@@ -63,6 +67,7 @@ enum Commands {
         full: bool,
     },
     ///Display or update the configuration
+    #[clap(alias = "cfg")]
     Config {
         #[clap(long, short, value_name = "PATH")]
         ///Set the directory where 'mods/' can be found
@@ -73,16 +78,19 @@ enum Commands {
         cache: Option<bool>,
     },
     ///Update currently installed mods
+    #[clap(alias = "u")]
     Update {
         ///Don't ask for confirmation
         #[clap(short, long)]
         yes: bool,
     },
     ///Search for a mod
+    #[clap(alias = "s")]
     Search {
         ///The term to search for
         term: Vec<String>,
     },
+
     ///Disable mod(s) or sub-mod(s)
     Disable { mods: Vec<String> },
     ///Enable mod(s) or sub-mod(s)
