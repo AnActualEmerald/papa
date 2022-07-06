@@ -7,7 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Global install option
+- Global install option (unix only)
+- `inlcude` and `exclude` commands for using global mods (unix only)
 - Options to `list` for global and all mods
 - `update` now lists the mods it will update, similar to `install`
 
