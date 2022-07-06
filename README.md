@@ -3,6 +3,8 @@
  <img src="https://static.wikia.nocookie.net/titanfall/images/d/d5/ScorchIcon.png" />
  <br>
  Papa
+<br>
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/AnActualEmerald/papa/Rust) ![Crates.io (latest)](https://img.shields.io/crates/dv/papa)
 </h1>
 
 
