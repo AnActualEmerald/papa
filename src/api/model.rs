@@ -1,7 +1,9 @@
 use anyhow::{Context, Result};
+use log::{debug, warn};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::HashSet,
     ffi::OsStr,
     fs::{self, File, OpenOptions},
     path::{Path, PathBuf},
@@ -36,7 +38,7 @@ impl Mod {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Hash, Eq)]
 pub struct InstalledMod {
     pub package_name: String,
     pub version: String,
@@ -44,6 +46,12 @@ pub struct InstalledMod {
     //TODO: Implement local dep tracking
     pub depends_on: Vec<String>,
     pub needed_by: Vec<String>,
+}
+
+impl PartialEq for InstalledMod {
+    fn eq(&self, other: &Self) -> bool {
+        self.package_name == other.package_name && self.version == other.version
+    }
 }
 
 impl InstalledMod {
@@ -56,10 +64,16 @@ impl InstalledMod {
         b
     }
 }
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Hash, Eq)]
 pub struct SubMod {
     pub path: PathBuf,
     pub name: String,
+}
+
+impl PartialEq for SubMod {
+    fn eq(&self, other: &Self) -> bool {
+        self.path == other.path && self.name == other.name
+    }
 }
 
 impl SubMod {
@@ -88,12 +102,17 @@ pub struct Manifest {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LocalIndex {
-    pub mods: Vec<InstalledMod>,
+    pub mods: HashSet<InstalledMod>,
+    #[serde(default)]
+    pub linked: HashSet<InstalledMod>,
 }
 
 impl LocalIndex {
     pub fn new() -> Self {
-        Self { mods: vec![] }
+        Self {
+            mods: HashSet::new(),
+            linked: HashSet::new(),
+        }
     }
 }
 
@@ -121,26 +140,34 @@ impl CachedMod {
 }
 
 pub struct Cache {
+    re: Regex,
     pkgs: Vec<CachedMod>,
 }
 
 impl Cache {
     pub fn build(dir: &Path) -> Result<Self> {
         let cache = fs::read_dir(dir)?;
+        let re =
+            Regex::new(r"(.+)[_-](\d\.\d\.\d)(\.zip)?").context("Unable to create cache regex")?;
         let mut pkgs = vec![];
         for e in cache.flatten() {
             if !e.path().is_dir() {
+                debug!("Reading {} into cache", e.path().display());
                 let file_name = e.file_name();
-                let re =
-                    Regex::new(r"(.+)_(.+)(\.zip)?").context("Unable to create cache regex")?;
                 if let Some(c) = re.captures(file_name.to_str().unwrap()) {
-                    let name = c.get(1).unwrap().as_str();
-                    let ver = c.get(2).unwrap().as_str();
+                    let name = c.get(1).unwrap().as_str().trim();
+                    let ver = c.get(2).unwrap().as_str().trim();
                     pkgs.push(CachedMod::new(name, ver, dir));
+                    debug!("Added {} version {} to cache", name, ver);
+                } else {
+                    warn!(
+                        "Unexpected filename in cache dir: {}",
+                        file_name.to_str().unwrap()
+                    );
                 }
             }
         }
-        Ok(Cache { pkgs })
+        Ok(Cache { pkgs, re })
     }
 
     ///Cleans all cached versions of a package except the version provided
@@ -174,12 +201,13 @@ impl Cache {
 
     fn has(&self, path: &Path) -> bool {
         if let Some(name) = path.file_name() {
-            let parts: Vec<&str> = name.to_str().unwrap().split('_').collect();
-            let name = parts[0];
-            let ver = parts[1];
-            if let Some(c) = self.pkgs.iter().find(|e| e.name == name) {
-                if c.version == ver {
-                    return true;
+            if let Some(parts) = self.re.captures(name.to_str().unwrap()) {
+                let name = parts.get(1).unwrap().as_str();
+                let ver = parts.get(2).unwrap().as_str();
+                if let Some(c) = self.pkgs.iter().find(|e| e.name == name) {
+                    if c.version == ver {
+                        return true;
+                    }
                 }
             }
         }

@@ -6,6 +6,8 @@ use crate::model::InstalledMod;
 use crate::model::Mod;
 use anyhow::{anyhow, Context, Result};
 use directories::ProjectDirs;
+use std::collections::HashSet;
+use std::ffi::OsStr;
 use std::fs::{self, File, OpenOptions};
 use std::io::Write;
 use std::path::Path;
@@ -70,9 +72,11 @@ pub fn check_cache(path: &Path) -> Option<File> {
     }
 }
 
+#[inline(always)]
 pub fn ensure_dirs(dirs: &ProjectDirs) {
     fs::create_dir_all(dirs.cache_dir()).unwrap();
     fs::create_dir_all(dirs.config_dir()).unwrap();
+    fs::create_dir_all(dirs.data_local_dir()).unwrap();
 }
 
 pub fn remove_file(path: &Path) -> Result<()> {
@@ -94,7 +98,7 @@ pub fn clear_cache(dir: &Path, force: bool) -> Result<()> {
             clear_cache(&path, force)?;
             fs::remove_dir(&path)
                 .context(format!("Unable to remove directory {}", path.display()))?;
-        } else if path.ends_with(".zip") || force {
+        } else if path.extension() == Some(OsStr::new("zip")) || force {
             fs::remove_file(&path).context(format!("Unable to remove file {}", path.display()))?;
         }
     }
@@ -135,7 +139,7 @@ pub fn save_file(file: &Path, data: String) -> Result<()> {
 pub fn resolve_deps<'a>(
     valid: &mut Vec<&'a Mod>,
     base: &'a Mod,
-    installed: &'a Vec<InstalledMod>,
+    installed: &'a HashSet<InstalledMod>,
     index: &'a Vec<Mod>,
 ) -> Result<()> {
     for dep in &base.deps {

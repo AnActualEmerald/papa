@@ -8,7 +8,7 @@ use anyhow::{anyhow, Context, Result};
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
-    mod_dir: String,
+    pub mod_dir: PathBuf,
     cache: bool,
     #[serde(default)]
     pub game_path: PathBuf,
@@ -20,7 +20,7 @@ pub struct Config {
 impl Config {
     pub fn new(dir: String, cache: bool, game_path: String, nstar_version: Option<String>) -> Self {
         Config {
-            mod_dir: dir,
+            mod_dir: PathBuf::from(dir),
             cache,
             game_path: PathBuf::from(game_path),
             nstar_version,
@@ -40,7 +40,7 @@ impl Config {
     }
 
     pub fn set_dir(&mut self, dir: &str) {
-        self.mod_dir = dir.to_owned();
+        self.mod_dir = PathBuf::from(dir);
     }
 
     pub fn set_cache(&mut self, cache: &bool) {

@@ -2,7 +2,7 @@ use std::{
     cmp::min,
     fs::{self, File, OpenOptions},
     io::{self, Read, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
     time::SystemTime,
 };
 
@@ -86,10 +86,9 @@ pub fn uninstall(mods: Vec<&PathBuf>) -> Result<()> {
     Ok(())
 }
 
-pub fn install_mod(zip_file: &File, config: &Config) -> Result<InstalledMod> {
+pub fn install_mod(zip_file: &File, target_dir: &Path) -> Result<InstalledMod> {
     debug!("Starting mod insall");
-    let mods_dir = config
-        .mod_dir()
+    let mods_dir = target_dir
         .canonicalize()
         .context("Couldn't resolve mods directory path")?;
     //Get the package manifest

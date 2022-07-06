@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Global install option
+- Options to `list` for global and all mods
+- `update` now lists the mods it will update, similar to `install`
+
+### Changed
+- Improved formatting a bit when installing many mods
+
+### Fixed
+- Cache breaking for packages with `_` in the package name
+- Cache not actually clearing without `force` option
+
+
 
 ## v2.1.1
 

@@ -46,9 +46,13 @@ enum Commands {
         ///Force installation
         #[clap(short, long)]
         force: bool,
+
+        ///Make mod globally available
+        #[clap(short, long)]
+        global: bool,
     },
     ///Remove a mod or mods from the current mods directory
-    #[clap(alias = "r")]
+    #[clap(alias = "r", alias = "rm")]
     Remove {
         #[clap(value_name = "MOD")]
         #[clap(help = "Mod name(s) to remove")]
@@ -56,7 +60,15 @@ enum Commands {
     },
     ///List installed mods
     #[clap(alias = "l", alias = "ls")]
-    List {},
+    List {
+        ///List only globally installed mods
+        #[clap(short, long)]
+        global: bool,
+
+        ///List both local and global mods
+        #[clap(short, long)]
+        all: bool,
+    },
     ///Clear mod cache
     #[clap(alias = "c")]
     Clear {
@@ -146,19 +158,21 @@ async fn main() {
             Ok(())
         }
         Commands::Config { mods_dir, cache } => core.update_config(mods_dir, cache),
-        Commands::List {} => core.list(),
+        Commands::List { global, all } => core.list(global, all),
         Commands::Install {
             mod_names: _,
             url: Some(url),
             yes: _,
             force: _,
+            global: _,
         } => core.install_from_url(url).await,
         Commands::Install {
             mod_names,
             url: None,
             yes,
             force,
-        } => core.install(mod_names, yes, force).await,
+            global,
+        } => core.install(mod_names, yes, force, global).await,
         Commands::Disable { mods } => core.disable(mods),
         Commands::Enable { mods } => core.enable(mods),
         Commands::Search { term } => core.search(term).await,
