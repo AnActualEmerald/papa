@@ -6,10 +6,11 @@ pub mod northstar;
 pub(crate) mod utils;
 
 use std::fs;
+use std::os::unix;
 use std::path::{Path, PathBuf};
 
 use directories::ProjectDirs;
-use log::{debug, trace};
+use log::{debug, trace, warn};
 use regex::Regex;
 use rustyline::Editor;
 
@@ -17,7 +18,7 @@ use self::config::Config;
 use crate::api;
 use crate::api::model::{self, Cache, InstalledMod, LocalIndex, Mod};
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 
 pub struct Core {
     pub config: Config,
@@ -188,22 +189,22 @@ impl Core {
 
     pub fn list(&self, global: bool, all: bool) -> Result<()> {
         let do_list = |target, global| -> Result<()> {
-            let mods = utils::get_installed(target)?.mods;
+            let index = utils::get_installed(target)?;
             let msg = if global {
                 "Global mods:"
             } else {
                 "Local mods:"
             };
             println!("{}", msg);
-            if !mods.is_empty() {
-                mods.into_iter().for_each(|m| {
+            if !index.mods.is_empty() {
+                index.mods.into_iter().for_each(|m| {
                     let disabled = if !m.any_disabled() || m.mods.len() > 1 {
                         ""
                     } else {
                         "[disabled]"
                     };
                     println!(
-                        " \x1b[92m{}@{}\x1b[0m {}",
+                        "  \x1b[92m{}@{}\x1b[0m {}",
                         m.package_name, m.version, disabled
                     );
                     if m.mods.len() > 1 {
@@ -211,14 +212,23 @@ impl Core {
                             let character = if i + 1 < m.mods.len() { "├" } else { "└" };
                             let disabled = if e.disabled() { "[disabled]" } else { "" };
                             println!(
-                                "   \x1b[92m{}─\x1b[0m \x1b[0;96m{}\x1b[0m {}",
+                                "    \x1b[92m{}─\x1b[0m \x1b[0;96m{}\x1b[0m {}",
                                 character, e.name, disabled
                             );
                         }
                     }
                 });
             } else {
-                println!(" No mods currently installed");
+                println!("  No mods currently installed");
+            }
+            println!();
+            if !index.linked.is_empty() {
+                println!("Linked mods:");
+                index
+                    .linked
+                    .into_iter()
+                    .for_each(|m| println!("  \x1b[92m{}@{}\x1b[0m", m.package_name, m.version));
+                println!();
             }
 
             Ok(())
@@ -520,6 +530,70 @@ impl Core {
         }
 
         utils::save_installed(self.config.mod_dir(), &installed)?;
+        Ok(())
+    }
+
+    pub(crate) fn include(&self, mods: Vec<String>, force: bool) -> Result<()> {
+        let mut local = utils::get_installed(&self.local_target)?;
+        let global = utils::get_installed(&self.global_target)?;
+        for m in mods.iter() {
+            if let Some(g) = global
+                .mods
+                .iter()
+                .find(|e| e.package_name.trim().to_lowercase() == m.trim().to_lowercase())
+            {
+                if !force && local.linked.contains(g) {
+                    println!("Mod '{}' already linked", m);
+                    continue;
+                }
+                for m in g.mods.iter() {
+                    unix::fs::symlink(&m.path, self.local_target.join(&m.name)).context(
+                        format!(
+                        "Unable to create symlink to {}... Does a file by that name already exist?",
+                        self.local_target.join(&m.name).display()
+                    ),
+                    )?;
+                }
+
+                println!("Linked {}!", m);
+                local.linked.insert(g.clone());
+            } else {
+                println!("No mod '{}' globally installed", m);
+            }
+        }
+
+        utils::save_installed(&self.local_target, &local)?;
+
+        Ok(())
+    }
+
+    pub(crate) fn exclude(&self, mods: Vec<String>) -> Result<()> {
+        let mut local = utils::get_installed(&self.local_target)?;
+        for m in mods {
+            if let Some(g) = local
+                .linked
+                .clone()
+                .iter()
+                .find(|e| e.package_name.trim().to_lowercase() == m.trim().to_lowercase())
+            {
+                for m in g.mods.iter() {
+                    fs::remove_file(self.local_target.join(&m.name))?;
+                }
+
+                println!("Removed link to {}", m);
+                local.linked.remove(g);
+            } else {
+                warn!(
+                    "Coudln't find link to {} in directory {}",
+                    m,
+                    self.local_target.display()
+                );
+                println!("No mod '{}' linked to current mod directory", m);
+            }
+        }
+
+        utils::save_installed(&self.local_target, &local)?;
+
         Ok(())
     }
 }

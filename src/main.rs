@@ -108,6 +108,20 @@ enum Commands {
     ///Enable mod(s) or sub-mod(s)
     Enable { mods: Vec<String> },
 
+    //These will only be available on linux for now because symlinks on Windows are weird
+    #[cfg(target_os = "linux")]
+    #[clap(alias = "link", alias = "ln")]
+    ///Link a global mod to the current mods folder
+    Include {
+        mods: Vec<String>,
+        #[clap(long, short)]
+        force: bool,
+    },
+    #[cfg(target_os = "linux")]
+    #[clap(alias = "unlink")]
+    ///Unlink a global mod from the current mods folder
+    Exclude { mods: Vec<String> },
+
     ///Commands for managing Northstar itself
     #[cfg(feature = "northstar")]
     #[clap(alias("ns"))]
@@ -207,6 +221,10 @@ async fn main() {
             #[cfg(feature = "launcher")]
             NstarCommands::Start {} => core.start_northstar(),
         },
+        #[cfg(target_os = "linux")]
+        Commands::Include { mods, force } => core.include(mods, force),
+        #[cfg(target_os = "linux")]
+        Commands::Exclude { mods } => core.exclude(mods),
     };
 
     if let Some(e) = res.err() {
