@@ -4,7 +4,7 @@
  <br>
  Papa
 <br>
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/AnActualEmerald/papa/Rust) ![Crates.io (latest)](https://img.shields.io/crates/dv/papa)
+<img alt="GitHub Workflow Status" src="https://img.shields.io/github/workflow/status/AnActualEmerald/papa/Rust"> <img alt="Crates.io (latest)" src="https://img.shields.io/crates/dv/papa">
 </h1>
 
 
