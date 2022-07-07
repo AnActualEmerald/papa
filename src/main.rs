@@ -153,11 +153,10 @@ async fn main() {
     env_logger::builder().format_timestamp(None).init();
 
     let dirs = ProjectDirs::from("me", "greenboi", "papa").unwrap();
-    let config = config::load_config(dirs.config_dir()).unwrap();
 
     let rl = Editor::<()>::new();
 
-    let mut core = core::Core::new(config, dirs, rl);
+    let mut core = core::Core::new(dirs, rl);
 
     let res = match cli.command {
         Commands::Update { yes } => core.update(yes).await,

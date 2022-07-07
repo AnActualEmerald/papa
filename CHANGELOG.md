@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Cache breaking for packages with `_` in the package name
 - Cache not actually clearing without `force` option
+- Crash where the config directory wasn't be created properly
 
 
 

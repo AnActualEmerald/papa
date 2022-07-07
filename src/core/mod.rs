@@ -30,8 +30,9 @@ pub struct Core {
 }
 
 impl Core {
-    pub fn new(config: Config, dirs: ProjectDirs, rl: Editor<()>) -> Self {
+    pub fn new(dirs: ProjectDirs, rl: Editor<()>) -> Self {
         utils::ensure_dirs(&dirs);
+        let config = config::load_config(dirs.config_dir()).expect("Unable to load config file");
         let cache = Cache::build(dirs.cache_dir()).unwrap();
         let lt = config.mod_dir.clone();
         let gt = dirs.data_local_dir();
@@ -547,12 +548,11 @@ impl Core {
                     continue;
                 }
                 for m in g.mods.iter() {
-                    unix::fs::symlink(&m.path, self.local_target.join(&m.name)).context(
-                        format!(
-                        "Unable to create symlink to {}... Does a file by that name already exist?",
+                    self.link_dir(&m.path, &self.local_target.join(&m.name))
+                        .context(format!(
+                        "Unable to create link to {}... Does a file by that name already exist?",
                         self.local_target.join(&m.name).display()
-                    ),
-                    )?;
+                    ))?;
                 }
 
                 println!("Linked {}!", m);
@@ -567,6 +567,32 @@ impl Core {
         Ok(())
     }
 
+    fn link_dir(&self, original: &Path, target: &Path) -> Result<()> {
+        debug!("Linking dir {} to {}", original.display(), target.display());
+        for e in original.read_dir()? {
+            let e = e?;
+            if e.path().is_dir() {
+                self.link_dir(&e.path(), &target.join(e.file_name()))?;
+                continue;
+            }
+
+            let target = target.join(e.file_name());
+            if let Some(p) = target.parent() {
+                if !p.exists() {
+                    fs::create_dir_all(p)?;
+                }
+            }
+
+            debug!(
+                "Create hardlink {} -> {}",
+                e.path().display(),
+                target.display()
+            );
+            fs::hard_link(e.path(), &target).context("Failed to create hard link")?;
+        }
+        Ok(())
+    }
+
     pub(crate) fn exclude(&self, mods: Vec<String>) -> Result<()> {
         let mut local = utils::get_installed(&self.local_target)?;
         for m in mods {
@@ -577,7 +603,7 @@ impl Core {
                 .find(|e| e.package_name.trim().to_lowercase() == m.trim().to_lowercase())
             {
                 for m in g.mods.iter() {
-                    fs::remove_file(self.local_target.join(&m.name))?;
+                    fs::remove_dir_all(self.local_target.join(&m.name))?;
                 }
 
                 println!("Removed link to {}", m);
