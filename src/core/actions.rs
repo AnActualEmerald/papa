@@ -14,7 +14,6 @@ use zip::ZipArchive;
 
 use crate::{
     api::model::SubMod,
-    config::Config,
     model::{InstalledMod, Manifest},
 };
 

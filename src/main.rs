@@ -4,7 +4,7 @@ use clap::{Parser, Subcommand};
 use log::debug;
 
 use crate::api::model;
-use crate::core::config;
+
 use directories::ProjectDirs;
 use rustyline::Editor;
 

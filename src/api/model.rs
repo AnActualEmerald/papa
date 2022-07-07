@@ -38,7 +38,7 @@ impl Mod {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Hash, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct InstalledMod {
     pub package_name: String,
     pub version: String,
@@ -48,32 +48,19 @@ pub struct InstalledMod {
     pub needed_by: Vec<String>,
 }
 
-impl PartialEq for InstalledMod {
-    fn eq(&self, other: &Self) -> bool {
-        self.package_name == other.package_name && self.version == other.version
-    }
-}
-
 impl InstalledMod {
     pub fn flatten_paths(&self) -> Vec<&PathBuf> {
         self.mods.iter().map(|m| &m.path).collect()
     }
 
     pub fn any_disabled(&self) -> bool {
-        let b = self.mods.iter().any(|m| m.disabled());
-        b
+        self.mods.iter().any(|m| m.disabled())
     }
 }
-#[derive(Serialize, Deserialize, Debug, Clone, Hash, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Hash, PartialEq, Eq)]
 pub struct SubMod {
     pub path: PathBuf,
     pub name: String,
-}
-
-impl PartialEq for SubMod {
-    fn eq(&self, other: &Self) -> bool {
-        self.path == other.path && self.name == other.name
-    }
 }
 
 impl SubMod {

@@ -6,7 +6,7 @@ pub mod northstar;
 pub(crate) mod utils;
 
 use std::fs;
-use std::os::unix;
+
 use std::path::{Path, PathBuf};
 
 use directories::ProjectDirs;
@@ -41,7 +41,7 @@ impl Core {
             dirs: dirs.clone(),
             rl,
             cache,
-            local_target: lt.to_path_buf(),
+            local_target: lt,
             global_target: gt.to_path_buf(),
         }
     }
@@ -261,7 +261,7 @@ impl Core {
         let path = self.dirs.cache_dir().join(file_name);
         match actions::download_file(url.to_string().as_str(), path.clone()).await {
             Ok(f) => {
-                let _pkg = actions::install_mod(&f, &self.config.mod_dir()).unwrap();
+                let _pkg = actions::install_mod(&f, self.config.mod_dir()).unwrap();
                 utils::remove_file(&path)?;
                 println!("Installed {}", url);
             }
@@ -377,7 +377,7 @@ impl Core {
         for e in downloaded
             .iter()
             .map(|f| -> Result<()> {
-                let pkg = actions::install_mod(f, &target)?;
+                let pkg = actions::install_mod(f, target)?;
                 installed.mods.insert(pkg.clone());
                 self.cache.clean(&pkg.package_name, &pkg.version)?;
                 println!("Installed {}!", pkg.package_name);
@@ -402,8 +402,7 @@ impl Core {
                     .clone()
                     .iter()
                     .find(|e| e.package_name.trim().to_lowercase() == f.trim().to_lowercase())
-                    .filter(|e| installed.mods.remove(e))
-                    .map(|e| e.clone())
+                    .filter(|e| installed.mods.remove(e)).cloned()
             })
             .collect();
 
