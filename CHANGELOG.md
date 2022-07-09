@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+
+
+## v2.2.0
+
+### Added
+- Global install option (unix only)
+- `inlcude` and `exclude` commands for using global mods (unix only)
+- Options to `list` for global and all mods
+- `update` now lists the mods it will update, similar to `install`
+
+### Changed
+- Improved formatting a bit when installing many mods
+
+### Fixed
+- Cache breaking for packages with `_` in the package name
+- Cache not actually clearing without `force` option
+- Crash where the config directory wasn't be created properly
+
+
+
 ## v2.1.1
 
 ### Added 
