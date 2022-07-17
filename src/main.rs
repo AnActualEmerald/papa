@@ -234,7 +234,7 @@ async fn main() {
         Commands::Include { mods, force } => include(&ctx, mods, force),
         #[cfg(target_os = "linux")]
         Commands::Exclude { mods } => exclude(&ctx, mods),
-        Commands::Cluster { command } => cluster(&ctx, command),
+        Commands::Cluster { command } => cluster(&mut ctx, command),
     };
 
     if let Some(e) = res.err() {

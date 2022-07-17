@@ -217,15 +217,28 @@ pub struct Cluster {
     pub name: Option<String>,
     ///K: Member Name V: Member Path
     pub members: HashMap<String, PathBuf>,
+
+    #[serde(skip)]
+    path: PathBuf,
 }
 
 impl Cluster {
+    pub fn new(name: Option<String>, path: PathBuf) -> Self {
+        Cluster {
+            name,
+            members: HashMap::new(),
+            path,
+        }
+    }
+
     pub fn find() -> Result<Option<Self>> {
         let has_cluster = |p: &Path| -> Result<Option<Self>> {
             for e in p.read_dir()?.flatten() {
                 if e.file_name().as_os_str() == OsStr::new("cluster.ron") {
                     let raw = fs::read_to_string(e.path())?;
-                    let clstr = ron::from_str(&raw)?;
+                    let mut clstr: Cluster = ron::from_str(&raw)?;
+                    clstr.path = e.path().to_path_buf();
+
                     return Ok(Some(clstr));
                 }
             }
@@ -247,5 +260,13 @@ impl Cluster {
                 }
             }
         }
+    }
+
+    pub fn save(&self) -> Result<()> {
+        let pretty = ron::ser::to_string_pretty(&self, ron::ser::PrettyConfig::new())?;
+
+        fs::write(&self.path, pretty)?;
+
+        Ok(())
     }
 }
