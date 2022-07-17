@@ -1,3 +1,5 @@
+#[cfg(feature = "northstar")]
+use crate::core::northstar::{init_northstar, update_northstar};
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
@@ -10,6 +12,8 @@ use rustyline::Editor;
 
 mod api;
 mod core;
+
+use crate::core::commands::*;
 
 #[derive(Parser)]
 #[clap(name = "Papa")]
@@ -156,41 +160,41 @@ async fn main() {
 
     let rl = Editor::<()>::new();
 
-    let mut core = core::Core::new(dirs, rl);
+    let mut ctx = core::Ctx::new(dirs, rl);
 
     let res = match cli.command {
-        Commands::Update { yes } => core.update(yes).await,
+        Commands::Update { yes } => update(&mut ctx, yes).await,
         Commands::Config {
             mods_dir: None,
             cache: None,
         } => {
             println!(
                 "Current config:\n{}",
-                toml::to_string_pretty(&core.config).unwrap()
+                toml::to_string_pretty(&ctx.config).unwrap()
             );
             Ok(())
         }
-        Commands::Config { mods_dir, cache } => core.update_config(mods_dir, cache),
-        Commands::List { global, all } => core.list(global, all),
+        Commands::Config { mods_dir, cache } => update_config(&mut ctx, mods_dir, cache),
+        Commands::List { global, all } => list(&ctx, global, all),
         Commands::Install {
             mod_names: _,
             url: Some(url),
             yes: _,
             force: _,
             global: _,
-        } => core.install_from_url(url).await,
+        } => install_from_url(&ctx, url).await,
         Commands::Install {
             mod_names,
             url: None,
             yes,
             force,
             global,
-        } => core.install(mod_names, yes, force, global).await,
-        Commands::Disable { mods } => core.disable(mods),
-        Commands::Enable { mods } => core.enable(mods),
-        Commands::Search { term } => core.search(term).await,
-        Commands::Remove { mod_names } => core.remove(mod_names),
-        Commands::Clear { full } => core.clear(full),
+        } => install(&mut ctx, mod_names, yes, force, global).await,
+        Commands::Disable { mods } => disable(&mut ctx, mods),
+        Commands::Enable { mods } => enable(&mut ctx, mods),
+        Commands::Search { term } => search(&ctx, term).await,
+        Commands::Remove { mod_names } => remove(&ctx, mod_names),
+        Commands::Clear { full } => clear(&ctx, full),
         #[cfg(feature = "northstar")]
         Commands::Northstar { command } => match command {
             //      NstarCommands::Install { game_path } => {
@@ -214,16 +218,16 @@ async fn main() {
                 } else {
                     std::env::current_dir().unwrap()
                 };
-                core.init_northstar(&game_path).await
+                init_northstar(&mut ctx, &game_path).await
             }
-            NstarCommands::Update {} => core.update_northstar().await,
+            NstarCommands::Update {} => update_northstar(&mut ctx).await,
             #[cfg(feature = "launcher")]
-            NstarCommands::Start {} => core.start_northstar(),
+            NstarCommands::Start {} => ctx.start_northstar(&ctx),
         },
         #[cfg(target_os = "linux")]
-        Commands::Include { mods, force } => core.include(mods, force),
+        Commands::Include { mods, force } => include(&ctx, mods, force),
         #[cfg(target_os = "linux")]
-        Commands::Exclude { mods } => core.exclude(mods),
+        Commands::Exclude { mods } => exclude(&ctx, mods),
     };
 
     if let Some(e) = res.err() {
