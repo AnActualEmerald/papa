@@ -2,11 +2,19 @@ use std::fs;
 
 use log::debug;
 
-use crate::{core::{Ctx, utils, commands::utils::{do_update, link_dir}}, api::{self, model}};
+use crate::{
+    api::{
+        self,
+        model::{self, LocalIndex},
+    },
+    core::{
+        commands::utils::{do_update, link_dir},
+        config::ManageMode,
+        utils, Ctx,
+    },
+};
 
-use anyhow::{Result, anyhow};
-
-
+use anyhow::{anyhow, Result};
 
 pub async fn update(ctx: &mut Ctx, yes: bool) -> Result<()> {
     let local_target = ctx.local_target.clone();
@@ -14,7 +22,19 @@ pub async fn update(ctx: &mut Ctx, yes: bool) -> Result<()> {
     print!("Updating package index...");
     let index = &api::get_package_index().await?;
     println!(" Done!");
-    let mut installed = utils::get_installed(ctx.config.mod_dir())?;
+    let mut installed = if let ManageMode::Client = ctx.config.mode {
+        utils::get_installed(ctx.config.mod_dir())
+    } else if let Some(c) = ctx.cluster.as_ref() {
+        let mut chain = LocalIndex::new();
+        for e in c.members.values() {
+            chain.mods.extend(utils::get_installed(e)?.mods);
+        }
+
+        debug!("Chained clustered mods: {:#?}", chain);
+        Ok(chain)
+    } else {
+        Err(anyhow!("Failed to get clustered mods"))
+    }?;
     let mut global = utils::get_installed(ctx.dirs.data_local_dir())?;
     let outdated: Vec<&model::Mod> = index
         .iter()
@@ -118,5 +138,4 @@ pub async fn update(ctx: &mut Ctx, yes: bool) -> Result<()> {
         }
     }
     Ok(())
-
 }

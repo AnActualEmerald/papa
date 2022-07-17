@@ -2,6 +2,7 @@ use std::fs;
 
 use crate::{
     api::model::Cluster,
+    core::config,
     core::{config::ManageMode, Ctx},
 };
 use anyhow::{Context, Result};
@@ -22,6 +23,8 @@ pub(crate) fn new(ctx: &mut Ctx, name: Option<String>) -> Result<()> {
     );
     ctx.config.mode = ManageMode::Server;
     println!("Set management mode to server");
+
+    config::save_config(ctx.dirs.config_dir(), &ctx.config)?;
 
     Ok(())
 }
