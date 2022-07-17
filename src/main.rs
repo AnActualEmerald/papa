@@ -135,6 +135,7 @@ enum Commands {
     },
 
     ///Manage clusters of Northstar servers
+    #[clap(alias("cl"))]
     Cluster {
         #[clap(subcommand)]
         command: WsCommands,

@@ -15,6 +15,20 @@ pub struct Config {
     pub nstar_version: Option<String>,
     #[serde(default)]
     pub exclude: Vec<String>,
+    #[serde(default = "ManageMode::default")]
+    pub mode: ManageMode,
+}
+
+#[derive(Serialize, Deserialize)]
+pub enum ManageMode {
+    Client,
+    Server,
+}
+
+impl ManageMode {
+    fn default() -> Self {
+        ManageMode::Client
+    }
 }
 
 impl Config {
@@ -28,6 +42,7 @@ impl Config {
                 "ns_startup_args.txt".to_string(),
                 "ns_startup_args_dedi.txt".to_string(),
             ],
+            mode: ManageMode::Client,
         }
     }
 
