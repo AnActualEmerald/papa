@@ -3,7 +3,7 @@ use log::{debug, warn};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     ffi::OsStr,
     fs::{self, File, OpenOptions},
     path::{Path, PathBuf},
@@ -89,6 +89,7 @@ pub struct Manifest {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LocalIndex {
+    #[serde(default)]
     pub mods: HashSet<InstalledMod>,
     #[serde(default)]
     pub linked: HashSet<InstalledMod>,
@@ -209,4 +210,11 @@ impl Cache {
             None
         }
     }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct Cluster {
+    pub name: Option<String>,
+    ///K: Member Name V: Member Path
+    pub members: HashMap<String, PathBuf>,
 }

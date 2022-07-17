@@ -23,6 +23,8 @@ mod search;
 pub(crate) use search::search;
 mod update;
 pub(crate) use update::update;
+mod cluster;
+pub(crate) use cluster::*;
 
 //=================
 //Command utilities

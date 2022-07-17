@@ -80,7 +80,6 @@ pub fn uninstall(mods: Vec<&PathBuf>) -> Result<()> {
             debug!("Removing dir failed, attempting to remove file...");
             fs::remove_file(p).context(format!("Unable to remove directory {}", p.display()))?
         }
-        println!("Removed {}", p.display());
     }
     Ok(())
 }

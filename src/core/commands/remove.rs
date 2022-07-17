@@ -23,6 +23,9 @@ pub fn remove(ctx: &Ctx, mod_names: Vec<String>) -> Result<()> {
     let paths = valid.iter().flat_map(|f| f.flatten_paths()).collect();
 
     actions::uninstall(paths)?;
+    valid
+        .iter()
+        .for_each(|e| println!("Removed {}", e.package_name));
     utils::save_installed(ctx.config.mod_dir(), &installed)?;
     Ok(())
 }
