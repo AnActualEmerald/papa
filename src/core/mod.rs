@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use directories::ProjectDirs;
 use rustyline::Editor;
 
-use crate::api::model::Cache;
+use crate::api::model::{Cache, Cluster};
 
 use self::config::Config;
 
@@ -22,6 +22,7 @@ pub struct Ctx {
     pub cache: Cache,
     pub local_target: PathBuf,
     pub global_target: PathBuf,
+    pub cluster: Option<Cluster>,
 }
 
 impl Ctx {
@@ -38,6 +39,7 @@ impl Ctx {
             cache,
             local_target: lt,
             global_target: gt.to_path_buf(),
+            cluster: Cluster::find().unwrap_or(None),
         }
     }
 }

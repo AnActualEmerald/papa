@@ -218,3 +218,34 @@ pub struct Cluster {
     ///K: Member Name V: Member Path
     pub members: HashMap<String, PathBuf>,
 }
+
+impl Cluster {
+    pub fn find() -> Result<Option<Self>> {
+        let has_cluster = |p: &Path| -> Result<Option<Self>> {
+            for e in p.read_dir()?.flatten() {
+                if e.file_name().as_os_str() == OsStr::new("cluster.ron") {
+                    let raw = fs::read_to_string(e.path())?;
+                    let clstr = ron::from_str(&raw)?;
+                    return Ok(Some(clstr));
+                }
+            }
+            Ok(None)
+        };
+        let mut depth = 0;
+        let mut target = std::env::current_dir()?;
+        loop {
+            debug!("Checking for cluster file in {}", target.display());
+            let test = has_cluster(&target)?;
+            if test.is_some() {
+                break Ok(test);
+            } else {
+                if let Some(p) = target.parent() {
+                    target = p.to_owned();
+                    depth += 1;
+                } else {
+                    break Ok(None);
+                }
+            }
+        }
+    }
+}
