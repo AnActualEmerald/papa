@@ -135,6 +135,7 @@ enum Commands {
     },
 
     ///Manage clusters of Northstar servers
+    #[cfg(feature = "cluster")]
     #[clap(alias("cl"))]
     Cluster {
         #[clap(subcommand)]
@@ -235,6 +236,7 @@ async fn main() {
         Commands::Include { mods, force } => include(&ctx, mods, force),
         #[cfg(target_os = "linux")]
         Commands::Exclude { mods } => exclude(&ctx, mods),
+        #[cfg(feature = "cluster")]
         Commands::Cluster { command } => cluster(&mut ctx, command),
     };
 
