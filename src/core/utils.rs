@@ -1,5 +1,6 @@
 use crate::api;
 use crate::api::model::LocalIndex;
+use crate::api::model::Profile;
 use crate::api::model::SubMod;
 use crate::model;
 use crate::model::InstalledMod;
@@ -15,7 +16,7 @@ use std::path::Path;
 #[macro_export]
 macro_rules! g2re {
     ($e:expr) => {{
-        let re = $e.replace('*', ".+");
+        let re = $e.replace('*', ".*");
         regex::Regex::new(&re)
     }};
 }
@@ -77,6 +78,7 @@ pub fn ensure_dirs(dirs: &ProjectDirs) {
     fs::create_dir_all(dirs.cache_dir()).unwrap();
     fs::create_dir_all(dirs.config_dir()).unwrap();
     fs::create_dir_all(dirs.data_local_dir()).unwrap();
+    Profile::ensure_default(dirs.config_dir()).unwrap();
 }
 
 pub fn remove_file(path: &Path) -> Result<()> {

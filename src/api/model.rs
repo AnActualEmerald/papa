@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use log::{debug, warn};
+use log::{debug, info, warn};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -268,5 +268,59 @@ impl Cluster {
         fs::write(&self.path, pretty)?;
 
         Ok(())
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Profile {
+    #[serde(skip)]
+    path: Option<PathBuf>,
+    pub name: String,
+    pub mods: HashSet<InstalledMod>,
+}
+
+impl Profile {
+    pub fn get(dir: &Path, name: &str) -> Result<Self> {
+        let fname = format!("{}.ron", name);
+        let path = dir.join(&fname);
+        let raw = if path.exists() {
+            fs::read_to_string(&path)?
+        } else {
+            String::new()
+        };
+        let mut p: Self = if raw.is_empty() {
+            Profile {
+                path: None,
+                name: name.to_owned(),
+                mods: HashSet::new(),
+            }
+        } else {
+            ron::from_str(&raw).with_context(|| format!("Failed to parse profile {}", fname))?
+        };
+        p.path = Some(path.to_path_buf());
+        Ok(p)
+    }
+
+    pub fn ensure_default(dir: &Path) -> Result<()> {
+        let path = dir.join("default.ron");
+        if !path.exists() {
+            Profile {
+                path: Some(path),
+                name: "default".to_string(),
+                mods: HashSet::new(),
+            };
+        }
+        info!("Created default mod profile");
+        Ok(())
+    }
+}
+
+//This might be a bad idea but it is incredibly convenient
+impl Drop for Profile {
+    fn drop(&mut self) {
+        if let Some(p) = &self.path {
+            let s = ron::ser::to_string_pretty(self, ron::ser::PrettyConfig::new()).unwrap();
+            fs::write(p, &s).unwrap();
+        }
     }
 }

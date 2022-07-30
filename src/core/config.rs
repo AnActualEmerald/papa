@@ -17,6 +17,12 @@ pub struct Config {
     pub exclude: Vec<String>,
     #[serde(default = "ManageMode::default")]
     pub mode: ManageMode,
+    #[serde(default = "default_prof")]
+    pub profile: String,
+}
+
+fn default_prof() -> String {
+    "default".to_string()
 }
 
 #[derive(Serialize, Deserialize)]
@@ -43,6 +49,7 @@ impl Config {
                 "ns_startup_args_dedi.txt".to_string(),
             ],
             mode: ManageMode::Client,
+            profile: "default".to_string(),
         }
     }
 

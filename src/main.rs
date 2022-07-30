@@ -141,6 +141,12 @@ enum Commands {
         #[clap(subcommand)]
         command: WsCommands,
     },
+
+    ///Manage mod profiles
+    Profile {
+        #[clap(subcommand)]
+        command: ProfCommands,
+    },
 }
 
 #[derive(Subcommand)]
@@ -168,7 +174,7 @@ async fn main() {
 
     let rl = Editor::<()>::new();
 
-    let mut ctx = core::Ctx::new(dirs, rl);
+    let mut ctx = core::Ctx::new(dirs, rl).expect("Failed to create context");
 
     let res = match cli.command {
         Commands::Update { yes } => update(&mut ctx, yes).await,
@@ -238,6 +244,7 @@ async fn main() {
         Commands::Exclude { mods } => exclude(&ctx, mods),
         #[cfg(feature = "cluster")]
         Commands::Cluster { command } => cluster(&mut ctx, command),
+        Commands::Profile { command } => profile(&mut ctx, command),
     };
 
     if let Some(e) = res.err() {
