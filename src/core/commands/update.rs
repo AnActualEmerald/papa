@@ -17,24 +17,19 @@ use crate::{
 use anyhow::{anyhow, Result};
 
 pub async fn update(ctx: &mut Ctx, yes: bool) -> Result<()> {
+    match ctx.config.mode {
+        ManageMode::Client => client_update(ctx, yes).await,
+        ManageMode::Server => cluster_update(ctx, yes).await,
+    }
+}
+
+async fn client_update(ctx: &mut Ctx, yes: bool) -> Result<()> {
     let local_target = ctx.local_target.clone();
     let global_target = ctx.global_target.clone();
     print!("Updating package index...");
     let index = &api::get_package_index().await?;
     println!(" Done!");
-    let mut installed = if let ManageMode::Client = ctx.config.mode {
-        utils::get_installed(ctx.config.mod_dir())
-    } else if let Some(c) = ctx.cluster.as_ref() {
-        let mut chain = LocalIndex::new();
-        for e in c.members.values() {
-            chain.mods.extend(utils::get_installed(e)?.mods);
-        }
-
-        debug!("Chained clustered mods: {:#?}", chain);
-        Ok(chain)
-    } else {
-        Err(anyhow!("Failed to get clustered mods"))
-    }?;
+    let mut installed = utils::get_installed(ctx.config.mod_dir())?;
     let mut global = utils::get_installed(ctx.dirs.data_local_dir())?;
     let outdated: Vec<&model::Mod> = index
         .iter()
@@ -135,6 +130,76 @@ pub async fn update(ctx: &mut Ctx, yes: bool) -> Result<()> {
                 );
                 println!("Run \"\x1b[96mpapa northstar update\x1b[0m\" to install it!");
             }
+        }
+    }
+    Ok(())
+}
+
+async fn cluster_update(ctx: &mut Ctx, yes: bool) -> Result<()> {
+    if let Some(c) = ctx.cluster.clone() {
+        println!(
+            "Updating server cluster{}...",
+            if c.name.is_some() {
+                format!(" {}", c.name.as_ref().unwrap())
+            } else {
+                "".to_string()
+            }
+        );
+
+        let index = utils::update_index(&ctx.local_target, &ctx.global_target).await;
+        //update global mods first
+        let mut to_relink = vec![];
+        let mut global_installed = utils::get_installed(&ctx.global_target)?;
+        for g in index.iter().filter(|m| m.global) {
+            if let Some(o) = global_installed
+                .mods
+                .iter()
+                .find(|e| e.package_name == g.name && e.version != g.version)
+            {
+                to_relink.push((&g.name, g));
+            }
+        }
+
+        if !to_relink.is_empty() {
+            let size: i64 = to_relink.iter().map(|f| f.1.file_size).sum::<i64>();
+            println!("Updating global mod(s): \n");
+            print!("\t");
+            to_relink.iter().enumerate().for_each(|(i, f)| {
+                //Only display 5 mods per row
+                if i > 0 && i % 5 == 0 {
+                    println!("\n");
+                    print!("\t");
+                }
+                print!(" \x1b[36m{}@{}\x1b[0m ", f.0, f.1.version);
+            });
+
+            println!("\n");
+            if !yes {
+                if let Ok(line) = ctx.rl.readline(&format!(
+                    "Will download ~{:.2} MB (compressed), okay? (This will overwrite any changes made to mod files) [Y/n]: ",
+                    size as f64 / 1_048_576f64
+                )) {
+                    if line.to_lowercase() == "n" {
+                        return Ok(());
+                    }
+                } else {
+                    return Ok(());
+                }
+            }
+            do_update(
+                ctx,
+                &to_relink.iter().map(|(_, m)| m.clone()).collect(),
+                &mut global_installed,
+                &ctx.global_target.clone(),
+            )
+            .await?;
+            utils::save_installed(&ctx.global_target, &global_installed)?;
+        }
+
+        for s in c.members.iter() {
+            let name = s.0;
+            let path = s.1;
+            let mut installed = utils::get_installed(&path);
         }
     }
     Ok(())

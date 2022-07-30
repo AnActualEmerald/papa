@@ -16,7 +16,7 @@ pub async fn install(
         ctx.config.mod_dir()
     };
 
-    let index = utils::update_index(target).await;
+    let index = utils::update_index(target, &ctx.global_target).await;
     let mut installed = utils::get_installed(target)?;
     let mut valid = vec![];
     for name in mod_names {

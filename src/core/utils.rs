@@ -21,13 +21,19 @@ macro_rules! g2re {
     }};
 }
 
-pub async fn update_index(path: &Path) -> Vec<model::Mod> {
+///Takes the local and global installed files to display whether a mod is installed or not
+pub async fn update_index(local: &Path, global: &Path) -> Vec<model::Mod> {
     print!("Updating package index...");
     let mut index = api::get_package_index().await.unwrap().to_vec();
     //        save_file(&dirs.cache_dir().join("index.ron"), index)?;
-    let installed = get_installed(path).unwrap();
+    let installed = get_installed(local).unwrap();
+    let glob = get_installed(global).unwrap();
     for e in index.iter_mut() {
         e.installed = installed
+            .mods
+            .iter()
+            .any(|f| f.package_name == e.name && f.version == e.version);
+        e.global = glob
             .mods
             .iter()
             .any(|f| f.package_name == e.name && f.version == e.version);

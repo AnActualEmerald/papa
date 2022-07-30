@@ -46,7 +46,7 @@ pub fn start_northstar(ctx: &Ctx) -> Result<(), String> {
 ///Returns OK if the path isn't set, but notifies the user
 pub async fn update_northstar(ctx: &mut Ctx) -> Result<()> {
     if let Some(current) = &ctx.config.nstar_version {
-        let index = utils::update_index(ctx.config.mod_dir()).await;
+        let index = utils::update_index(ctx.config.mod_dir(), &ctx.global_target).await;
         let nmod = index
             .iter()
             .find(|f| f.name.to_lowercase() == "northstar")
@@ -83,7 +83,7 @@ pub async fn update_northstar(ctx: &mut Ctx) -> Result<()> {
 ///
 ///Returns the version that was installed
 pub async fn install_northstar(ctx: &Ctx, game_path: &Path) -> Result<String> {
-    let index = utils::update_index(ctx.config.mod_dir()).await;
+    let index = utils::update_index(ctx.config.mod_dir(), &ctx.global_target).await;
     let nmod = index
         .iter()
         .find(|f| f.name.to_lowercase() == "northstar")

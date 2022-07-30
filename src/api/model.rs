@@ -21,6 +21,7 @@ pub struct Mod {
     pub file_size: i64,
     #[serde(default)]
     pub installed: bool,
+    pub global: bool,
     #[serde(default)]
     pub upgradable: bool,
 }

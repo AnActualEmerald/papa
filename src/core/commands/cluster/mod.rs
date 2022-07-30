@@ -20,7 +20,11 @@ pub(crate) enum WsCommands {
     New { name: Option<String> },
     ///Add a folder to an existing cluster
     #[clap(alias("a"))]
-    Add { name: String, path: PathBuf },
+    Add {
+        #[clap(short, long)]
+        name: Option<String>,
+        path: PathBuf,
+    },
     ///Remove a folder from a cluster
     #[clap(alias("r"))]
     Remove { name: String },

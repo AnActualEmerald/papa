@@ -44,7 +44,7 @@ impl Ctx {
             cache,
             local_target: lt,
             global_target: gt.to_path_buf(),
-            cluster: Cluster::find().unwrap_or(None),
+            cluster: Cluster::find().unwrap_or(None), //don't use `?` here so we don't crash everything if there's no cluster
             local_installed: l_mods,
             global_installed: g_mods,
         })

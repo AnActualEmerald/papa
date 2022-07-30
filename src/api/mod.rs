@@ -55,6 +55,7 @@ fn map_response(res: &Value) -> Option<Vec<Mod>> {
                         desc,
                         file_size,
                         installed: false,
+                        global: false,
                         upgradable: false,
                     }
                 })

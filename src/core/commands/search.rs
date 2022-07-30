@@ -6,7 +6,7 @@ use crate::{
 use anyhow::Result;
 
 pub(crate) async fn search(ctx: &Ctx, term: Vec<String>) -> Result<()> {
-    let index = utils::update_index(ctx.config.mod_dir()).await;
+    let index = utils::update_index(ctx.config.mod_dir(), &ctx.global_target).await;
 
     let print = |f: &Mod| {
         println!(
