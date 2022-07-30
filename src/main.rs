@@ -142,6 +142,7 @@ enum Commands {
         command: WsCommands,
     },
 
+    #[cfg(feature = "profiles")]
     ///Manage mod profiles
     Profile {
         #[clap(subcommand)]
@@ -244,6 +245,7 @@ async fn main() {
         Commands::Exclude { mods } => exclude(&ctx, mods),
         #[cfg(feature = "cluster")]
         Commands::Cluster { command } => cluster(&mut ctx, command),
+        #[cfg(feature = "profiles")]
         Commands::Profile { command } => profile(&mut ctx, command),
     };
 

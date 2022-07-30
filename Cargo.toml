@@ -34,7 +34,8 @@ zip = "0.6.2"
 default = ["northstar"]
 northstar = []
 launcher = ["northstar"]
-cluser = []
+cluster = []
+progiles = []
 
 [profile.release]
 strip = true
