@@ -97,11 +97,11 @@ pub fn clear_cache(dir: &Path, force: bool) -> Result<()> {
 //            .collect())
 //    }
 
-#[inline]
-pub fn save_file(file: &Path, data: String) -> Result<()> {
-    fs::write(file, data.as_bytes())?;
-    Ok(())
-}
+// #[inline]
+// pub fn save_file(file: &Path, data: String) -> Result<()> {
+//     fs::write(file, data.as_bytes())?;
+//     Ok(())
+// }
 
 //    //supposing the mod name is formatted like Author.Mod@v1.0.0
 //    pub fn parse_mod_name(name: &str) -> Option<String> {

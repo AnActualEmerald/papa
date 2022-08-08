@@ -14,7 +14,7 @@ use anyhow::{anyhow, Context, Result};
 use super::{actions, config, utils, Ctx};
 
 pub(crate) async fn init_northstar(ctx: &mut Ctx, game_path: &Path) -> Result<()> {
-    let version = install_northstar(&ctx, game_path).await?;
+    let version = install_northstar(ctx, game_path).await?;
 
     ctx.config.game_path = game_path.to_path_buf();
     ctx.config.nstar_version = Some(version);
@@ -66,7 +66,7 @@ pub async fn update_northstar(ctx: &mut Ctx) -> Result<()> {
             }
         }
 
-        do_install(&ctx, nmod, &ctx.config.game_path).await?;
+        do_install(ctx, nmod, &ctx.config.game_path).await?;
         ctx.config.nstar_version = Some(nmod.version.clone());
         config::save_config(ctx.dirs.config_dir(), &ctx.config)?;
 

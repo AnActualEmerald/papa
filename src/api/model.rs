@@ -99,13 +99,13 @@ pub struct LocalIndex {
 }
 
 impl LocalIndex {
-    pub fn new() -> Self {
-        Self {
-            mods: HashMap::new(),
-            linked: HashMap::new(),
-            path: None,
-        }
-    }
+    // pub fn new() -> Self {
+    //     Self {
+    //         mods: HashMap::new(),
+    //         linked: HashMap::new(),
+    //         path: None,
+    //     }
+    // }
 
     pub fn load(path: &Path) -> Result<Self> {
         let raw = fs::read_to_string(path.join(".papa.ron"))?;
@@ -128,7 +128,7 @@ impl LocalIndex {
 
 impl Drop for LocalIndex {
     fn drop(&mut self) {
-        if let Some(_) = &self.path {
+        if self.path.is_some() {
             self.save().expect("Failed to write index to disk");
         }
     }
@@ -252,6 +252,7 @@ pub struct Cluster {
     path: PathBuf,
 }
 
+#[allow(dead_code)]
 impl Cluster {
     pub fn new(name: Option<String>, path: PathBuf) -> Self {
         Cluster {
@@ -267,27 +268,25 @@ impl Cluster {
                 if e.file_name().as_os_str() == OsStr::new("cluster.ron") {
                     let raw = fs::read_to_string(e.path())?;
                     let mut clstr: Cluster = ron::from_str(&raw)?;
-                    clstr.path = e.path().to_path_buf();
+                    clstr.path = e.path();
 
                     return Ok(Some(clstr));
                 }
             }
             Ok(None)
         };
-        let mut depth = 0;
+        let mut _depth = 0;
         let mut target = std::env::current_dir()?;
         loop {
             debug!("Checking for cluster file in {}", target.display());
             let test = has_cluster(&target)?;
             if test.is_some() {
                 break Ok(test);
+            } else if let Some(p) = target.parent() {
+                target = p.to_owned();
+                _depth += 1;
             } else {
-                if let Some(p) = target.parent() {
-                    target = p.to_owned();
-                    depth += 1;
-                } else {
-                    break Ok(None);
-                }
+                break Ok(None);
             }
         }
     }
@@ -309,6 +308,7 @@ pub struct Profile {
     pub mods: HashSet<InstalledMod>,
 }
 
+#[allow(dead_code)]
 impl Profile {
     pub fn get(dir: &Path, name: &str) -> Result<Self> {
         let fname = format!("{}.ron", name);
@@ -327,7 +327,7 @@ impl Profile {
         } else {
             ron::from_str(&raw).with_context(|| format!("Failed to parse profile {}", fname))?
         };
-        p.path = Some(path.to_path_buf());
+        p.path = Some(path);
         Ok(p)
     }
 

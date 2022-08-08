@@ -117,7 +117,7 @@ async fn client_update(ctx: &mut Ctx, yes: bool) -> Result<()> {
                 .linked
                 .entry(n.to_owned())
                 .and_modify(|v| *v = m.clone())
-                .or_insert(m.clone());
+                .or_insert_with(|| m.clone());
         }
     }
     //Would be cool to do an && on these let statements
@@ -151,7 +151,7 @@ async fn cluster_update(ctx: &mut Ctx, yes: bool) -> Result<()> {
         let mut to_relink = vec![];
         let mut global_installed = LocalIndex::load(&ctx.global_target)?;
         for g in index.iter().filter(|m| m.global) {
-            if let Some(o) = global_installed
+            if let Some(_o) = global_installed
                 .mods
                 .iter()
                 .find(|(n, e)| **n == g.name && e.version != g.version)
@@ -188,7 +188,7 @@ async fn cluster_update(ctx: &mut Ctx, yes: bool) -> Result<()> {
             }
             do_update(
                 ctx,
-                &to_relink.iter().map(|(_, m)| m.clone()).collect(),
+                &to_relink.iter().map(|(_, m)| *m).collect(),
                 &mut global_installed,
                 &ctx.global_target.clone(),
             )
@@ -196,9 +196,9 @@ async fn cluster_update(ctx: &mut Ctx, yes: bool) -> Result<()> {
         }
 
         for s in c.members.iter() {
-            let name = s.0;
+            let _name = s.0;
             let path = s.1;
-            let mut installed = LocalIndex::load(&path);
+            let _installed = LocalIndex::load(path);
         }
     }
     Ok(())

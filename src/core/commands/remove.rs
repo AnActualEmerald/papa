@@ -6,7 +6,7 @@ use crate::{
 use anyhow::Result;
 
 pub fn remove(ctx: &Ctx, mod_names: Vec<String>) -> Result<()> {
-    let mut installed = LocalIndex::load(ctx.config.mod_dir())?;
+    let installed = LocalIndex::load(ctx.config.mod_dir())?;
     let valid: Vec<InstalledMod> = installed
         .mods
         .iter()

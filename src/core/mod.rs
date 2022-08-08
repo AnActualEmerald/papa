@@ -36,7 +36,7 @@ impl Ctx {
         let lt = config.mod_dir.clone();
         let gt = dirs.data_local_dir();
         let l_mods = LocalIndex::load(&lt)?;
-        let g_mods = LocalIndex::load(&gt)?;
+        let g_mods = LocalIndex::load(gt)?;
         Ok(Ctx {
             config,
             dirs: dirs.clone(),
