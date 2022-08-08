@@ -29,22 +29,24 @@ async fn client_update(ctx: &mut Ctx, yes: bool) -> Result<()> {
     print!("Updating package index...");
     let index = &api::get_package_index().await?;
     println!(" Done!");
-    let mut installed = utils::get_installed(ctx.config.mod_dir())?;
-    let mut global = utils::get_installed(ctx.dirs.data_local_dir())?;
+    let mut installed = LocalIndex::load(ctx.config.mod_dir())?;
+    let mut global = LocalIndex::load(ctx.dirs.data_local_dir())?;
     let outdated: Vec<&model::Mod> = index
         .iter()
         .filter(|e| {
-            installed.mods.iter().any(|i| {
-                i.package_name.trim() == e.name.trim() && i.version.trim() != e.version.trim()
-            })
+            installed
+                .mods
+                .iter()
+                .any(|(n, i)| n.trim() == e.name.trim() && i.version.trim() != e.version.trim())
         })
         .collect();
     let glob_outdated: Vec<&model::Mod> = index
         .iter()
         .filter(|e| {
-            global.mods.iter().any(|i| {
-                i.package_name.trim() == e.name.trim() && i.version.trim() != e.version.trim()
-            })
+            global
+                .mods
+                .iter()
+                .any(|(n, i)| n.trim() == e.name.trim() && i.version.trim() != e.version.trim())
         })
         .collect();
 
@@ -90,10 +92,10 @@ async fn client_update(ctx: &mut Ctx, yes: bool) -> Result<()> {
             .linked
             .clone()
             .into_iter()
-            .filter(|e| glob_outdated.iter().any(|f| e.package_name == f.name));
+            .filter(|(e, _)| glob_outdated.iter().any(|f| e == &f.name));
 
-        for r in relink {
-            debug!("Relinking mod {}", r.package_name);
+        for (name, r) in relink {
+            debug!("Relinking mod {}", name);
             //Update the submod links
             for p in r.mods.iter() {
                 //delete the current link first
@@ -105,20 +107,18 @@ async fn client_update(ctx: &mut Ctx, yes: bool) -> Result<()> {
             }
 
             //replace the linked mod with the new mod info
-            let n = global
+            let (n, m) = global
                 .mods
                 .iter()
-                .find(|e| e.package_name == r.package_name)
+                .find(|(e, _)| *e == &r.package_name)
                 .ok_or_else(|| anyhow!("Unable to find linked mod in global index"))?;
-            if !installed.linked.remove(&r) {
-                debug!("Didn't find old linked mod to remove");
-            }
-            if !installed.linked.insert(n.clone()) {
-                debug!("Failed to add updated mod to linked set");
-            }
+            //Insert or update the mod in the linked set
+            installed
+                .linked
+                .entry(n.to_owned())
+                .and_modify(|v| *v = m.clone())
+                .or_insert(m.clone());
         }
-        utils::save_installed(ctx.config.mod_dir(), &installed)?;
-        utils::save_installed(ctx.dirs.data_local_dir(), &global)?;
     }
     //Would be cool to do an && on these let statements
     if let Some(current) = &ctx.config.nstar_version {
@@ -149,12 +149,12 @@ async fn cluster_update(ctx: &mut Ctx, yes: bool) -> Result<()> {
         let index = utils::update_index(&ctx.local_target, &ctx.global_target).await;
         //update global mods first
         let mut to_relink = vec![];
-        let mut global_installed = utils::get_installed(&ctx.global_target)?;
+        let mut global_installed = LocalIndex::load(&ctx.global_target)?;
         for g in index.iter().filter(|m| m.global) {
             if let Some(o) = global_installed
                 .mods
                 .iter()
-                .find(|e| e.package_name == g.name && e.version != g.version)
+                .find(|(n, e)| **n == g.name && e.version != g.version)
             {
                 to_relink.push((&g.name, g));
             }
@@ -193,13 +193,12 @@ async fn cluster_update(ctx: &mut Ctx, yes: bool) -> Result<()> {
                 &ctx.global_target.clone(),
             )
             .await?;
-            utils::save_installed(&ctx.global_target, &global_installed)?;
         }
 
         for s in c.members.iter() {
             let name = s.0;
             let path = s.1;
-            let mut installed = utils::get_installed(&path);
+            let mut installed = LocalIndex::load(&path);
         }
     }
     Ok(())

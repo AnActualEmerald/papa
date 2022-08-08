@@ -51,7 +51,6 @@ pub async fn download_file(url: &str, file_path: PathBuf) -> Result<File> {
 
     //start download in chunks
     let mut file = File::create(&file_path)?;
-    // .map_err(|_| (format!("Failed to create file {}", file_path.display())))?;
     let mut downloaded: u64 = 0;
     let mut stream = res.bytes_stream();
     debug!("Starting download from {}", url);
@@ -142,13 +141,16 @@ pub fn install_mod(zip_file: &File, target_dir: &Path) -> Result<InstalledMod> {
             let e = e.unwrap();
 
             if e.path().is_dir() {
+                //Get the path relative to the .papa.ron file
+                let m_path = e.path();
+                let m_path = m_path.strip_prefix(&temp_dir)?;
                 if e.path().ends_with("mods") {
                     let mut dirs = e.path().read_dir().unwrap();
                     while let Some(Ok(e)) = dirs.next() {
-                        mods.push(SubMod::new(e.file_name().to_str().unwrap(), &e.path()));
+                        mods.push(SubMod::new(e.file_name().to_str().unwrap(), m_path));
                     }
                 } else {
-                    mods.push(SubMod::new(e.file_name().to_str().unwrap(), &e.path()));
+                    mods.push(SubMod::new(e.file_name().to_str().unwrap(), m_path));
                 }
             }
         }
@@ -158,18 +160,15 @@ pub fn install_mod(zip_file: &File, target_dir: &Path) -> Result<InstalledMod> {
         return Err(anyhow!("Couldn't find a directory to copy"));
     }
 
-    for p in mods
-        .iter()
-        .map(|p| (&p.path, mods_dir.join(p.path.file_name().unwrap())))
-    {
-        if p.1.exists() {
-            fs::remove_dir_all(&p.1)?;
-        }
-        fs::rename(p.0, p.1)?;
-    }
+    // move the mod files from the temp dir to the real dir
+    for p in mods.iter() {
+        let temp = temp_dir.join(&p.path);
+        let perm = mods_dir.join(&p.path);
 
-    for mut m in mods.iter_mut() {
-        m.path = mods_dir.join(m.path.file_name().unwrap());
+        if perm.exists() {
+            fs::remove_dir_all(&perm)?;
+        }
+        fs::rename(temp, perm)?;
     }
 
     let manifest: Manifest = serde_json::from_str(&manifest).context("Unable to parse manifest")?;

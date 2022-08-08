@@ -31,15 +31,12 @@ pub(super) async fn do_update(
     for f in downloaded.into_iter() {
         let mut pkg = actions::install_mod(&f, target).unwrap();
         ctx.cache.clean(&pkg.package_name, &pkg.version)?;
-        if let Some(i) = installed
+        if let Some((_, inst)) = installed
             .mods
-            .clone()
-            .iter()
-            .find(|e| e.package_name == pkg.package_name)
+            .iter_mut()
+            .find(|(n, _)| **n == pkg.package_name)
         {
-            let mut inst = i.clone();
             inst.version = pkg.version;
-            installed.mods.remove(i);
             //Don't know if sorting is needed here but seems like a good assumption
             inst.mods
                 .sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
@@ -63,7 +60,6 @@ pub(super) async fn do_update(
             }
 
             inst.mods = pkg.mods;
-            installed.mods.insert(inst);
             println!("Updated {}", pkg.package_name);
         }
     }

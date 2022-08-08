@@ -7,11 +7,12 @@ use crate::model::InstalledMod;
 use crate::model::Mod;
 use anyhow::{anyhow, Context, Result};
 use directories::ProjectDirs;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs::{self, File, OpenOptions};
-use std::io::Write;
 use std::path::Path;
+
+use super::Ctx;
 
 #[macro_export]
 macro_rules! g2re {
@@ -26,48 +27,20 @@ pub async fn update_index(local: &Path, global: &Path) -> Vec<model::Mod> {
     print!("Updating package index...");
     let mut index = api::get_package_index().await.unwrap().to_vec();
     //        save_file(&dirs.cache_dir().join("index.ron"), index)?;
-    let installed = get_installed(local).unwrap();
-    let glob = get_installed(global).unwrap();
+    let installed = LocalIndex::load(local).unwrap();
+    let glob = LocalIndex::load(global).unwrap();
     for e in index.iter_mut() {
         e.installed = installed
             .mods
             .iter()
-            .any(|f| f.package_name == e.name && f.version == e.version);
+            .any(|(n, f)| n == &e.name && f.version == e.version);
         e.global = glob
             .mods
             .iter()
-            .any(|f| f.package_name == e.name && f.version == e.version);
+            .any(|(n, f)| n == &e.name && f.version == e.version);
     }
     println!(" Done!");
     index
-}
-
-pub fn get_installed(path: &Path) -> Result<LocalIndex> {
-    let path = path.join(".papa.ron");
-    if path.exists() {
-        let raw = fs::read_to_string(path).context("Unable to read installed packages")?;
-        Ok(ron::from_str(&raw)?)
-    } else {
-        if let Some(p) = path.parent() {
-            if !p.exists() {
-                fs::create_dir_all(p)?;
-            }
-        }
-        File::create(path)
-            .context("Unable to create installed package index")?
-            .write_all(ron::to_string(&LocalIndex::new()).unwrap().as_bytes())?;
-
-        Ok(LocalIndex::new())
-    }
-}
-
-#[inline]
-pub fn save_installed(path: &Path, installed: &LocalIndex) -> Result<()> {
-    let path = path.join(".papa.ron");
-
-    save_file(&path, ron::to_string(installed).unwrap())?;
-
-    Ok(())
 }
 
 #[inline]
@@ -147,12 +120,12 @@ pub fn save_file(file: &Path, data: String) -> Result<()> {
 pub fn resolve_deps<'a>(
     valid: &mut Vec<&'a Mod>,
     base: &'a Mod,
-    installed: &'a HashSet<InstalledMod>,
+    installed: &'a HashMap<String, InstalledMod>,
     index: &'a Vec<Mod>,
 ) -> Result<()> {
     for dep in &base.deps {
         let dep_name = dep.split('-').collect::<Vec<&str>>()[1];
-        if !installed.iter().any(|e| e.package_name == dep_name) {
+        if !installed.iter().any(|(k, _)| k == dep_name) {
             if let Some(d) = index.iter().find(|f| f.name == dep_name) {
                 resolve_deps(valid, d, installed, index)?;
                 valid.push(d);
@@ -168,7 +141,7 @@ pub fn resolve_deps<'a>(
     Ok(())
 }
 
-pub fn disable_mod(m: &mut SubMod) -> Result<bool> {
+pub fn disable_mod(ctx: &Ctx, m: &mut SubMod) -> Result<bool> {
     if m.disabled() {
         return Ok(false);
     }
@@ -176,7 +149,7 @@ pub fn disable_mod(m: &mut SubMod) -> Result<bool> {
     let name = &m.name;
     let old_path = m.path.clone();
 
-    let dir = m.path.parent().unwrap().join(".disabled");
+    let dir = ctx.local_target.join(".disabled").join(&m.path);
 
     if !dir.exists() {
         fs::create_dir_all(&dir)?;
@@ -184,7 +157,7 @@ pub fn disable_mod(m: &mut SubMod) -> Result<bool> {
 
     m.path = dir.join(name);
 
-    fs::rename(old_path, &m.path).context("Failed to rename mod")?;
+    fs::rename(&old_path, &m.path).context("Failed to rename mod")?;
 
     Ok(true)
 }

@@ -1,7 +1,10 @@
 use anyhow::{anyhow, Result};
 use regex::Regex;
 
-use crate::core::{actions, utils, Ctx};
+use crate::{
+    api::model::LocalIndex,
+    core::{actions, utils, Ctx},
+};
 
 pub async fn install(
     ctx: &mut Ctx,
@@ -17,7 +20,7 @@ pub async fn install(
     };
 
     let index = utils::update_index(target, &ctx.global_target).await;
-    let mut installed = utils::get_installed(target)?;
+    let mut installed = LocalIndex::load(target)?;
     let mut valid = vec![];
     for name in mod_names {
         let re = Regex::new(r"(.+)@?(v?\d.\d.\d)?").unwrap();
@@ -110,7 +113,7 @@ pub async fn install(
         .iter()
         .map(|f| -> Result<()> {
             let pkg = actions::install_mod(f, target)?;
-            installed.mods.insert(pkg.clone());
+            installed.mods.insert(pkg.package_name.clone(), pkg.clone());
             ctx.cache.clean(&pkg.package_name, &pkg.version)?;
             println!("Installed {}!", pkg.package_name);
             Ok(())
@@ -120,7 +123,7 @@ pub async fn install(
         println!("Encountered errors while installing mods:");
         println!("{}", e.unwrap_err());
     }
-    utils::save_installed(target, &installed)?;
+    // utils::save_installed(target, &installed)?;
     Ok(())
 }
 

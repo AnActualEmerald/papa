@@ -35,7 +35,7 @@ default = ["northstar"]
 northstar = []
 launcher = ["northstar"]
 cluster = []
-progiles = []
+profiles = []
 
 [profile.release]
 strip = true

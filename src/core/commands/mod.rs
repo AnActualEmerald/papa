@@ -23,7 +23,9 @@ mod search;
 pub(crate) use search::search;
 mod update;
 pub(crate) use update::update;
+#[cfg(feature = "cluster")]
 mod cluster;
+#[cfg(feature = "cluster")]
 pub(crate) use cluster::*;
 
 //=================

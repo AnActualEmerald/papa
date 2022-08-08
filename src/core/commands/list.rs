@@ -1,9 +1,9 @@
-use crate::core::{utils, Ctx};
+use crate::{api::model::LocalIndex, core::Ctx};
 use anyhow::Result;
 
 pub fn list(ctx: &Ctx, global: bool, all: bool) -> Result<()> {
     let do_list = |target, global| -> Result<()> {
-        let index = utils::get_installed(target)?;
+        let index = LocalIndex::load(target)?;
         let msg = if global {
             "Global mods:"
         } else {
@@ -11,7 +11,7 @@ pub fn list(ctx: &Ctx, global: bool, all: bool) -> Result<()> {
         };
         println!("{}", msg);
         if !index.mods.is_empty() {
-            index.mods.into_iter().for_each(|m| {
+            index.mods.iter().for_each(|(_, m)| {
                 let disabled = if !m.any_disabled() || m.mods.len() > 1 {
                     ""
                 } else {
@@ -40,8 +40,8 @@ pub fn list(ctx: &Ctx, global: bool, all: bool) -> Result<()> {
             println!("Linked mods:");
             index
                 .linked
-                .into_iter()
-                .for_each(|m| println!("  \x1b[92m{}@{}\x1b[0m", m.package_name, m.version));
+                .iter()
+                .for_each(|(_, m)| println!("  \x1b[92m{}@{}\x1b[0m", m.package_name, m.version));
             println!();
         }
 

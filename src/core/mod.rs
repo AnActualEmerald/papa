@@ -6,7 +6,7 @@ use rustyline::Editor;
 
 use crate::api::model::{Cache, Cluster, LocalIndex};
 
-use self::{config::Config, utils::get_installed};
+use self::config::Config;
 
 pub mod actions;
 pub mod config;
@@ -35,8 +35,8 @@ impl Ctx {
         let cache = Cache::build(dirs.cache_dir()).unwrap();
         let lt = config.mod_dir.clone();
         let gt = dirs.data_local_dir();
-        let l_mods = get_installed(&lt)?;
-        let g_mods = get_installed(&gt)?;
+        let l_mods = LocalIndex::load(&lt)?;
+        let g_mods = LocalIndex::load(&gt)?;
         Ok(Ctx {
             config,
             dirs: dirs.clone(),

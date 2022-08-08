@@ -91,16 +91,45 @@ pub struct Manifest {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LocalIndex {
     #[serde(default)]
-    pub mods: HashSet<InstalledMod>,
+    pub mods: HashMap<String, InstalledMod>,
     #[serde(default)]
-    pub linked: HashSet<InstalledMod>,
+    pub linked: HashMap<String, InstalledMod>,
+    #[serde(skip)]
+    pub path: Option<PathBuf>,
 }
 
 impl LocalIndex {
     pub fn new() -> Self {
         Self {
-            mods: HashSet::new(),
-            linked: HashSet::new(),
+            mods: HashMap::new(),
+            linked: HashMap::new(),
+            path: None,
+        }
+    }
+
+    pub fn load(path: &Path) -> Result<Self> {
+        let raw = fs::read_to_string(path.join(".papa.ron"))?;
+        let mut parsed = ron::from_str::<Self>(&raw)?;
+        parsed.path = Some(path.to_path_buf());
+        Ok(parsed)
+    }
+
+    pub fn save(&self) -> Result<()> {
+        if let Some(p) = &self.path {
+            let parsed = ron::to_string(self)?;
+            fs::write(&p, &parsed).context("Unable to write index")
+        } else {
+            Err(anyhow::anyhow!(
+                "Tried to save local index but the path wasn't set"
+            ))
+        }
+    }
+}
+
+impl Drop for LocalIndex {
+    fn drop(&mut self) {
+        if let Some(_) = &self.path {
+            self.save().expect("Failed to write index to disk");
         }
     }
 }
