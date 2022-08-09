@@ -88,7 +88,7 @@ pub struct Manifest {
     pub dependencies: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Default, Serialize, Deserialize, Debug, Clone)]
 pub struct LocalIndex {
     #[serde(default)]
     pub mods: HashMap<String, InstalledMod>,
@@ -99,24 +99,37 @@ pub struct LocalIndex {
 }
 
 impl LocalIndex {
-    // pub fn new() -> Self {
-    //     Self {
-    //         mods: HashMap::new(),
-    //         linked: HashMap::new(),
-    //         path: None,
-    //     }
-    // }
-
     pub fn load(path: &Path) -> Result<Self> {
-        let raw = fs::read_to_string(path.join(".papa.ron"))?;
-        let mut parsed = ron::from_str::<Self>(&raw)?;
-        parsed.path = Some(path.to_path_buf());
-        Ok(parsed)
+        if path.join(".papa.ron").exists() {
+            let raw = fs::read_to_string(path.join(".papa.ron"))?;
+            let mut parsed = ron::from_str::<Self>(&raw)?;
+            parsed.path = Some(path.join(".papa.ron"));
+            Ok(parsed)
+        } else {
+            Err(anyhow::anyhow!("No such file"))
+        }
+    }
+
+    pub fn load_or_create(path: &Path) -> Self {
+        match Self::load(path) {
+            Ok(s) => s,
+            Err(_) => Self::create(path),
+        }
+    }
+
+    pub fn create(path: &Path) -> Self {
+        let mut ind = Self::default();
+        ind.path = Some(path.join(".papa.ron"));
+
+        ind
     }
 
     pub fn save(&self) -> Result<()> {
         if let Some(p) = &self.path {
             let parsed = ron::to_string(self)?;
+            if let Some(p) = p.parent() {
+                fs::create_dir_all(p)?;
+            }
             fs::write(&p, &parsed).context("Unable to write index")
         } else {
             Err(anyhow::anyhow!(

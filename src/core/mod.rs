@@ -24,8 +24,8 @@ pub struct Ctx {
     pub local_target: PathBuf,
     pub global_target: PathBuf,
     pub cluster: Option<Cluster>,
-    pub local_installed: LocalIndex,
-    pub global_installed: LocalIndex,
+    // pub local_installed: Option<LocalIndex>,
+    // pub global_installed: LocalIndex,
 }
 
 impl Ctx {
@@ -35,8 +35,8 @@ impl Ctx {
         let cache = Cache::build(dirs.cache_dir()).unwrap();
         let lt = config.mod_dir.clone();
         let gt = dirs.data_local_dir();
-        let l_mods = LocalIndex::load(&lt)?;
-        let g_mods = LocalIndex::load(gt)?;
+        // let l_mods = LocalIndex::load(&lt).ok();
+        // let g_mods = LocalIndex::create(gt);
         Ok(Ctx {
             config,
             dirs: dirs.clone(),
@@ -45,8 +45,8 @@ impl Ctx {
             local_target: lt,
             global_target: gt.to_path_buf(),
             cluster: Cluster::find().unwrap_or(None), //don't use `?` here so we don't crash everything if there's no cluster
-            local_installed: l_mods,
-            global_installed: g_mods,
+                                                      // local_installed: l_mods,
+                                                      // global_installed: g_mods,
         })
     }
 }

@@ -1,3 +1,5 @@
+use std::fs;
+
 use anyhow::{anyhow, Result};
 use regex::Regex;
 
@@ -19,8 +21,14 @@ pub async fn install(
         ctx.config.mod_dir()
     };
 
+    //Create the target dir if it doesn't exist
+    if !target.exists() {
+        log::trace!("Creating dir {}", target.display());
+        fs::create_dir_all(target)?;
+    }
+
     let index = utils::update_index(target, &ctx.global_target).await;
-    let mut installed = LocalIndex::load(target)?;
+    let mut installed = LocalIndex::load_or_create(target);
     let mut valid = vec![];
     for name in mod_names {
         let re = Regex::new(r"(.+)@?(v?\d.\d.\d)?").unwrap();

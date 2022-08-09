@@ -27,17 +27,21 @@ pub async fn update_index(local: &Path, global: &Path) -> Vec<model::Mod> {
     print!("Updating package index...");
     let mut index = api::get_package_index().await.unwrap().to_vec();
     //        save_file(&dirs.cache_dir().join("index.ron"), index)?;
-    let installed = LocalIndex::load(local).unwrap();
-    let glob = LocalIndex::load(global).unwrap();
+    let installed = LocalIndex::load(local);
+    let glob = LocalIndex::load(global);
     for e in index.iter_mut() {
-        e.installed = installed
-            .mods
-            .iter()
-            .any(|(n, f)| n == &e.name && f.version == e.version);
-        e.global = glob
-            .mods
-            .iter()
-            .any(|(n, f)| n == &e.name && f.version == e.version);
+        if let Ok(installed) = &installed {
+            e.installed = installed
+                .mods
+                .iter()
+                .any(|(n, f)| n == &e.name && f.version == e.version);
+        }
+        if let Ok(glob) = &glob {
+            e.global = glob
+                .mods
+                .iter()
+                .any(|(n, f)| n == &e.name && f.version == e.version);
+        }
     }
     println!(" Done!");
     index

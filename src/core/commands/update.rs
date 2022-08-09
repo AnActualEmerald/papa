@@ -29,17 +29,21 @@ async fn client_update(ctx: &mut Ctx, yes: bool) -> Result<()> {
     print!("Updating package index...");
     let index = &api::get_package_index().await?;
     println!(" Done!");
-    let mut installed = LocalIndex::load(ctx.config.mod_dir())?;
-    let mut global = LocalIndex::load(ctx.dirs.data_local_dir())?;
-    let outdated: Vec<&model::Mod> = index
-        .iter()
-        .filter(|e| {
-            installed
-                .mods
-                .iter()
-                .any(|(n, i)| n.trim() == e.name.trim() && i.version.trim() != e.version.trim())
-        })
-        .collect();
+    let mut installed = LocalIndex::load(ctx.config.mod_dir()).ok();
+    let mut global = LocalIndex::load_or_create(ctx.dirs.data_local_dir());
+    let outdated: Vec<&model::Mod> = if let Some(installed) = &installed {
+        index
+            .iter()
+            .filter(|e| {
+                installed
+                    .mods
+                    .iter()
+                    .any(|(n, i)| n.trim() == e.name.trim() && i.version.trim() != e.version.trim())
+            })
+            .collect()
+    } else {
+        vec![]
+    };
     let glob_outdated: Vec<&model::Mod> = index
         .iter()
         .filter(|e| {
@@ -84,40 +88,44 @@ async fn client_update(ctx: &mut Ctx, yes: bool) -> Result<()> {
                 }
         }
 
-        do_update(ctx, &outdated, &mut installed, &local_target).await?;
+        if let Some(installed) = installed.as_mut() {
+            do_update(ctx, &outdated, installed, &local_target).await?;
+        }
         do_update(ctx, &glob_outdated, &mut global, &global_target).await?;
 
-        //check if any link mods are being updated
-        let relink = installed
-            .linked
-            .clone()
-            .into_iter()
-            .filter(|(e, _)| glob_outdated.iter().any(|f| e == &f.name));
-
-        for (name, r) in relink {
-            debug!("Relinking mod {}", name);
-            //Update the submod links
-            for p in r.mods.iter() {
-                //delete the current link first
-                let target = ctx.local_target.join(&p.name);
-                if target.exists() {
-                    fs::remove_dir_all(&target)?;
-                }
-                link_dir(&p.path, &target)?;
-            }
-
-            //replace the linked mod with the new mod info
-            let (n, m) = global
-                .mods
-                .iter()
-                .find(|(e, _)| *e == &r.package_name)
-                .ok_or_else(|| anyhow!("Unable to find linked mod in global index"))?;
-            //Insert or update the mod in the linked set
-            installed
+        if let Some(installed) = installed.as_mut() {
+            //check if any link mods are being updated
+            let relink = installed
                 .linked
-                .entry(n.to_owned())
-                .and_modify(|v| *v = m.clone())
-                .or_insert_with(|| m.clone());
+                .clone()
+                .into_iter()
+                .filter(|(e, _)| glob_outdated.iter().any(|f| e == &f.name));
+
+            for (name, r) in relink {
+                debug!("Relinking mod {}", name);
+                //Update the submod links
+                for p in r.mods.iter() {
+                    //delete the current link first
+                    let target = ctx.local_target.join(&p.name);
+                    if target.exists() {
+                        fs::remove_dir_all(&target)?;
+                    }
+                    link_dir(&p.path, &target)?;
+                }
+
+                //replace the linked mod with the new mod info
+                let (n, m) = global
+                    .mods
+                    .iter()
+                    .find(|(e, _)| *e == &r.package_name)
+                    .ok_or_else(|| anyhow!("Unable to find linked mod in global index"))?;
+                //Insert or update the mod in the linked set
+                installed
+                    .linked
+                    .entry(n.to_owned())
+                    .and_modify(|v| *v = m.clone())
+                    .or_insert_with(|| m.clone());
+            }
         }
     }
     //Would be cool to do an && on these let statements
