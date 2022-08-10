@@ -129,7 +129,7 @@ pub async fn install(
         .filter(|f| f.is_err())
     {
         println!("Encountered errors while installing mods:");
-        println!("{}", e.unwrap_err());
+        println!("{:#?}", e.unwrap_err());
     }
     // utils::save_installed(target, &installed)?;
     Ok(())

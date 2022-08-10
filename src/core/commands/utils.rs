@@ -31,11 +31,7 @@ pub(super) async fn do_update(
     for f in downloaded.into_iter() {
         let mut pkg = actions::install_mod(&f, target).unwrap();
         ctx.cache.clean(&pkg.package_name, &pkg.version)?;
-        if let Some((_, inst)) = installed
-            .mods
-            .iter_mut()
-            .find(|(n, _)| **n == pkg.package_name)
-        {
+        installed.mods.entry(pkg.package_name).and_modify(|inst| {
             inst.version = pkg.version;
             //Don't know if sorting is needed here but seems like a good assumption
             inst.mods
@@ -43,25 +39,28 @@ pub(super) async fn do_update(
             pkg.mods
                 .sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
 
-            for (a, b) in inst.mods.iter().zip(pkg.mods.iter()) {
-                trace!("a mod: {:#?} | b mod: {:#?}", a, b);
-                if a.disabled() {
-                    fs::remove_dir_all(&a.path).unwrap();
+            for (curr, new) in inst.mods.iter().zip(pkg.mods.iter()) {
+                trace!("current mod: {:#?} | new mod: {:#?}", curr, new);
+                if curr.disabled() {
+                    fs::remove_dir_all(ctx.local_target.join(&curr.path)).unwrap();
                     debug!(
                         "Moving mod from {} to {}",
-                        b.path.display(),
-                        a.path.display()
+                        new.path.display(),
+                        curr.path.display()
                     );
-                    fs::rename(&b.path, &a.path).unwrap_or_else(|e| {
+                    fs::rename(
+                        ctx.local_target.join(&new.path),
+                        ctx.local_target.join(&curr.path),
+                    )
+                    .unwrap_or_else(|e| {
                         debug!("Unable to move sub-mod to old path");
                         debug!("{}", e);
                     });
                 }
             }
 
-            inst.mods = pkg.mods;
-            println!("Updated {}", pkg.package_name);
-        }
+            println!("Updated {}", inst.package_name);
+        });
     }
 
     Ok(())

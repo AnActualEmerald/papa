@@ -7,6 +7,7 @@ use crate::model::InstalledMod;
 use crate::model::Mod;
 use anyhow::{anyhow, Context, Result};
 use directories::ProjectDirs;
+use log::debug;
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs::{self, File, OpenOptions};
@@ -150,18 +151,23 @@ pub fn disable_mod(ctx: &Ctx, m: &mut SubMod) -> Result<bool> {
         return Ok(false);
     }
 
-    let name = &m.name;
-    let old_path = m.path.clone();
+    let old_path = ctx.local_target.join(&m.path);
 
-    let dir = ctx.local_target.join(".disabled").join(&m.path);
+    let dir = ctx.local_target.join(".disabled");
+    let new_path = dir.join(&m.path);
 
     if !dir.exists() {
         fs::create_dir_all(&dir)?;
     }
 
-    m.path = dir.join(name);
+    debug!(
+        "Rename mod from {} to {}",
+        old_path.display(),
+        new_path.display()
+    );
+    fs::rename(&old_path, &new_path).context("Failed to rename mod")?;
 
-    fs::rename(&old_path, &m.path).context("Failed to rename mod")?;
+    m.path = Path::new(".disabled").join(&m.path);
 
     Ok(true)
 }
@@ -171,10 +177,17 @@ pub fn enable_mod(m: &mut SubMod, mods_dir: &Path) -> Result<bool> {
         return Ok(false);
     }
 
-    let old_path = m.path.clone();
-    m.path = mods_dir.join(&m.name);
+    let old_path = mods_dir.join(&m.path);
+    m.path = m.path.strip_prefix(".disabled")?.to_path_buf();
+    let new_path = mods_dir.join(&m.path);
 
-    fs::rename(old_path, &m.path).context("Failed to reanem mod")?;
+    debug!(
+        "Rename mod from {} to {}",
+        old_path.display(),
+        new_path.display()
+    );
+
+    fs::rename(old_path, new_path).context("Failed to rename mod")?;
 
     Ok(true)
 }

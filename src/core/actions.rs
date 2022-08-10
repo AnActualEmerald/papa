@@ -17,7 +17,7 @@ use crate::{
     model::{InstalledMod, Manifest},
 };
 
-use log::{debug, error};
+use log::{debug, error, trace};
 
 use anyhow::{anyhow, Context, Result};
 
@@ -122,11 +122,14 @@ pub fn install_mod(zip_file: &File, target_dir: &Path) -> Result<InstalledMod> {
 
             debug!("Extracting file to {}", out.display());
             if (*file.name()).ends_with('/') {
+                trace!("Creating dir path in temp dir");
                 fs::create_dir_all(&out)?;
                 continue;
             } else if let Some(p) = out.parent() {
+                trace!("Creating dir at {}", p.display());
                 fs::create_dir_all(&p)?;
             }
+            trace!("Open file {} for writing", out.display());
             let mut outfile = OpenOptions::new()
                 .create(true)
                 .write(true)
@@ -142,15 +145,25 @@ pub fn install_mod(zip_file: &File, target_dir: &Path) -> Result<InstalledMod> {
 
             if e.path().is_dir() {
                 //Get the path relative to the .papa.ron file
-                let m_path = e.path();
-                let m_path = m_path.strip_prefix(&temp_dir)?;
+                // let m_path = e.path();
+                // let m_path = m_path.strip_prefix(&temp_dir)?;
                 if e.path().ends_with("mods") {
                     let mut dirs = e.path().read_dir().unwrap();
                     while let Some(Ok(e)) = dirs.next() {
-                        mods.push(SubMod::new(e.file_name().to_str().unwrap(), m_path));
+                        let name = e.file_name();
+                        let name = name.to_str().unwrap();
+                        debug!("Add submod {}", name);
+                        mods.push(SubMod::new(name, &Path::new("mods").join(name)));
                     }
                 } else {
-                    mods.push(SubMod::new(e.file_name().to_str().unwrap(), m_path));
+                    debug!(
+                        "Add one submod {}",
+                        e.path().file_name().unwrap().to_string_lossy()
+                    );
+                    mods.push(SubMod::new(
+                        e.file_name().to_str().unwrap(),
+                        &PathBuf::new(),
+                    ));
                 }
             }
         }
@@ -161,9 +174,15 @@ pub fn install_mod(zip_file: &File, target_dir: &Path) -> Result<InstalledMod> {
     }
 
     // move the mod files from the temp dir to the real dir
-    for p in mods.iter() {
+    for p in mods.iter_mut() {
         let temp = temp_dir.join(&p.path);
+        p.path = p.path.strip_prefix("mods")?.to_path_buf();
         let perm = mods_dir.join(&p.path);
+        trace!(
+            "Temp path: {} | Perm path: {}",
+            temp.display(),
+            perm.display()
+        );
 
         if perm.exists() {
             fs::remove_dir_all(&perm)?;

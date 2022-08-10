@@ -13,12 +13,12 @@ pub(crate) fn enable(ctx: &Ctx, mods: Vec<String>) -> Result<()> {
                 for sub in p.mods.iter_mut() {
                     utils::enable_mod(sub, ctx.config.mod_dir())?;
                 }
-                println!("Enabled {}", m);
+                println!("Enabled {}", p.package_name);
             } else {
                 for e in p.mods.iter_mut() {
                     if e.name.to_lowercase() == m {
                         utils::enable_mod(e, ctx.config.mod_dir())?;
-                        println!("Enabled {}", m);
+                        println!("Enabled {}", p.package_name);
                     }
                 }
             }

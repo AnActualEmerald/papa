@@ -126,7 +126,7 @@ impl LocalIndex {
 
     pub fn save(&self) -> Result<()> {
         if let Some(p) = &self.path {
-            let parsed = ron::to_string(self)?;
+            let parsed = ron::ser::to_string_pretty(self, ron::ser::PrettyConfig::new())?;
             if let Some(p) = p.parent() {
                 fs::create_dir_all(p)?;
             }
