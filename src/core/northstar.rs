@@ -13,7 +13,7 @@ use anyhow::{anyhow, Context, Result};
 
 use super::{actions, config, utils, Ctx};
 
-pub(crate) async fn init_northstar(ctx: &mut Ctx, game_path: &Path) -> Result<()> {
+pub async fn init_northstar(ctx: &mut Ctx, game_path: &Path) -> Result<()> {
     let version = install_northstar(ctx, game_path).await?;
 
     ctx.config.game_path = game_path.to_path_buf();
