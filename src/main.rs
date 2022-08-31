@@ -156,7 +156,7 @@ enum NstarCommands {
     //    Install { game_path: Option<PathBuf> },
     ///Initializes a new northstar installation in the provided path, or current directory.
     Init { game_path: Option<PathBuf> },
-    ///Updats the current northstar install. Must have been installed with `papa northstar init`.
+    ///Updates the current northstar install. Must have been installed with `papa northstar init`.
     Update {},
     #[cfg(feature = "launcher")]
     ///Start the Northstar client

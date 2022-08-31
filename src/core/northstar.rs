@@ -100,7 +100,7 @@ pub async fn install_northstar(ctx: &Ctx, game_path: &Path) -> Result<String> {
 async fn do_install(ctx: &Ctx, nmod: &Mod, game_path: &Path) -> Result<()> {
     let filename = format!("northstar-{}.zip", nmod.version);
     let nfile = if let Some(f) = utils::check_cache(&ctx.dirs.cache_dir().join(&filename)) {
-        println!("Using cached verision of Northstar@{}...", nmod.version);
+        println!("Using cached version of Northstar@{}...", nmod.version);
         f
     } else {
         actions::download_file(&nmod.url, ctx.dirs.cache_dir().join(&filename)).await?
