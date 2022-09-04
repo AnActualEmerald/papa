@@ -20,9 +20,6 @@ impl Ctx {
     pub fn with_dirs(dirs: ProjectDirs) -> Result<Self, ThermiteError> {
         utils::ensure_dirs(&dirs);
         let cache = Cache::build(dirs.cache_dir()).unwrap();
-        Ok(Ctx {
-            dirs: dirs.clone(),
-            cache,
-        })
+        Ok(Ctx { dirs, cache })
     }
 }

@@ -1,8 +1,8 @@
-use log::{debug, info, warn};
+use log::{debug, warn};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap},
     error::Error,
     ffi::OsStr,
     fs::{self, File, OpenOptions},

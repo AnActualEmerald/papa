@@ -4,7 +4,7 @@ use crate::{
     model::{LocalIndex, Mod},
 };
 
-use log::{debug, error, info, trace};
+use log::{debug, error, trace};
 
 use super::Ctx;
 
@@ -18,7 +18,7 @@ pub async fn install(
     ctx: &mut Ctx,
     target: &mut LocalIndex,
     mods: Vec<Mod>,
-    force: bool,
+    _force: bool,
     cache: bool,
 ) -> Result<(), ThermiteError> {
     let mut downloaded = vec![];

@@ -53,7 +53,7 @@ pub async fn download_file_with_progress(
     debug!("Downloading file size: {}", file_size);
 
     //start download in chunks
-    let mut file = File::create(&file_path)?;
+    let mut file = File::create(file_path)?;
     let mut downloaded: u64 = 0;
     let mut stream = res.bytes_stream();
     debug!("Starting download from {}", url);
@@ -66,7 +66,7 @@ pub async fn download_file_with_progress(
             pb.set_position(new);
         }
     }
-    let finished = File::open(&file_path)?;
+    let finished = File::open(file_path)?;
     debug!("Finished download to {}", file_path.display());
 
     if let Some(pb) = &pb {
@@ -122,7 +122,7 @@ pub fn install_mod(zip_file: &File, target_dir: &Path) -> Result<LocalMod, Therm
         fs::create_dir_all(&temp_dir)?;
         for i in 0..archive.len() {
             let mut file = archive.by_index(i).unwrap();
-            let out = temp_dir.join(&file.enclosed_name().unwrap());
+            let out = temp_dir.join(file.enclosed_name().unwrap());
 
             if file.enclosed_name().unwrap().starts_with(".") {
                 debug!("Skipping hidden file {}", out.display());
@@ -143,7 +143,7 @@ pub fn install_mod(zip_file: &File, target_dir: &Path) -> Result<LocalMod, Therm
                 continue;
             } else if let Some(p) = out.parent() {
                 trace!("Creating dir at {}", p.display());
-                fs::create_dir_all(&p)?;
+                fs::create_dir_all(p)?;
             }
             trace!("Open file {} for writing", out.display());
             let mut outfile = OpenOptions::new()
