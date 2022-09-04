@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, path::PathBuf};
 
 use thiserror::Error;
 
@@ -6,7 +6,7 @@ use crate::model::Mod;
 
 #[derive(Error, Debug)]
 pub enum ThermiteError {
-    #[error("Error while installing mod {m.name}")]
+    #[error("Error while installing mod {0}", m.name)]
     InstallError {
         m: Mod,
         path: PathBuf,
@@ -20,4 +20,12 @@ pub enum ThermiteError {
     RonError(#[from] ron::Error),
     #[error("{0}")]
     MiscError(String),
+    #[error("Error downloading file: {0}")]
+    DownloadError(#[from] reqwest::Error),
+    #[error(transparent)]
+    ZipError(#[from] zip::result::ZipError),
+    #[error("Error parsing JSON: {0}")]
+    JsonError(#[from] serde_json::Error),
+    #[error("Error resolving dependency {0} of {1}")]
+    DepError(String, String),
 }

@@ -40,7 +40,7 @@ impl Mod {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash, PartialEq, Eq)]
-pub struct InstalledMod {
+pub struct LocalMod {
     pub package_name: String,
     pub version: String,
     pub mods: Vec<SubMod>,
@@ -49,7 +49,7 @@ pub struct InstalledMod {
     pub needed_by: Vec<String>,
 }
 
-impl InstalledMod {
+impl LocalMod {
     pub fn flatten_paths(&self) -> Vec<&PathBuf> {
         self.mods.iter().map(|m| &m.path).collect()
     }
@@ -88,28 +88,38 @@ pub struct Manifest {
     pub dependencies: Vec<String>,
 }
 
+/// Index of mods installed locally
+///
+/// Will save itself when it goes out of scope
 #[derive(Default, Serialize, Deserialize, Debug, Clone)]
 pub struct LocalIndex {
     #[serde(default)]
-    pub mods: HashMap<String, InstalledMod>,
+    pub mods: HashMap<String, LocalMod>,
     #[serde(default)]
-    pub linked: HashMap<String, InstalledMod>,
+    pub linked: HashMap<String, LocalMod>,
     #[serde(skip)]
-    pub path: Option<PathBuf>,
+    path: PathBuf,
 }
 
 impl LocalIndex {
-    pub fn load(path: &Path) -> Result<Self, ThermiteError> {
-        if path.join(".papa.ron").exists() {
-            let raw = fs::read_to_string(path.join(".papa.ron"))?;
+    /// Load an existing RON-format index file
+    /// # Params
+    /// * path - Path to the index file to load
+    pub fn load(path: impl AsRef<Path>) -> Result<Self, ThermiteError> {
+        let path = path.as_ref();
+        if path.exists() {
+            let raw = fs::read_to_string(path)?;
             let mut parsed = ron::from_str::<Self>(&raw)?;
-            parsed.path = Some(path.join(".papa.ron"));
+            parsed.path = path.into();
             Ok(parsed)
         } else {
-            Err(ThermiteError::MissingFile(path.join(".papa.ron")))
+            Err(ThermiteError::MissingFile(path.into()))
         }
     }
 
+    /// Tries to load an existing RON-format index file, or creates one if it doesn't exist
+    /// # Params
+    /// * path - Path to file to try to load
     pub fn load_or_create(path: &Path) -> Self {
         match Self::load(path) {
             Ok(s) => s,
@@ -117,33 +127,47 @@ impl LocalIndex {
         }
     }
 
+    /// Create a new index file
+    /// # Params
+    /// * path - Path to create the file at
     pub fn create(path: &Path) -> Self {
         let mut ind = Self::default();
-        ind.path = Some(path.join(".papa.ron"));
+        ind.path = path.into();
 
         ind
     }
 
+    /// Save the index file
+    ///
+    /// This function will be callsed when the `LocalIndex` is dropped. It shouldn't need to be called manually.
     pub fn save(&self) -> Result<(), ThermiteError> {
-        if let Some(p) = &self.path {
-            let parsed = ron::ser::to_string_pretty(self, ron::ser::PrettyConfig::new())?;
-            if let Some(p) = p.parent() {
-                fs::create_dir_all(p)?;
-            }
-            fs::write(&p, &parsed).map_err(|e| e.into())
-        } else {
-            Err(ThermiteError::MiscError(
-                "Tried to save local index but the path wasn't set".to_string(),
-            ))
+        let parsed = ron::ser::to_string_pretty(self, ron::ser::PrettyConfig::new())?;
+        if let Some(p) = self.path.parent() {
+            fs::create_dir_all(p)?;
         }
+        fs::write(&self.path, &parsed).map_err(|e| e.into())
+    }
+
+    pub fn parent_dir(&self) -> PathBuf {
+        if let Some(p) = self.path.parent() {
+            p.to_path_buf()
+        } else {
+            PathBuf::default()
+        }
+    }
+
+    pub fn path(&self) -> &PathBuf {
+        &self.path
+    }
+
+    pub fn path_mut(&mut self) -> &mut PathBuf {
+        &mut self.path
     }
 }
 
 impl Drop for LocalIndex {
     fn drop(&mut self) {
-        if self.path.is_some() {
-            self.save().expect("Failed to write index to disk");
-        }
+        self.save().expect("failed to write index to disk");
     }
 }
 
@@ -252,64 +276,6 @@ impl Cache {
         } else {
             None
         }
-    }
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct Cluster {
-    pub name: Option<String>,
-    ///K: Member Name V: Member Path
-    pub members: HashMap<String, PathBuf>,
-
-    #[serde(skip)]
-    path: PathBuf,
-}
-
-#[allow(dead_code)]
-impl Cluster {
-    pub fn new(name: Option<String>, path: PathBuf) -> Self {
-        Cluster {
-            name,
-            members: HashMap::new(),
-            path,
-        }
-    }
-
-    pub fn find() -> Result<Option<Self>, ThermiteError> {
-        let has_cluster = |p: &Path| -> Result<Option<Self>, ThermiteError> {
-            for e in p.read_dir()?.flatten() {
-                if e.file_name().as_os_str() == OsStr::new("cluster.ron") {
-                    let raw = fs::read_to_string(e.path())?;
-                    let mut clstr: Cluster = ron::from_str(&raw)?;
-                    clstr.path = e.path();
-
-                    return Ok(Some(clstr));
-                }
-            }
-            Ok(None)
-        };
-        let mut _depth = 0;
-        let mut target = std::env::current_dir()?;
-        loop {
-            debug!("Checking for cluster file in {}", target.display());
-            let test = has_cluster(&target)?;
-            if test.is_some() {
-                break Ok(test);
-            } else if let Some(p) = target.parent() {
-                target = p.to_owned();
-                _depth += 1;
-            } else {
-                break Ok(None);
-            }
-        }
-    }
-
-    pub fn save(&self) -> Result<(), ThermiteError> {
-        let pretty = ron::ser::to_string_pretty(&self, ron::ser::PrettyConfig::new())?;
-
-        fs::write(&self.path, pretty)?;
-
-        Ok(())
     }
 }
 
