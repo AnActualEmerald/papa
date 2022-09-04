@@ -1,4 +1,7 @@
-use std::{io, path::PathBuf};
+use std::{
+    io,
+    path::{Path, PathBuf},
+};
 
 use thiserror::Error;
 
@@ -8,8 +11,8 @@ use crate::model::Mod;
 pub enum ThermiteError {
     #[error("Error while installing mod {0}", m.name)]
     InstallError {
-        m: Mod,
-        path: PathBuf,
+        m: Box<Mod>,
+        path: Box<Path>,
         source: Box<dyn std::error::Error>,
     },
     #[error("No such file {0:?}")]
