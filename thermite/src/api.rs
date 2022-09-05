@@ -12,8 +12,11 @@ pub async fn get_package_index() -> Result<Vec<Mod>, ThermiteError> {
         .await?;
     if raw.status().is_success() {
         let parsed: Value = serde_json::from_str(&raw.text().await.unwrap())?;
-        map_response(&parsed)
-            .ok_or_else(|| ThermiteError::MiscError("Thunderstore response was malformed".into()))
+        let index = map_response(&parsed).ok_or_else(|| {
+            ThermiteError::MiscError("Thunderstore response was malformed".into())
+        })?;
+
+        Ok(index)
     } else {
         Err(ThermiteError::MiscError(raw.status().to_string()))
     }
@@ -31,7 +34,6 @@ fn map_response(res: &Value) -> Option<Vec<Mod>> {
                     let file_size = latest["file_size"].as_i64().unwrap();
                     let desc = latest["description"].as_str().unwrap().to_string();
                     let deps = if let Value::Array(d) = &latest["dependencies"] {
-                        //TODO: Support dependencies
                         d.iter()
                             .map(|e| e.as_str().unwrap().to_string())
                             .filter(|e| !e.starts_with("northstar-Northstar")) //Don't try to install northstar for any mods that "depend" on it

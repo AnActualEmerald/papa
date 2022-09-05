@@ -3,17 +3,16 @@ use directories::ProjectDirs;
 
 pub mod actions;
 mod install;
-pub mod utils;
+mod update;
+pub(crate) mod utils;
 
 pub use install::install;
-pub use utils::{disable_mod, enable_mod, update_index};
+pub use utils::{resolve_deps, update_index};
 
 #[derive(Debug, Clone)]
 pub struct Ctx {
     pub cache: Cache,
     pub dirs: ProjectDirs,
-    // pub local_installed: Option<LocalIndex>,
-    // pub global_installed: LocalIndex,
 }
 
 impl Ctx {

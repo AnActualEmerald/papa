@@ -29,6 +29,6 @@ pub enum ThermiteError {
     ZipError(#[from] zip::result::ZipError),
     #[error("Error parsing JSON: {0}")]
     JsonError(#[from] serde_json::Error),
-    #[error("Error resolving dependency {0} of {1}")]
-    DepError(String, String),
+    #[error("Error resolving dependency {0}")]
+    DepError(String),
 }

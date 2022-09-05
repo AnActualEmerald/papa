@@ -162,6 +162,26 @@ impl LocalIndex {
     pub fn path_mut(&mut self) -> &mut PathBuf {
         &mut self.path
     }
+
+    pub fn get_mod(&self, name: &str) -> Option<&LocalMod> {
+        if self.mods.contains_key(name) {
+            self.mods.get(name)
+        } else if self.linked.contains_key(name) {
+            self.linked.get(name)
+        } else {
+            None
+        }
+    }
+
+    pub fn get_sub_mod(&self, name: &str) -> Option<&SubMod> {
+        for m in self.mods.values().chain(self.linked.values()) {
+            if let Some(m) = m.mods.iter().find(|e| e.name == name) {
+                return Some(m);
+            }
+        }
+
+        None
+    }
 }
 
 impl Drop for LocalIndex {

@@ -2,12 +2,10 @@ use crate::api;
 use crate::error::ThermiteError;
 use crate::model;
 use crate::model::LocalIndex;
-use crate::model::LocalMod;
 use crate::model::Mod;
 use crate::model::SubMod;
 use directories::ProjectDirs;
 use log::debug;
-use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs::{self, File, OpenOptions};
 use std::path::{Path, PathBuf};
@@ -128,34 +126,32 @@ pub fn clear_cache(dir: &Path, force: bool) -> Result<(), ThermiteError> {
 //
 //        Some(format!("{}.{}", author, big_snake.convert(&m_name)))
 //    }
-pub fn resolve_deps<'a>(
-    valid: &mut Vec<&'a Mod>,
-    base: &'a Mod,
-    installed: &'a HashMap<String, LocalMod>,
-    index: &'a Vec<Mod>,
-) -> Result<(), ThermiteError> {
-    for dep in &base.deps {
-        let dep_name = dep.split('-').collect::<Vec<&str>>()[1];
-        if !installed.iter().any(|(k, _)| k == dep_name) {
-            if let Some(d) = index.iter().find(|f| f.name == dep_name) {
-                resolve_deps(valid, d, installed, index)?;
-                valid.push(d);
-            } else {
-                return Err(ThermiteError::DepError(dep.into(), base.name.clone()));
-            }
+
+///
+pub fn resolve_deps(
+    deps: &Vec<impl AsRef<str>>,
+    index: &Vec<Mod>,
+) -> Result<Vec<Mod>, ThermiteError> {
+    let mut valid = vec![];
+    for dep in deps {
+        let dep_name = dep.as_ref().split('-').collect::<Vec<&str>>()[1];
+        if let Some(d) = index.iter().find(|f| f.name == dep_name) {
+            valid.push(d.clone());
+        } else {
+            return Err(ThermiteError::DepError(dep.as_ref().into()));
         }
     }
-    Ok(())
+    Ok(valid)
 }
 
-pub fn disable_mod(index: &LocalIndex, m: &mut SubMod) -> Result<bool, ThermiteError> {
+pub fn disable_mod(dir: impl AsRef<Path>, m: &mut SubMod) -> Result<bool, ThermiteError> {
     if m.disabled() {
         return Ok(false);
     }
 
-    let old_path = index.path().join(&m.path);
+    let old_path = dir.as_ref().join(&m.path);
 
-    let dir = index.path().join(".disabled");
+    let dir = dir.as_ref().join(".disabled");
     let new_path = dir.join(&m.path);
 
     if !dir.exists() {
@@ -174,14 +170,14 @@ pub fn disable_mod(index: &LocalIndex, m: &mut SubMod) -> Result<bool, ThermiteE
     Ok(true)
 }
 
-pub fn enable_mod(index: &LocalIndex, m: &mut SubMod) -> Result<bool, ThermiteError> {
+pub fn enable_mod(dir: impl AsRef<Path>, m: &mut SubMod) -> Result<bool, ThermiteError> {
     if !m.disabled() {
         return Ok(false);
     }
 
-    let old_path = index.path().join(&m.path);
+    let old_path = dir.as_ref().join(&m.path);
     m.path = m.path.strip_prefix(".disabled").unwrap().to_path_buf();
-    let new_path = index.path().join(&m.path);
+    let new_path = dir.as_ref().join(&m.path);
 
     debug!(
         "Rename mod from {} to {}",
