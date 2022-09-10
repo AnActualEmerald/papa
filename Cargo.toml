@@ -14,7 +14,7 @@ repository = "https://github.com/AnActualEmerald/papa"
 [workspace]
 
 [dependencies]
-libthermite = {path = "./thermite", version = "0.1.0"}
+libthermite = {path = "./thermite", version = "0.2.0" }
 anyhow = "1.0.58"
 clap = { version = "3.2.8", features = ["derive", "color"] }
 directories = "4.0.1"
@@ -43,3 +43,5 @@ profiles = []
 strip = true
 lto = true
 opt-level = "z"
+codegen-units = 1
+

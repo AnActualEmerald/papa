@@ -1,12 +1,10 @@
 use std::fs;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use regex::Regex;
+use thermite::{update_index, LocalIndex};
 
-use crate::{
-    api::model::LocalIndex,
-    core::{actions, utils, Ctx},
-};
+use crate::core::{utils, Ctx};
 
 pub async fn install(
     ctx: &mut Ctx,
@@ -21,14 +19,8 @@ pub async fn install(
         ctx.config.mod_dir()
     };
 
-    //Create the target dir if it doesn't exist
-    if !target.exists() {
-        log::trace!("Creating dir {}", target.display());
-        fs::create_dir_all(target)?;
-    }
-
-    let index = utils::update_index(target, &ctx.global_target).await;
-    let mut installed = LocalIndex::load_or_create(target);
+    let mut installed = LocalIndex::load_or_create(target.join(".papa.ron"));
+    let index = update_index(Some(installed.path()), None).await;
     let mut valid = vec![];
     for name in mod_names {
         let re = Regex::new(r"(.+)@?(v?\d.\d.\d)?").unwrap();
@@ -53,8 +45,15 @@ pub async fn install(
             continue;
         }
 
-        utils::resolve_deps(&mut valid, base, &installed.mods, &index)?;
-        valid.push(base);
+        let deps = thermite::core::resolve_deps(&base.deps, &index).unwrap();
+
+        valid.push(base.clone());
+        // This only covers a single layer of dependencies
+        for dep in deps {
+            if !dep.installed {
+                valid.push(dep.clone());
+            }
+        }
     }
 
     //Gaurd against an empty list (maybe all the mods are already installed?)
@@ -90,48 +89,52 @@ pub async fn install(
         }
     }
 
-    let mut downloaded = vec![];
-    for base in valid {
-        let name = &base.name;
-        let path = ctx
-            .dirs
-            .cache_dir()
-            .join(format!("{}_{}.zip", name, base.version));
+    let mut ctx = thermite::core::Ctx::new(ctx.dirs.clone());
 
-        //would love to use this in the same if as the let but it's unstable so...
-        if ctx.config.cache() {
-            if let Some(f) = ctx.cache.check(&path) {
-                println!("Using cached version of {}", name);
-                downloaded.push(f);
-                continue;
-            }
-        }
-        match actions::download_file(&base.url, path).await {
-            Ok(f) => downloaded.push(f),
-            Err(e) => eprintln!("{}", e),
-        }
-    }
+    thermite::install(&mut ctx, &mut installed, valid.as_slice(), force, true).await?;
 
-    println!(
-        "Extracting mod{} to {}",
-        if downloaded.len() > 1 { "s" } else { "" },
-        target.display()
-    );
-    for e in downloaded
-        .iter()
-        .map(|f| -> Result<()> {
-            let pkg = actions::install_mod(f, target)?;
-            installed.mods.insert(pkg.package_name.clone(), pkg.clone());
-            ctx.cache.clean(&pkg.package_name, &pkg.version)?;
-            println!("Installed {}!", pkg.package_name);
-            Ok(())
-        })
-        .filter(|f| f.is_err())
-    {
-        println!("Encountered errors while installing mods:");
-        println!("{:#?}", e.unwrap_err());
-    }
-    // utils::save_installed(target, &installed)?;
+    // let mut downloaded = vec![];
+    // for base in valid {
+    //     let name = &base.name;
+    //     let path = ctx
+    //         .dirs
+    //         .cache_dir()
+    //         .join(format!("{}_{}.zip", name, base.version));
+
+    //     //would love to use this in the same if as the let but it's unstable so...
+    //     if ctx.config.cache() {
+    //         if let Some(f) = ctx.cache.check(&path) {
+    //             println!("Using cached version of {}", name);
+    //             downloaded.push(f);
+    //             continue;
+    //         }
+    //     }
+    //     match thermite::installdownload_file(&base.url, path).await {
+    //         Ok(f) => downloaded.push(f),
+    //         Err(e) => eprintln!("{}", e),
+    //     }
+    // }
+
+    // println!(
+    //     "Extracting mod{} to {}",
+    //     if downloaded.len() > 1 { "s" } else { "" },
+    //     target.display()
+    // );
+    // for e in downloaded
+    //     .iter()
+    //     .map(|f| -> Result<()> {
+    //         let pkg = actions::install_mod(f, target)?;
+    //         installed.mods.insert(pkg.package_name.clone(), pkg.clone());
+    //         ctx.cache.clean(&pkg.package_name, &pkg.version)?;
+    //         println!("Installed {}!", pkg.package_name);
+    //         Ok(())
+    //     })
+    //     .filter(|f| f.is_err())
+    // {
+    //     println!("Encountered errors while installing mods:");
+    //     println!("{:#?}", e.unwrap_err());
+    // }
+    // // utils::save_installed(target, &installed)?;
     Ok(())
 }
 
@@ -144,9 +147,9 @@ pub async fn install_from_url(ctx: &Ctx, url: String) -> Result<()> {
         .join("");
     println!("Downloading to {}", file_name);
     let path = ctx.dirs.cache_dir().join(file_name);
-    match actions::download_file(url.to_string().as_str(), path.clone()).await {
+    match thermite::core::actions::download_file(url.to_string().as_str(), path.clone()).await {
         Ok(f) => {
-            let _pkg = actions::install_mod(&f, ctx.config.mod_dir()).unwrap();
+            let _pkg = thermite::core::actions::install_mod(&f, ctx.config.mod_dir()).unwrap();
             utils::remove_file(&path)?;
             println!("Installed {}", url);
         }
