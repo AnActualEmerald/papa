@@ -185,7 +185,7 @@ fn extract(ctx: &Ctx, zip_file: File, target: &Path) -> Result<()> {
                 fs::create_dir_all(target.join(f.name())).context("Unable to create directory")?;
                 continue;
             } else if let Some(p) = out.parent() {
-                fs::create_dir_all(&p).context("Unable to create directory")?;
+                fs::create_dir_all(p).context("Unable to create directory")?;
             }
 
             let mut outfile = OpenOptions::new()

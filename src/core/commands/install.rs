@@ -1,6 +1,6 @@
-use std::fs;
 
-use anyhow::{anyhow, Context, Result};
+
+use anyhow::{anyhow, Result};
 use regex::Regex;
 use thermite::{update_index, LocalIndex, ModVersion};
 

@@ -57,9 +57,9 @@ impl Config {
         Path::new(&self.mod_dir)
     }
 
-    pub fn cache(&self) -> bool {
-        self.cache
-    }
+    // pub fn cache(&self) -> bool {
+    //     self.cache
+    // }
 
     pub fn set_dir(&mut self, dir: &str) {
         self.mod_dir = PathBuf::from(dir);

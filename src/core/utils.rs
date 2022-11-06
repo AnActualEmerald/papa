@@ -3,12 +3,9 @@ use crate::api::model::LocalIndex;
 use crate::api::model::Profile;
 use crate::api::model::SubMod;
 use crate::model;
-use crate::model::InstalledMod;
-use crate::model::Mod;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use directories::ProjectDirs;
 use log::debug;
-use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs::{self, File, OpenOptions};
 use std::path::Path;
@@ -69,13 +66,6 @@ pub fn remove_file(path: &Path) -> Result<()> {
     fs::remove_file(path).context(format!("Unable to remove file {}", path.display()))
 }
 
-//    pub fn remove_dir(dir: &Path) -> Result<(), String> {
-//        fs::remove_dir_all(dir)
-//            .map_err(|_| format!("Unable to remove directory {}", dir.display()))?;
-//
-//        Ok(())
-//    }
-
 pub fn clear_cache(dir: &Path, force: bool) -> Result<()> {
     for entry in fs::read_dir(dir).context(format!("unable to read directory {}", dir.display()))? {
         let path = entry.context("Error reading directory entry")?.path();
@@ -89,60 +79,6 @@ pub fn clear_cache(dir: &Path, force: bool) -> Result<()> {
         }
     }
 
-    Ok(())
-}
-
-//    pub fn list_dir(dir: &Path) -> Result<Vec<String>, String> {
-//        Ok(fs::read_dir(dir)
-//            .map_err(|_| format!("unable to read directory {}", dir.display()))
-//            .map_err(|_| format!("Unable to read directory {}", dir.display()))?
-//            .filter(|f| f.is_ok())
-//            .map(|f| f.unwrap())
-//            .map(|f| f.file_name().to_string_lossy().into_owned())
-//            .collect())
-//    }
-
-// #[inline]
-// pub fn save_file(file: &Path, data: String) -> Result<()> {
-//     fs::write(file, data.as_bytes())?;
-//     Ok(())
-// }
-
-//    //supposing the mod name is formatted like Author.Mod@v1.0.0
-//    pub fn parse_mod_name(name: &str) -> Option<String> {
-//        let parts = name.split_once('.')?;
-//        let author = parts.0;
-//        //let parts = parts.1.split_once('@')?;
-//        let m_name = parts.1;
-//        //let ver = parts.1.replace('v', "");
-//
-//        let big_snake = Converter::new()
-//            .set_delim("_")
-//            .set_pattern(Pattern::Capital);
-//
-//        Some(format!("{}.{}", author, big_snake.convert(&m_name)))
-//    }
-pub fn resolve_deps<'a>(
-    valid: &mut Vec<&'a Mod>,
-    base: &'a Mod,
-    installed: &'a HashMap<String, InstalledMod>,
-    index: &'a Vec<Mod>,
-) -> Result<()> {
-    for dep in &base.deps {
-        let dep_name = dep.split('-').collect::<Vec<&str>>()[1];
-        if !installed.iter().any(|(k, _)| k == dep_name) {
-            if let Some(d) = index.iter().find(|f| f.name == dep_name) {
-                resolve_deps(valid, d, installed, index)?;
-                valid.push(d);
-            } else {
-                return Err(anyhow!(
-                    "Unable to resolve dependency {} of {}",
-                    dep,
-                    base.name
-                ));
-            }
-        }
-    }
     Ok(())
 }
 

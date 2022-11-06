@@ -111,7 +111,7 @@ pub fn install_mod(zip_file: &File, target_dir: &Path) -> Result<InstalledMod> {
         fs::create_dir_all(&temp_dir).context("Unable to create temp directory")?;
         for i in 0..archive.len() {
             let mut file = archive.by_index(i).unwrap();
-            let out = temp_dir.join(&file.enclosed_name().unwrap());
+            let out = temp_dir.join(file.enclosed_name().unwrap());
 
             if let Some(e) = out.extension() {
                 if out.exists() && e == std::ffi::OsStr::new("cfg") {
@@ -127,7 +127,7 @@ pub fn install_mod(zip_file: &File, target_dir: &Path) -> Result<InstalledMod> {
                 continue;
             } else if let Some(p) = out.parent() {
                 trace!("Creating dir at {}", p.display());
-                fs::create_dir_all(&p)?;
+                fs::create_dir_all(p)?;
             }
             trace!("Open file {} for writing", out.display());
             let mut outfile = OpenOptions::new()

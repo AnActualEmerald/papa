@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
     ffi::OsStr,
-    fs::{self, File, OpenOptions},
+    fs,
     path::{Path, PathBuf},
 };
 
@@ -130,7 +130,7 @@ impl LocalIndex {
             if let Some(p) = p.parent() {
                 fs::create_dir_all(p)?;
             }
-            fs::write(&p, &parsed).context("Unable to write index")
+            fs::write(p, &parsed).context("Unable to write index")
         } else {
             Err(anyhow::anyhow!(
                 "Tried to save local index but the path wasn't set"
@@ -171,7 +171,6 @@ impl CachedMod {
 }
 
 pub struct Cache {
-    re: Regex,
     pkgs: Vec<CachedMod>,
 }
 
@@ -198,7 +197,7 @@ impl Cache {
                 }
             }
         }
-        Ok(Cache { pkgs, re })
+        Ok(Cache { pkgs })
     }
 
     ///Cleans all cached versions of a package except the version provided
@@ -219,39 +218,6 @@ impl Cache {
         }
 
         Ok(res)
-    }
-
-    ///Checks if a path is in the current cache
-    pub fn check(&self, path: &Path) -> Option<File> {
-        if self.has(path) {
-            self.open_file(path)
-        } else {
-            None
-        }
-    }
-
-    fn has(&self, path: &Path) -> bool {
-        if let Some(name) = path.file_name() {
-            if let Some(parts) = self.re.captures(name.to_str().unwrap()) {
-                let name = parts.get(1).unwrap().as_str();
-                let ver = parts.get(2).unwrap().as_str();
-                if let Some(c) = self.pkgs.iter().find(|e| e.name == name) {
-                    if c.version == ver {
-                        return true;
-                    }
-                }
-            }
-        }
-        false
-    }
-
-    #[inline(always)]
-    fn open_file(&self, path: &Path) -> Option<File> {
-        if let Ok(f) = OpenOptions::new().read(true).open(path) {
-            Some(f)
-        } else {
-            None
-        }
     }
 }
 

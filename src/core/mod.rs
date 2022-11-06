@@ -4,7 +4,7 @@ use anyhow::Result;
 use directories::ProjectDirs;
 use rustyline::Editor;
 
-use crate::api::model::{Cache, Cluster, LocalIndex};
+use crate::api::model::{Cache, Cluster};
 
 use self::config::Config;
 
