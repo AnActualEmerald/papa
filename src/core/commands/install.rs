@@ -2,7 +2,7 @@ use std::fs;
 
 use anyhow::{anyhow, Context, Result};
 use regex::Regex;
-use thermite::{update_index, LocalIndex};
+use thermite::{update_index, LocalIndex, ModVersion};
 
 use crate::core::{utils, Ctx};
 
@@ -40,14 +40,21 @@ pub async fn install(
         if base.installed && !force {
             println!(
                 "Package \x1b[36m{}\x1b[0m version \x1b[36m{}\x1b[0m already installed",
-                base.name, base.version
+                base.name, base.latest
             );
             continue;
         }
 
-        let deps = thermite::core::resolve_deps(&base.deps, &index).unwrap();
+        let deps = thermite::core::resolve_deps(
+            &base.versions[&base.latest].deps,
+            &index
+                .iter()
+                .map(|e| e.versions[&e.latest].clone())
+                .collect::<Vec<ModVersion>>(),
+        )
+        .unwrap();
 
-        valid.push(base.clone());
+        valid.push(base.versions[&base.latest].clone());
         // This only covers a single layer of dependencies
         for dep in deps {
             if !dep.installed {
@@ -61,7 +68,7 @@ pub async fn install(
         return Ok(());
     }
 
-    let size: i64 = valid.iter().map(|f| f.file_size).sum();
+    let size: u64 = valid.iter().map(|f| f.file_size).sum();
     println!("Installing:\n");
 
     print!("\t");
@@ -92,49 +99,9 @@ pub async fn install(
     let mut ctx = thermite::core::Ctx::new(ctx.dirs.clone());
 
     thermite::install(&mut ctx, &mut installed, valid.as_slice(), force, true).await?;
-
-    // let mut downloaded = vec![];
-    // for base in valid {
-    //     let name = &base.name;
-    //     let path = ctx
-    //         .dirs
-    //         .cache_dir()
-    //         .join(format!("{}_{}.zip", name, base.version));
-
-    //     //would love to use this in the same if as the let but it's unstable so...
-    //     if ctx.config.cache() {
-    //         if let Some(f) = ctx.cache.check(&path) {
-    //             println!("Using cached version of {}", name);
-    //             downloaded.push(f);
-    //             continue;
-    //         }
-    //     }
-    //     match thermite::installdownload_file(&base.url, path).await {
-    //         Ok(f) => downloaded.push(f),
-    //         Err(e) => eprintln!("{}", e),
-    //     }
-    // }
-
-    // println!(
-    //     "Extracting mod{} to {}",
-    //     if downloaded.len() > 1 { "s" } else { "" },
-    //     target.display()
-    // );
-    // for e in downloaded
-    //     .iter()
-    //     .map(|f| -> Result<()> {
-    //         let pkg = actions::install_mod(f, target)?;
-    //         installed.mods.insert(pkg.package_name.clone(), pkg.clone());
-    //         ctx.cache.clean(&pkg.package_name, &pkg.version)?;
-    //         println!("Installed {}!", pkg.package_name);
-    //         Ok(())
-    //     })
-    //     .filter(|f| f.is_err())
-    // {
-    //     println!("Encountered errors while installing mods:");
-    //     println!("{:#?}", e.unwrap_err());
-    // }
-    // // utils::save_installed(target, &installed)?;
+    for m in valid {
+        println!("Installed {}!", m.name);
+    }
     Ok(())
 }
 

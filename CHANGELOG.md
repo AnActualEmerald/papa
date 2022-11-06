@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Remove message is now less spammy
+- Index file now saves mod paths relative to the file
 
 ### Fixed
 - `update` now handles linked mods correctly

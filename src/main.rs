@@ -18,7 +18,6 @@ use crate::core::commands::*;
 #[derive(Parser)]
 #[clap(name = "Papa")]
 #[clap(author = "AnAcutalEmerald <emerald_actual@proton.me>")]
-#[clap(version = env!("CARGO_PKG_VERSION"))]
 #[clap(about = "Command line mod manager for Northstar")]
 #[clap(after_help = "Welcome back. Cockpit cooling reactivated.")]
 struct Cli {
@@ -173,7 +172,7 @@ async fn main() {
 
     let dirs = ProjectDirs::from("me", "greenboi", "papa").unwrap();
 
-    let rl = Editor::<()>::new();
+    let rl = Editor::<()>::new().unwrap();
 
     let mut ctx = core::Ctx::new(dirs, rl).expect("Failed to create context");
 
