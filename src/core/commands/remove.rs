@@ -22,7 +22,11 @@ pub fn remove(ctx: &Ctx, mod_names: Vec<String>) -> Result<()> {
             }
         })
         .collect();
-    let paths = valid.iter().flat_map(|f| f.flatten_paths()).collect();
+    let paths = valid
+        .iter()
+        .flat_map(|f| f.flatten_paths())
+        .map(|f| ctx.local_target.join(f))
+        .collect();
 
     actions::uninstall(paths)?;
     valid
