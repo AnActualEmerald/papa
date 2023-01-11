@@ -1,59 +1,27 @@
-use std::{cmp::min, fs::File, io::Write, path::PathBuf};
+use crate::model::ModName;
+use regex::Regex;
 
-use futures_util::StreamExt;
-use indicatif::{ProgressBar, ProgressStyle};
-use reqwest::Client;
+pub fn validate_modnames(input: &str) -> Result<ModName, String> {
+    let Ok(re) = Regex::new(r"(.+)\.(.+)@(\d+\.\d+\.\d+)")else {
+        return Err("Unable to compile regex".to_string());
+    };
 
-pub async fn download_file(url: String, file_path: PathBuf) -> Result<(), String> {
-    let client = Client::new();
+    if let Some(captures) = re.captures(input) {
+        let mut name = ModName::default();
+        if let Some(author) = captures.get(1) {
+            name.author = author.as_str().to_string();
+        }
 
-    //send the request
-    let res = client
-        .get(&url)
-        .send()
-        .await
-        .or(Err(format!("Unable to GET from {}", &url)))?;
+        if let Some(n) = captures.get(2) {
+            name.name = n.as_str().to_string();
+        }
 
-    let file_size = res.content_length().ok_or(format!(
-        "Unable to read content length of response from {}",
-        url
-    ))?;
+        name.version = captures.get(3).map(|v| v.as_str().to_string());
 
-    //setup the progress bar
-    let pb = ProgressBar::new(file_size).with_style(ProgressStyle::default_bar().template(
-        "{msg}\n{spinner:.green} [{duration}] {wide_bar:.cyan} {bytes}/{total_bytes} {bytes_per_sec}",
-    ).progress_chars("#>-"));
-
-    //start download in chunks
-    let mut file = File::create(&file_path).or(Err(format!(
-        "Failed to create file {}",
-        file_path.display()
-    )))?;
-    let mut downloaded: u64 = 0;
-    let mut stream = res.bytes_stream();
-
-    while let Some(item) = stream.next().await {
-        let chunk = item.or(Err(format!("Error downloading file :(")))?;
-        file.write_all(&chunk).or(Err(format!(
-            "Error writing to file {}",
-            file_path.display()
-        )))?;
-        let new = min(downloaded + (chunk.len() as u64), file_size);
-        downloaded = new;
-        pb.set_position(new);
+        Ok(name)
+    } else {
+        Err(format!(
+            "Mod name '{input}' should be in 'Author.ModName' format"
+        ))
     }
-
-    pb.finish_with_message(format!("Downloaded {}", url));
-    Ok(())
-}
-
-//supposing the mod name is formatted like Author.Mod@v1.0.0
-pub fn parse_mod_name(name: &str) -> Option<String> {
-    let parts = name.split_once(".")?;
-    let author = parts.0;
-    let parts = parts.1.split_once("@")?;
-    let m_name = parts.0;
-    let ver = parts.1.replace("v", "");
-
-    Some(format!("/{}/{}/{}", author, m_name, ver))
 }
