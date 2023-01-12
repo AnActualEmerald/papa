@@ -2,7 +2,7 @@ use crate::model::ModName;
 use regex::Regex;
 
 pub fn validate_modnames(input: &str) -> Result<ModName, String> {
-    let Ok(re) = Regex::new(r"(.+)\.(.+)@(\d+\.\d+\.\d+)")else {
+    let Ok(re) = Regex::new(r"^(\w+)\.(\w+)(?:@(\d+\.\d+\.\d+))?$")else {
         return Err("Unable to compile regex".to_string());
     };
 
@@ -23,5 +23,16 @@ pub fn validate_modnames(input: &str) -> Result<ModName, String> {
         Err(format!(
             "Mod name '{input}' should be in 'Author.ModName' format"
         ))
+    }
+}
+
+pub fn to_file_size_string(size: u64) -> String {
+    if size / 1_000_000 >= 1 {
+        let size = size as f64 / 1_048_576f64;
+
+        format!("{:.2} MB", size)
+    } else {
+        let size = size as f64 / 1024f64;
+        format!("{:.2} KB", size)
     }
 }

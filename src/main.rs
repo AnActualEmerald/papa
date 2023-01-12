@@ -3,13 +3,15 @@
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
-use log::debug;
+use tracing::debug;
+use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 use directories::ProjectDirs;
 use rustyline::Editor;
 
 mod core;
 pub mod model;
+pub mod traits;
 pub mod utils;
 
 use model::ModName;
@@ -168,92 +170,95 @@ async fn main() {
     if cli.debug {
         std::env::set_var("RUST_LOG", "DEBUG");
     }
-    env_logger::builder().format_timestamp(None).init();
 
-    let dirs = ProjectDirs::from("me", "greenboi", "papa").unwrap();
+    let subscriber = FmtSubscriber::builder()
+        .with_env_filter(EnvFilter::from_default_env())
+        .finish();
 
-    let rl = Editor::<()>::new().unwrap();
+    tracing::subscriber::set_global_default(subscriber).expect("Unable to init tracing");
 
-    todo!();
+    // let dirs = ProjectDirs::from("me", "greenboi", "papa").unwrap();
 
-    // let res = match cli.command {
-    //     _ => todo!(),
-    // Commands::Update { yes } => update(&mut ctx, yes).await,
-    // Commands::Config {
-    //     mods_dir: None,
-    //     cache: None,
-    // } => {
-    //     println!(
-    //         "Current config:\n{}",
-    //         toml::to_string_pretty(&ctx.config).unwrap()
-    //     );
-    //     Ok(())
-    // }
-    // Commands::Config { mods_dir, cache } => update_config(&mut ctx, mods_dir, cache),
-    // Commands::List { global, all } => list(&ctx, global, all),
-    // Commands::Install {
-    //     mod_names: _,
-    //     url: Some(url),
-    //     yes: _,
-    //     force: _,
-    //     global: _,
-    // } => install_from_url(&ctx, url).await,
-    // Commands::Install {
-    //     mod_names,
-    //     url: None,
-    //     yes,
-    //     force,
-    //     global,
-    // } => install(mod_names, yes, force, global).await,
-    // Commands::Disable { mods } => disable(&ctx, mods),
-    // Commands::Enable { mods } => enable(&ctx, mods),
-    // Commands::Search { term } => search(&ctx, term).await,
-    // Commands::Remove { mod_names } => remove(&ctx, mod_names),
-    // Commands::Clear { full } => clear(&ctx, full),
-    // #[cfg(feature = "northstar")]
-    // Commands::Northstar { command } => match command {
-    //      NstarCommands::Install { game_path } => {
-    //          let game_path = if let Some(p) = game_path {
-    //              p.canonicalize().unwrap()
-    //          } else {
-    //              std::env::current_dir().unwrap()
-    //          };
-    //          core.install_northstar(&game_path).await
-    //      }
-    //     NstarCommands::Init { game_path } => {
-    //         let game_path = if let Some(p) = game_path {
-    //             match p.canonicalize() {
-    //                 Ok(p) => p,
-    //                 Err(e) => {
-    //                     debug!("{:#?}", e);
-    //                     println!("{}", e);
-    //                     return;
-    //                 }
-    //             }
-    //         } else {
-    //             std::env::current_dir().unwrap()
-    //         };
-    //         init_northstar(&mut ctx, &game_path).await
-    //     }
-    //     NstarCommands::Update {} => update_northstar(&mut ctx).await,
-    //     #[cfg(feature = "launcher")]
-    //     NstarCommands::Start {} => ctx.start_northstar(&ctx),
-    // },
-    // #[cfg(target_os = "linux")]
-    // Commands::Include { mods, force } => include(&ctx, mods, force),
-    // #[cfg(target_os = "linux")]
-    // Commands::Exclude { mods } => exclude(&ctx, mods),
-    // #[cfg(feature = "cluster")]
-    // Commands::Cluster { command } => cluster(&mut ctx, command),
-    // #[cfg(feature = "profiles")]
-    // Commands::Profile { command } => profile(&mut ctx, command),
-    // };
+    // let rl = Editor::<()>::new().unwrap();
 
-    // if let Some(e) = res.err() {
-    //     if cli.debug {
-    //         debug!("{:#?}", e);
-    //     } else {
-    //         println!("{}", e);
-    //     }
-    // }
+    let res = match cli.command {
+        // Commands::Update { yes } => update(&mut ctx, yes).await,
+        // Commands::Config {
+        //     mods_dir: None,
+        //     cache: None,
+        // } => {
+        //     println!(
+        //         "Current config:\n{}",
+        //         toml::to_string_pretty(&ctx.config).unwrap()
+        //     );
+        //     Ok(())
+        // }
+        // Commands::Config { mods_dir, cache } => update_config(&mut ctx, mods_dir, cache),
+        // Commands::List { global, all } => list(&ctx, global, all),
+        // Commands::Install {
+        //     mod_names: _,
+        //     url: Some(url),
+        //     yes: _,
+        //     force: _,
+        //     global: _,
+        // } => install_from_url(&ctx, url).await,
+        Commands::Install {
+            mod_names,
+            url: None,
+            yes,
+            force,
+            global,
+        } => core::install(mod_names, yes, force, global).await,
+        // Commands::Disable { mods } => disable(&ctx, mods),
+        // Commands::Enable { mods } => enable(&ctx, mods),
+        // Commands::Search { term } => search(&ctx, term).await,
+        // Commands::Remove { mod_names } => remove(&ctx, mod_names),
+        // Commands::Clear { full } => clear(&ctx, full),
+        // #[cfg(feature = "northstar")]
+        // Commands::Northstar { command } => match command {
+        //      NstarCommands::Install { game_path } => {
+        //          let game_path = if let Some(p) = game_path {
+        //              p.canonicalize().unwrap()
+        //          } else {
+        //              std::env::current_dir().unwrap()
+        //          };
+        //          core.install_northstar(&game_path).await
+        //      }
+        //     NstarCommands::Init { game_path } => {
+        //         let game_path = if let Some(p) = game_path {
+        //             match p.canonicalize() {
+        //                 Ok(p) => p,
+        //                 Err(e) => {
+        //                     debug!("{:#?}", e);
+        //                     println!("{}", e);
+        //                     return;
+        //                 }
+        //             }
+        //         } else {
+        //             std::env::current_dir().unwrap()
+        //         };
+        //         init_northstar(&mut ctx, &game_path).await
+        //     }
+        //     NstarCommands::Update {} => update_northstar(&mut ctx).await,
+        //     #[cfg(feature = "launcher")]
+        //     NstarCommands::Start {} => ctx.start_northstar(&ctx),
+        // },
+        // #[cfg(target_os = "linux")]
+        // Commands::Include { mods, force } => include(&ctx, mods, force),
+        // #[cfg(target_os = "linux")]
+        // Commands::Exclude { mods } => exclude(&ctx, mods),
+        // #[cfg(feature = "cluster")]
+        // Commands::Cluster { command } => cluster(&mut ctx, command),
+        // #[cfg(feature = "profiles")]
+        // Commands::Profile { command } => profile(&mut ctx, command),
+        _ => todo!(),
+    };
+
+    if let Err(e) = res {
+        if cli.debug {
+            debug!("{:#?}", e);
+        } else {
+            println!("{}", e);
+        }
+    }
 }
