@@ -6,9 +6,7 @@ use clap::{Parser, Subcommand};
 use tracing::debug;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
-use directories::ProjectDirs;
-use rustyline::Editor;
-
+pub mod config;
 mod core;
 pub mod model;
 pub mod traits;
@@ -176,6 +174,8 @@ async fn main() {
         .finish();
 
     tracing::subscriber::set_global_default(subscriber).expect("Unable to init tracing");
+
+    debug!("Config: {:#?}", *config::CONFIG);
 
     // let dirs = ProjectDirs::from("me", "greenboi", "papa").unwrap();
 
