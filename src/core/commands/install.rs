@@ -1,9 +1,10 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use tracing::instrument;
 
+use crate::config::{CONFIG, DIRS};
 use crate::model::ModName;
 use crate::traits::RemoteIndex;
-use crate::utils::to_file_size_string;
+use crate::utils::{ensure_dir, to_file_size_string};
 use owo_colors::OwoColorize;
 use thermite::prelude::*;
 
@@ -72,15 +73,23 @@ pub async fn install(
     if answer.to_lowercase().trim() != "n" {
         println!("Downloading packages...");
         let mut files = vec![];
+        let cache_dir = DIRS.cache_dir();
         for (mn, v) in valid {
-            let filename = format!("{}.zip", mn);
-            let file = download_file(&v.url, filename).await?;
+            println!("Downloading {mn}...");
+            let filename = cache_dir.join(format!("{}.zip", mn));
+            ensure_dir(&cache_dir)?;
+            let file = download_file(&v.url, filename)
+                .await
+                .context(format!("Error downloading {}", mn))?;
             files.push((mn.author, file));
         }
         println!("Done!");
         println!("Installing packages...");
         for (author, f) in files {
-            install_mod(author, &f, "mods")?;
+            if !CONFIG.is_server() {
+                ensure_dir(CONFIG.install_dir())?;
+                install_mod(author, &f, CONFIG.install_dir())?;
+            }
         }
         println!("Done!");
     }

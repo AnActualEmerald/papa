@@ -194,7 +194,7 @@ async fn main() {
         //     Ok(())
         // }
         // Commands::Config { mods_dir, cache } => update_config(&mut ctx, mods_dir, cache),
-        // Commands::List { global, all } => list(&ctx, global, all),
+        Commands::List { global, all } => core::list(global, all),
         // Commands::Install {
         //     mod_names: _,
         //     url: Some(url),

@@ -1,5 +1,9 @@
+use std::{fs, path::Path};
+
 use crate::model::ModName;
+use anyhow::Result;
 use regex::Regex;
+use tracing::debug;
 
 pub fn validate_modnames(input: &str) -> Result<ModName, String> {
     let Ok(re) = Regex::new(r"^(\w+)\.(\w+)(?:@(\d+\.\d+\.\d+))?$")else {
@@ -35,4 +39,18 @@ pub fn to_file_size_string(size: u64) -> String {
         let size = size as f64 / 1024f64;
         format!("{:.2} KB", size)
     }
+}
+
+pub fn ensure_dir(dir: impl AsRef<Path>) -> Result<()> {
+    let dir = dir.as_ref();
+
+    debug!("Checking if path '{}' exists", dir.display());
+    if !dir.try_exists()? {
+        debug!("Path '{}' doesn't exist, creating it", dir.display());
+        fs::create_dir_all(dir)?;
+    } else {
+        debug!("Path '{}' already exists", dir.display());
+    }
+
+    Ok(())
 }

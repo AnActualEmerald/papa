@@ -1,6 +1,8 @@
 use std::fmt::Display;
 
-#[derive(Default, Clone, Debug)]
+use thermite::model::InstalledMod;
+
+#[derive(Default, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ModName {
     pub author: String,
     pub name: String,
@@ -15,5 +17,15 @@ impl Display for ModName {
         }
 
         Ok(())
+    }
+}
+
+impl From<InstalledMod> for ModName {
+    fn from(value: InstalledMod) -> Self {
+        Self {
+            author: value.author,
+            name: value.manifest.name,
+            version: Some(value.manifest.version_number),
+        }
     }
 }

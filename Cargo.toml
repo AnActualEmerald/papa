@@ -1,6 +1,6 @@
 [package]
 name = "papa"
-version = "2.3.0-alpha.3"
+version = "3.0.0"
 edition = "2021"
 license = "MIT"
 description = "A cli mod manager for the Northstar launcher"
@@ -14,7 +14,7 @@ repository = "https://github.com/AnActualEmerald/papa"
 [workspace]
 
 [dependencies]
-libthermite = {path = "../thermite", version = "0.4"}
+libthermite = {path = "../thermite", version = "0.5.0-beta"}
 anyhow = "1.0.66"
 clap = { version = "4.0.19", features = ["derive", "color"] }
 directories = "4.0.1"
