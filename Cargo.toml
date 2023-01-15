@@ -14,7 +14,7 @@ repository = "https://github.com/AnActualEmerald/papa"
 [workspace]
 
 [dependencies]
-libthermite = {path = "../thermite", version = "0.5.0-beta", features = ["steam"]}
+libthermite = {path = "../thermite", version = "0.5.0-beta.1", features = ["steam"]}
 anyhow = "1.0.66"
 clap = { version = "4.0.19", features = ["derive", "color"] }
 directories = "4.0.1"
