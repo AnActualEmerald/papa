@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use thermite::model::InstalledMod;
 
-#[derive(Default, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Default, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ModName {
     pub author: String,
     pub name: String,

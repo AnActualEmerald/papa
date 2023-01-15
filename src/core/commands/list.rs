@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 
 use anyhow::Result;
 use owo_colors::OwoColorize;
@@ -15,7 +15,7 @@ pub fn list(global: bool, all: bool) -> Result<()> {
     let mods = find_mods(CONFIG.install_dir())?;
     debug!("Found {} mods", mods.len());
     trace!("{:?}", mods);
-    let mut grouped_mods: HashMap<ModName, HashSet<String>> = HashMap::new();
+    let mut grouped_mods: BTreeMap<ModName, BTreeSet<String>> = BTreeMap::new();
     for m in mods {
         let local_name = m.mod_json.name.clone();
         let mn = m.into();
@@ -24,7 +24,7 @@ pub fn list(global: bool, all: bool) -> Result<()> {
             group.insert(local_name);
         } else {
             debug!("Adding group {} for sdubmod {}", mn, local_name);
-            let group = HashSet::from([local_name]);
+            let group = BTreeSet::from([local_name]);
             grouped_mods.insert(mn, group);
         }
     }
@@ -32,9 +32,9 @@ pub fn list(global: bool, all: bool) -> Result<()> {
     println!("Installed mods: ");
     for (group, names) in grouped_mods {
         if names.len() == 1 {
-            println!("  {}", group.bright_blue().bold());
+            println!("-  {}", group.bright_blue().bold());
         } else {
-            println!("  {}:", group.bright_blue().bold());
+            println!("-  {}:", group.bright_blue().bold());
             for n in names {
                 println!("    {}", n.bright_cyan().bold());
             }
