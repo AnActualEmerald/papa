@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use directories::ProjectDirs;
-use figment::providers::{Format, Serialized, Toml};
+use figment::providers::{Env, Format, Serialized, Toml};
 use figment::Figment;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
@@ -13,6 +13,7 @@ lazy_static! {
         ProjectDirs::from("me", "greenboi", "Papa").expect("Unable to find base dirs");
     pub static ref CONFIG: Config = Figment::from(Serialized::defaults(Config::default()))
         .merge(Toml::file(DIRS.config_dir().join("config.toml")))
+        .merge(Env::prefixed("PAPA_"))
         .extract()
         .expect("Error reading configuration");
 }

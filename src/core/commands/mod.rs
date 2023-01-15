@@ -6,3 +6,6 @@ pub use list::list;
 
 mod northstar;
 pub use northstar::northstar;
+
+mod search;
+pub use search::search;

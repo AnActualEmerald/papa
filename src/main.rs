@@ -212,7 +212,7 @@ async fn main() {
         } => core::install(mod_names, yes, force, global).await,
         // Commands::Disable { mods } => disable(&ctx, mods),
         // Commands::Enable { mods } => enable(&ctx, mods),
-        // Commands::Search { term } => search(&ctx, term).await,
+        Commands::Search { term } => core::search(&term).await,
         // Commands::Remove { mod_names } => remove(&ctx, mod_names),
         // Commands::Clear { full } => clear(&ctx, full),
         #[cfg(feature = "northstar")]
