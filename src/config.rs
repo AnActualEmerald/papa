@@ -1,5 +1,7 @@
+use std::fs;
 use std::path::{Path, PathBuf};
 
+use anyhow::Result;
 use directories::ProjectDirs;
 use figment::providers::{Format, Serialized, Toml};
 use figment::Figment;
@@ -15,7 +17,7 @@ lazy_static! {
         .expect("Error reading configuration");
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
     install_dir: PathBuf,
     is_server: bool,
@@ -46,4 +48,10 @@ impl Default for Config {
             is_server: false,
         }
     }
+}
+
+pub fn write_config(cfg: &Config) -> Result<()> {
+    let cereal = toml::to_string_pretty(cfg)?;
+    fs::write(DIRS.config_dir().join("config.toml"), &cereal)?;
+    Ok(())
 }

@@ -1,6 +1,5 @@
 // #[cfg(feature = "northstar")]
 // use crate::core::northstar::{init_northstar, update_northstar};
-use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 use tracing::debug;
@@ -125,14 +124,13 @@ enum Commands {
     #[clap(alias = "unlink")]
     ///Unlink a global mod from the current mods folder
     Exclude { mods: Vec<String> },
-    // ///Commands for managing Northstar itself
-    // #[cfg(feature = "northstar")]
-    // #[clap(alias("ns"))]
-    // Northstar {
-    //     #[clap(subcommand)]
-    //     command: NstarCommands,
-    // },
-
+    ///Commands for managing Northstar itself
+    #[cfg(feature = "northstar")]
+    #[clap(alias("ns"))]
+    Northstar {
+        #[clap(subcommand)]
+        command: NstarCommands,
+    },
     // ///Manage clusters of Northstar servers
     // #[cfg(feature = "cluster")]
     // #[clap(alias("cl"))]
@@ -150,11 +148,14 @@ enum Commands {
 }
 
 #[derive(Subcommand)]
-enum NstarCommands {
+pub enum NstarCommands {
     //    ///Installs northstar to provided path, or current directory.
     //    Install { game_path: Option<PathBuf> },
-    ///Initializes a new northstar installation in the provided path, or current directory.
-    Init { game_path: Option<PathBuf> },
+    ///Attempts to install Northstar to a Titanfall 2 Steam installation, or updates the configuration if it already exists.
+    Init {
+        #[arg(default_value_t = false, short, long)]
+        force: bool,
+    },
     ///Updats the current northstar install. Must have been installed with `papa northstar init`.
     Update {},
     // #[cfg(feature = "launcher")]
@@ -214,8 +215,8 @@ async fn main() {
         // Commands::Search { term } => search(&ctx, term).await,
         // Commands::Remove { mod_names } => remove(&ctx, mod_names),
         // Commands::Clear { full } => clear(&ctx, full),
-        // #[cfg(feature = "northstar")]
-        // Commands::Northstar { command } => match command {
+        #[cfg(feature = "northstar")]
+        Commands::Northstar { command } => core::northstar(&command).await,
         //      NstarCommands::Install { game_path } => {
         //          let game_path = if let Some(p) = game_path {
         //              p.canonicalize().unwrap()

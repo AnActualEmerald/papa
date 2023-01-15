@@ -9,6 +9,20 @@ pub struct ModName {
     pub version: Option<String>,
 }
 
+impl ModName {
+    pub fn new(
+        author: impl Into<String>,
+        name: impl Into<String>,
+        version: Option<String>,
+    ) -> Self {
+        Self {
+            author: author.into(),
+            name: name.into(),
+            version,
+        }
+    }
+}
+
 impl Display for ModName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}.{}", self.author, self.name)?;
