@@ -21,22 +21,18 @@
 ## Usage
 
 ```bash
-papa install server_utilities #install a mod
+papa install fifty.server_utilities #install a mod
 papa list #list installed mods
-papa update #update any out of date mods
-papa remove server_utilities #uninstall a mod
-papa clear #clear the download cache
+# not yet reimplemented papa update #update any out of date mods
+# not yet reimplemented papa remove server_utilities #uninstall a mod
 ```
 
 ## Installation
-Regardless of which method you use, I recommend setting your mods directory to something useful before using `papa`
+I suggest that you initialize Northstar to set everything up automatically
 ```bash
-papa config -m /PATH/TO/MODS/FOLDER/
+papa ns init
 ```
-Or initialize Northstar to set everything up automatically
-```bash
-papa ns init /PATH/TO/TITANFALL2/
-```
+Or create a file at `.config/papa/config.toml` and set `install_dir` to whatever directory you want
 
 ### Ubuntu/Debian(& derivatives)
 Download the `.deb` file from the latest release and install it using whatever you usually use to install packages:
@@ -65,5 +61,3 @@ If you want to build from source but don't have cargo installed, you should chec
 
 ## Caveats 
 - The default install directory is **relative to the current working directory**, meaning that running the command in ~/ will install mods into ~/mods
-- Installed mods are tracked by a `.papa.ron` file in the mods directory, so each directory will have its own list of mods
-- For now updates will blow up any changes made within the mod files themselves
