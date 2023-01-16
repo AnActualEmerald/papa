@@ -59,7 +59,8 @@ enum Commands {
     Remove {
         #[clap(value_name = "MOD")]
         #[clap(help = "Mod name(s) to remove")]
-        mod_names: Vec<String>,
+        #[clap(value_parser = validate_modnames)]
+        mod_names: Vec<ModName>,
     },
     ///List installed mods
     #[clap(alias = "l", alias = "ls")]
@@ -213,7 +214,7 @@ async fn main() {
         // Commands::Disable { mods } => disable(&ctx, mods),
         // Commands::Enable { mods } => enable(&ctx, mods),
         Commands::Search { term } => core::search(&term).await,
-        // Commands::Remove { mod_names } => remove(&ctx, mod_names),
+        Commands::Remove { mod_names } => core::remove(mod_names),
         // Commands::Clear { full } => clear(&ctx, full),
         #[cfg(feature = "northstar")]
         Commands::Northstar { command } => core::northstar(&command).await,

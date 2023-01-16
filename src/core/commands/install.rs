@@ -46,6 +46,17 @@ pub async fn install(
         ));
     }
 
+    let mut deps = vec![];
+    for v in valid.iter() {
+        deps.append(&mut resolve_deps(&v.1.deps, &remote_index)?);
+    }
+    let mut deps = deps
+        .iter()
+        .map(|v| (v.into(), v.get_latest().unwrap()))
+        .collect();
+
+    valid.append(&mut deps);
+
     let mut rl = rustyline::Editor::<()>::new()?;
 
     // total download size in bytes
@@ -89,6 +100,8 @@ pub async fn install(
             if !CONFIG.is_server() {
                 ensure_dir(CONFIG.install_dir())?;
                 install_mod(author, &f, CONFIG.install_dir())?;
+            } else {
+                todo!();
             }
         }
         println!("Done!");

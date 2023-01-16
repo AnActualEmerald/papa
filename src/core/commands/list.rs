@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use owo_colors::OwoColorize;
 use thermite::prelude::*;
 use tracing::{debug, instrument, trace};
@@ -12,11 +12,18 @@ pub fn list(global: bool, all: bool) -> Result<()> {
     if global {
         todo!();
     }
-    let mods = find_mods(CONFIG.install_dir())?;
+    let mods = find_mods(CONFIG.install_dir()).context("Error finding mods")?;
     debug!("Found {} mods", mods.len());
     trace!("{:?}", mods);
     let mut grouped_mods: BTreeMap<ModName, BTreeSet<String>> = BTreeMap::new();
     for m in mods {
+        let m = if let Err(e) = m {
+            println!("Error reading mod: {}", e);
+            continue;
+        } else {
+            m.unwrap()
+        };
+
         let local_name = m.mod_json.name.clone();
         let mn = m.into();
         if let Some(group) = grouped_mods.get_mut(&mn) {

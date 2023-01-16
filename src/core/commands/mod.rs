@@ -9,3 +9,6 @@ pub use northstar::northstar;
 
 mod search;
 pub use search::search;
+
+mod remove;
+pub use remove::remove;
