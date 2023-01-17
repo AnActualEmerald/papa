@@ -3,6 +3,7 @@ use tracing::instrument;
 
 use crate::config::{CONFIG, DIRS};
 use crate::model::ModName;
+use crate::readln;
 use crate::traits::RemoteIndex;
 use crate::utils::{ensure_dir, to_file_size_string};
 use owo_colors::OwoColorize;
@@ -57,8 +58,6 @@ pub async fn install(
 
     valid.append(&mut deps);
 
-    let mut rl = rustyline::Editor::<()>::new()?;
-
     // total download size in bytes
     let total_size = valid.iter().map(|(_, v)| v.file_size).sum::<u64>();
 
@@ -76,7 +75,7 @@ pub async fn install(
     );
 
     let answer = if !assume_yes {
-        rl.readline("OK? [Y/n]: ")?
+        readln!("OK? [Y/n]: ")?
     } else {
         String::new()
     };

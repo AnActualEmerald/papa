@@ -2,15 +2,16 @@ use std::{fs, path::Path};
 
 use crate::model::ModName;
 use anyhow::Result;
+use lazy_static::lazy_static;
 use regex::Regex;
 use tracing::debug;
 
-pub fn validate_modnames(input: &str) -> Result<ModName, String> {
-    let Ok(re) = Regex::new(r"^(\w+)\.(\w+)(?:@(\d+\.\d+\.\d+))?$")else {
-        return Err("Unable to compile regex".to_string());
-    };
+lazy_static! {
+    static ref RE: Regex = Regex::new(r"^(\w+)\.(\w+)(?:@(\d+\.\d+\.\d+))?$").unwrap();
+}
 
-    if let Some(captures) = re.captures(input) {
+pub fn validate_modnames(input: &str) -> Result<ModName, String> {
+    if let Some(captures) = RE.captures(input) {
         let mut name = ModName::default();
         if let Some(author) = captures.get(1) {
             name.author = author.as_str().to_string();

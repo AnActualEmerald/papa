@@ -11,6 +11,9 @@ pub mod model;
 pub mod traits;
 pub mod utils;
 
+#[macro_use]
+mod macros;
+
 use model::ModName;
 use utils::validate_modnames;
 
