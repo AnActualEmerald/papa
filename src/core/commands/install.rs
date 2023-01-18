@@ -10,13 +10,8 @@ use owo_colors::OwoColorize;
 use thermite::prelude::*;
 
 #[instrument]
-pub async fn install(
-    mods: Vec<ModName>,
-    assume_yes: bool,
-    force: bool,
-    global: bool,
-) -> Result<()> {
-    let remote_index = get_package_index().await?;
+pub fn install(mods: Vec<ModName>, assume_yes: bool, force: bool, global: bool) -> Result<()> {
+    let remote_index = get_package_index()?;
     let mut valid = vec![];
     let mut should_fail = false;
     for mn in mods {
@@ -88,9 +83,8 @@ pub async fn install(
             println!("Downloading {mn}...");
             let filename = cache_dir.join(format!("{}.zip", mn));
             ensure_dir(&cache_dir)?;
-            let file = download_file(&v.url, filename)
-                .await
-                .context(format!("Error downloading {}", mn))?;
+            let file =
+                download_file(&v.url, filename).context(format!("Error downloading {}", mn))?;
             files.push((mn.author, file));
         }
         println!("Done!");

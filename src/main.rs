@@ -22,6 +22,7 @@ use utils::validate_modnames;
 #[clap(author = "AnAcutalEmerald <emerald_actual@proton.me>")]
 #[clap(about = "Command line mod manager for Northstar")]
 #[clap(after_help = "Welcome back. Cockpit cooling reactivated.")]
+#[clap(version)]
 struct Cli {
     #[clap(subcommand)]
     command: Commands,
@@ -167,8 +168,7 @@ pub enum NstarCommands {
     // Start {},
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
     let cli = Cli::parse();
     if cli.debug {
         std::env::set_var("RUST_LOG", "DEBUG");
@@ -213,14 +213,14 @@ async fn main() {
             yes,
             force,
             global,
-        } => core::install(mod_names, yes, force, global).await,
+        } => core::install(mod_names, yes, force, global),
         // Commands::Disable { mods } => disable(&ctx, mods),
         // Commands::Enable { mods } => enable(&ctx, mods),
-        Commands::Search { term } => core::search(&term).await,
+        Commands::Search { term } => core::search(&term),
         Commands::Remove { mod_names } => core::remove(mod_names),
         // Commands::Clear { full } => clear(&ctx, full),
         #[cfg(feature = "northstar")]
-        Commands::Northstar { command } => core::northstar(&command).await,
+        Commands::Northstar { command } => core::northstar(&command),
         //      NstarCommands::Install { game_path } => {
         //          let game_path = if let Some(p) = game_path {
         //              p.canonicalize().unwrap()

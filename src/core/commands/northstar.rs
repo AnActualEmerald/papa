@@ -10,9 +10,9 @@ use owo_colors::OwoColorize;
 use thermite::prelude::*;
 use tracing::{debug, instrument};
 
-pub async fn northstar(commands: &NstarCommands) -> Result<()> {
+pub fn northstar(commands: &NstarCommands) -> Result<()> {
     match commands {
-        NstarCommands::Init { force } => init_ns(force).await?,
+        NstarCommands::Init { force } => init_ns(force)?,
         NstarCommands::Update {} => todo!(),
     }
 
@@ -20,7 +20,7 @@ pub async fn northstar(commands: &NstarCommands) -> Result<()> {
 }
 
 #[instrument]
-async fn init_ns(force: &bool) -> Result<()> {
+fn init_ns(force: &bool) -> Result<()> {
     let Some(titanfall) = titanfall() else {
         return Err(anyhow!("Unable to locate Titanfall 2 in Steam libraries"));
     };
@@ -38,7 +38,7 @@ async fn init_ns(force: &bool) -> Result<()> {
         }
     }
 
-    let index = get_package_index().await?;
+    let index = get_package_index()?;
     let nsmod = index
         .get_mod(&ModName::new("northstar", "Northstar", None))
         .ok_or(anyhow!("Couldn't find Northstar in the package index"))?;
@@ -52,11 +52,10 @@ async fn init_ns(force: &bool) -> Result<()> {
             .url,
         DIRS.cache_dir()
             .join(format!("{}-{}.zip", nsmod.name, nsmod.latest)),
-    )
-    .await?;
+    )?;
 
     println!("Installing Northstar...");
-    install_northstar(&nsfile, &titanfall).await?;
+    install_northstar(&nsfile, &titanfall)?;
     println!("Done!");
 
     let mut new_config = CONFIG.clone();

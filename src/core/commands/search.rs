@@ -4,8 +4,8 @@ use owo_colors::OwoColorize;
 use thermite::prelude::*;
 use tracing::debug;
 
-pub async fn search(term: &[String]) -> Result<()> {
-    let index = get_package_index().await?;
+pub fn search(term: &[String]) -> Result<()> {
+    let index = get_package_index()?;
     let term = term.join("");
     debug!("Searching for term '{}'", term.bold());
 
