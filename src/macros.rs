@@ -17,3 +17,11 @@ macro_rules! readln {
         }
     }};
 }
+
+#[macro_export]
+macro_rules! flush {
+    () => {{
+        use std::io::Write;
+        std::io::stdout().flush()
+    }};
+}

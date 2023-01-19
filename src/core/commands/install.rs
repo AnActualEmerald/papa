@@ -3,9 +3,10 @@ use tracing::instrument;
 
 use crate::config::{CONFIG, DIRS};
 use crate::model::ModName;
-use crate::readln;
 use crate::traits::RemoteIndex;
 use crate::utils::{ensure_dir, to_file_size_string};
+use crate::{flush, readln};
+use indicatif::{ProgressBar, ProgressStyle};
 use owo_colors::OwoColorize;
 use thermite::prelude::*;
 
@@ -80,14 +81,22 @@ pub fn install(mods: Vec<ModName>, assume_yes: bool, force: bool, global: bool) 
         let mut files = vec![];
         let cache_dir = DIRS.cache_dir();
         for (mn, v) in valid {
-            println!("Downloading {mn}...");
+            // flush!()?;
             let filename = cache_dir.join(format!("{}.zip", mn));
             ensure_dir(&cache_dir)?;
-            let file =
-                download_file(&v.url, filename).context(format!("Error downloading {}", mn))?;
+            let pb = ProgressBar::new(v.file_size)
+                .with_style(
+                    ProgressStyle::with_template("{msg}{bar} {bytes}/{total_bytes} {duration}")?
+                        .progress_chars(".. "),
+                )
+                .with_message(format!("Downloading {mn}..."));
+            let file = download_file_with_progress(&v.url, filename, |current, _| {
+                pb.set_position(current);
+            })
+            .context(format!("Error downloading {}", mn))?;
+            pb.finish();
             files.push((mn.author, file));
         }
-        println!("Done!");
         println!("Installing packages...");
         for (author, f) in files {
             if !CONFIG.is_server() {
