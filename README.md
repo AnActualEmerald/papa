@@ -4,7 +4,7 @@
  <br>
  Papa
 <br>
-<a href="https://github.com/AnActualEmerald/papa/actions/workflows/rust.yml"><img alt="GitHub Workflow Status" src="https://github.com/AnActualEmerald/papa/actions/workflows/rust.yml/badge.svg"></a> <img alt="Crates.io (latest)" src="https://img.shields.io/crates/dv/papa">
+<a href="https://github.com/AnActualEmerald/papa/actions/workflows/rust.yml"><img alt="GitHub Workflow Status" src="https://github.com/AnActualEmerald/papa/actions/workflows/rust.yml/badge.svg"></a> <a href="https://crates.io/crates/papa"><img alt="Crates.io (latest)" src="https://img.shields.io/crates/dv/papa"></a>
 </h1>
 
 
