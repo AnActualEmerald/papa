@@ -1,19 +1,17 @@
-use anyhow::{anyhow, Context, Result};
-use tracing::instrument;
+use anyhow::{anyhow, Result};
+use thermite::model::ModVersion;
 
-use crate::config::{CONFIG, DIRS};
 use crate::model::ModName;
+use crate::readln;
 use crate::traits::RemoteIndex;
-use crate::utils::{ensure_dir, to_file_size_string};
-use crate::{flush, readln};
-use indicatif::{ProgressBar, ProgressStyle};
+use crate::utils::{download_and_install, to_file_size_string};
+
 use owo_colors::OwoColorize;
 use thermite::prelude::*;
 
-#[instrument]
-pub fn install(mods: Vec<ModName>, assume_yes: bool, force: bool, global: bool) -> Result<()> {
+pub fn install(mods: Vec<ModName>, assume_yes: bool, force: bool, _global: bool) -> Result<()> {
     let remote_index = get_package_index()?;
-    let mut valid = vec![];
+    let mut valid: Vec<(ModName, &ModVersion)> = vec![];
     let mut should_fail = false;
     for mn in mods {
         if let Some(m) = remote_index.get_mod(&mn) {
@@ -23,10 +21,10 @@ pub fn install(mods: Vec<ModName>, assume_yes: bool, force: bool, global: bool) 
                     should_fail = true;
                     continue;
                 };
-                valid.push((mn, mv));
+                valid.push((m.into(), mv));
             } else {
                 valid.push((
-                    mn,
+                    m.into(),
                     m.get_latest()
                         .expect("Latest version of mod doesn't exist?"),
                 ));
@@ -76,37 +74,8 @@ pub fn install(mods: Vec<ModName>, assume_yes: bool, force: bool, global: bool) 
         String::new()
     };
 
-    if answer.to_lowercase().trim() != "n" {
-        println!("Downloading packages...");
-        let mut files = vec![];
-        let cache_dir = DIRS.cache_dir();
-        for (mn, v) in valid {
-            // flush!()?;
-            let filename = cache_dir.join(format!("{}.zip", mn));
-            ensure_dir(&cache_dir)?;
-            let pb = ProgressBar::new(v.file_size)
-                .with_style(
-                    ProgressStyle::with_template("{msg}{bar} {bytes}/{total_bytes} {duration}")?
-                        .progress_chars(".. "),
-                )
-                .with_message(format!("Downloading {mn}..."));
-            let file = download_file_with_progress(&v.url, filename, |current, _| {
-                pb.set_position(current);
-            })
-            .context(format!("Error downloading {}", mn))?;
-            pb.finish();
-            files.push((mn.author, file));
-        }
-        println!("Installing packages...");
-        for (author, f) in files {
-            if !CONFIG.is_server() {
-                ensure_dir(CONFIG.install_dir())?;
-                install_mod(author, &f, CONFIG.install_dir())?;
-            } else {
-                todo!();
-            }
-        }
-        println!("Done!");
+    if !answer.to_lowercase().trim().starts_with("n") {
+        download_and_install(valid)?;
     }
 
     Ok(())

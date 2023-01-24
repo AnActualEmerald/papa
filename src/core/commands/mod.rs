@@ -12,3 +12,6 @@ pub use search::search;
 
 mod remove;
 pub use remove::remove;
+
+mod update;
+pub use update::update;

@@ -1,9 +1,17 @@
 use std::{fs, path::Path};
 
-use crate::model::ModName;
-use anyhow::Result;
+use crate::{
+    config::{CONFIG, DIRS},
+    model::ModName,
+};
+use anyhow::{Context, Result};
+use indicatif::{ProgressBar, ProgressStyle};
 use lazy_static::lazy_static;
 use regex::Regex;
+use thermite::{
+    model::ModVersion,
+    prelude::{download_file_with_progress, install_mod},
+};
 use tracing::debug;
 
 lazy_static! {
@@ -53,5 +61,40 @@ pub fn ensure_dir(dir: impl AsRef<Path>) -> Result<()> {
         debug!("Path '{}' already exists", dir.display());
     }
 
+    Ok(())
+}
+
+pub fn download_and_install(mods: Vec<(ModName, impl AsRef<ModVersion>)>) -> Result<()> {
+    println!("Downloading packages...");
+    let mut files = vec![];
+    let cache_dir = DIRS.cache_dir();
+    for (mn, v) in mods {
+        let v = v.as_ref();
+        // flush!()?;
+        let filename = cache_dir.join(format!("{}.zip", mn));
+        ensure_dir(&cache_dir)?;
+        let pb = ProgressBar::new(v.file_size)
+            .with_style(
+                ProgressStyle::with_template("{msg}{bar} {bytes}/{total_bytes} {duration}")?
+                    .progress_chars(".. "),
+            )
+            .with_message(format!("Downloading {mn}..."));
+        let file = download_file_with_progress(&v.url, filename, |current, _| {
+            pb.set_position(current);
+        })
+        .context(format!("Error downloading {}", mn))?;
+        pb.finish();
+        files.push((mn.author, file));
+    }
+    println!("Installing packages...");
+    for (author, f) in files {
+        if !CONFIG.is_server() {
+            ensure_dir(CONFIG.install_dir())?;
+            install_mod(author, &f, CONFIG.install_dir())?;
+        } else {
+            todo!();
+        }
+    }
+    println!("Done!");
     Ok(())
 }
