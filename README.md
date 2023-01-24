@@ -23,8 +23,8 @@
 ```bash
 papa install fifty.server_utilities #install a mod
 papa list #list installed mods
-# not yet reimplemented papa update #update any out of date mods
-# not yet reimplemented papa remove server_utilities #uninstall a mod
+papa update #update any out of date mods
+papa remove fifty.server_utilities #uninstall a mod
 ```
 
 ## Installation
