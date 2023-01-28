@@ -2,7 +2,7 @@ use crate::{
     config::CONFIG,
     model::ModName,
     readln,
-    traits::RemoteIndex,
+    traits::Index,
     utils::{download_and_install, to_file_size_string},
 };
 use anyhow::Result;
@@ -19,7 +19,7 @@ pub fn update(yes: bool) -> Result<()> {
         let Ok(l) = &l else { continue };
         debug!("Checking if mod '{}' is out of date", l.manifest.name);
 
-        if let Some(m) = index.get_mod(&l.into()) {
+        if let Some(m) = index.get_item(&l.into()) {
             debug!("Checking mod {:?}", m);
             if m.latest != l.manifest.version_number {
                 outdated.push((m.into(), m.get_latest().expect("Missing latest version")));

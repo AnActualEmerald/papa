@@ -1,6 +1,8 @@
 // #[cfg(feature = "northstar")]
 // use crate::core::northstar::{init_northstar, update_northstar};
 
+use std::path::PathBuf;
+
 use clap::{Parser, Subcommand};
 use tracing::debug;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
@@ -161,8 +163,10 @@ pub enum NstarCommands {
     Init {
         #[arg(default_value_t = false, short, long)]
         force: bool,
+        /// The path to install Northstar into. Defaults to the local Titanfall 2 steam installation, if available.
+        path: Option<PathBuf>,
     },
-    ///Updats the current northstar install. Must have been installed with `papa northstar init`.
+    ///Updates the current northstar install.
     Update {},
     // #[cfg(feature = "launcher")]
     // ///Start the Northstar client

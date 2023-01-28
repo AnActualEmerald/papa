@@ -3,7 +3,7 @@ use thermite::model::ModVersion;
 
 use crate::model::ModName;
 use crate::readln;
-use crate::traits::RemoteIndex;
+use crate::traits::Index;
 use crate::utils::{download_and_install, to_file_size_string};
 
 use owo_colors::OwoColorize;
@@ -14,7 +14,7 @@ pub fn install(mods: Vec<ModName>, assume_yes: bool, force: bool, _global: bool)
     let mut valid: Vec<(ModName, &ModVersion)> = vec![];
     let mut should_fail = false;
     for mn in mods {
-        if let Some(m) = remote_index.get_mod(&mn) {
+        if let Some(m) = remote_index.get_item(&mn) {
             if let Some(version) = &mn.version {
                 let Some(mv) = m.get_version(version) else {
                     println!("Package {} has no version {}", format!("{}.{}", mn.author, mn.name).bright_cyan(), version.bright_cyan());
