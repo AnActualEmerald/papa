@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, string::FromUtf8Error};
 
 use thiserror::Error;
 
@@ -6,16 +6,10 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
 pub enum Error {
+    #[error("{0}")]
     SerialzeError(Box<String>),
-}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::SerialzeError(e) => write!(f, "{}", e),
-            _ => panic!("Unknown error variant"),
-        }
-    }
+    #[error("Error parsing bytes into UTF8 string: {0}")]
+    Utf8Error(#[from] FromUtf8Error),
 }
 
 impl serde::ser::Error for Error {

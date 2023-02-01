@@ -8,3 +8,7 @@ edition = "2021"
 [dependencies]
 serde = "1.0.152"
 thiserror = "1.0.38"
+
+[dev-dependencies]
+serde = { version = "1.0.152", features = ["derive"] }
+
