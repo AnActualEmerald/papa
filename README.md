@@ -4,7 +4,10 @@
  <br>
  Papa
 <br>
-<img alt="GitHub Workflow Status" src="https://img.shields.io/github/workflow/status/AnActualEmerald/papa/Rust"> <img alt="Crates.io (latest)" src="https://img.shields.io/crates/dv/papa">
+<a href="https://github.com/AnActualEmerald/papa/actions/workflows/rust.yml"> 
+ <img alt="Rust workflow badge" src="https://github.com/AnActualEmerald/papa/actions/workflows/rust.yml/badge.svg">
+</a>
+<img alt="Crates.io (latest)" src="https://img.shields.io/crates/dv/papa">
 </h1>
 
 
