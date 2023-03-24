@@ -25,3 +25,32 @@ macro_rules! flush {
         std::io::stdout().flush()
     }};
 }
+
+#[macro_export]
+macro_rules! modfile {
+    ($path:expr) => {{
+        use std::fs::File;
+        File::options()
+            .create(true)
+            .write(true)
+            .read(true)
+            .truncate(true)
+            .open($path)
+    }};
+    (wo, $path:expr) => {{
+        use std::fs::File;
+        File::options()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open($path)
+    }};
+    (ro, $path:expr) => {{
+        use std::fs::File;
+        File::options().create(true).read(true).open($path)
+    }};
+    (o, $path:expr) => {{
+        use std::fs::File;
+        File::options().read(true).write(true).open($path)
+    }};
+}

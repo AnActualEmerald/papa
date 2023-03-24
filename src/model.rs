@@ -1,6 +1,14 @@
-use std::fmt::Display;
+use std::{
+    collections::BTreeMap,
+    fmt::Display,
+    path::{Path, PathBuf},
+};
 
+use anyhow::{anyhow, Result};
 use thermite::model::{InstalledMod, Mod};
+use tracing::{debug, warn};
+
+use crate::utils::validate_modname;
 
 #[derive(Default, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ModName {
@@ -71,5 +79,67 @@ impl From<&Mod> for ModName {
             name: value.name.clone(),
             version: Some(value.latest.clone()),
         }
+    }
+}
+
+impl AsRef<ModName> for ModName {
+    fn as_ref(&self) -> &ModName {
+        self
+    }
+}
+
+pub struct Cache {
+    packages: BTreeMap<ModName, PathBuf>,
+    root: PathBuf,
+}
+
+impl Cache {
+
+    pub fn to_cache_path(&self, name: impl AsRef<ModName>) -> PathBuf {
+        let name = name.as_ref();
+        self.root.join(format!("{name}"))
+    }
+
+
+    #[inline]
+    pub fn get(&self, name: impl AsRef<ModName>) -> Option<&PathBuf> {
+        self.packages.get(name.as_ref())
+    }
+
+    #[inline]
+    pub fn has(&self, name: impl AsRef<ModName>) -> bool {
+        self.packages.contains_key(name.as_ref())
+    }
+
+    pub fn from_dir(path: impl AsRef<Path>) -> Result<Self> {
+        let mut packages = BTreeMap::new();
+
+        let path = path.as_ref();
+        if !path.is_dir() {
+            return Err(anyhow!("Cannot read cache from file"));
+        }
+        let mut rd = path.read_dir()?;
+        while let Some(Ok(entry)) = rd.next() {
+            // ignore any nested directories in the cache
+            if entry.file_type()?.is_dir() {
+                continue;
+            }
+
+            let name = entry
+                .file_name()
+                .into_string()
+                .expect("Unable to convert from OsString");
+            match validate_modname(name.trim_end_matches(".zip")) {
+                Ok(name) => {
+                    debug!("Adding {name} to cache");
+                    packages.insert(name, entry.path());
+                }
+                Err(_) => {
+                    warn!("Skipping invalid modname {name}");
+                }
+            }
+        }
+
+        Ok(Self { packages, root: path.to_owned()})
     }
 }

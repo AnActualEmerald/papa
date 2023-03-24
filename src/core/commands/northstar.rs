@@ -1,13 +1,13 @@
 use std::path::PathBuf;
 
 use crate::config::DIRS;
-use crate::readln;
 use crate::traits::Index;
 use crate::{
     config::{write_config, CONFIG},
     model::ModName,
     NstarCommands,
 };
+use crate::{modfile, readln};
 use anyhow::{anyhow, Result};
 use owo_colors::OwoColorize;
 use thermite::prelude::*;
@@ -51,13 +51,15 @@ fn init_ns(force: &bool, path: &Option<PathBuf>) -> Result<()> {
 
     println!("Downloading Northstar version {}...", nsmod.latest.bold());
 
-    let nsfile = download_file(
+    let mut nsfile = modfile!(DIRS
+        .cache_dir()
+        .join(format!("{}.zip", ModName::from(nsmod))))?;
+    download(
+        &mut nsfile,
         &nsmod
             .get_latest()
             .expect("N* mod missing latest version")
             .url,
-        DIRS.cache_dir()
-            .join(format!("{}-{}.zip", nsmod.name, nsmod.latest)),
     )?;
 
     println!("Installing Northstar...");

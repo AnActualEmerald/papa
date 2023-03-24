@@ -1,7 +1,8 @@
 use anyhow::{anyhow, Result};
 use thermite::model::ModVersion;
 
-use crate::model::ModName;
+use crate::config::DIRS;
+use crate::model::{ModName, Cache};
 use crate::readln;
 use crate::traits::Index;
 use crate::utils::{download_and_install, to_file_size_string};
@@ -75,7 +76,7 @@ pub fn install(mods: Vec<ModName>, assume_yes: bool, force: bool, _global: bool)
     };
 
     if !answer.to_lowercase().trim().starts_with("n") {
-        download_and_install(valid)?;
+        download_and_install(valid, !force)?;
     }
 
     Ok(())

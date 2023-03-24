@@ -1,16 +1,21 @@
-use std::{fs, path::Path};
+use std::{
+    fs::{self, File},
+    path::Path,
+};
 
 use crate::{
     config::{CONFIG, DIRS},
-    model::ModName,
+    model::{Cache, ModName},
+    modfile,
 };
 use anyhow::{Context, Result};
 use indicatif::{ProgressBar, ProgressStyle};
 use lazy_static::lazy_static;
+use owo_colors::OwoColorize;
 use regex::Regex;
 use thermite::{
     model::ModVersion,
-    prelude::{download_file_with_progress, install_mod},
+    prelude::{download_with_progress, install_mod},
 };
 use tracing::debug;
 
@@ -18,7 +23,7 @@ lazy_static! {
     static ref RE: Regex = Regex::new(r"^(\w+)\.(\w+)(?:@(\d+\.\d+\.\d+))?$").unwrap();
 }
 
-pub fn validate_modnames(input: &str) -> Result<ModName, String> {
+pub fn validate_modname(input: &str) -> Result<ModName, String> {
     if let Some(captures) = RE.captures(input) {
         let mut name = ModName::default();
         if let Some(author) = captures.get(1) {
@@ -64,29 +69,46 @@ pub fn ensure_dir(dir: impl AsRef<Path>) -> Result<()> {
     Ok(())
 }
 
-pub fn download_and_install(mods: Vec<(ModName, impl AsRef<ModVersion>)>) -> Result<()> {
+pub fn download_and_install(
+    mods: Vec<(ModName, impl AsRef<ModVersion>)>,
+    check_cache: bool,
+) -> Result<()> {
+    if mods.is_empty() {
+        println!("Nothing to do!");
+        return Ok(());
+    }
+
     println!("Downloading packages...");
     let mut files = vec![];
     let cache_dir = DIRS.cache_dir();
+    ensure_dir(&cache_dir)?;
+    let cache = Cache::from_dir(cache_dir)?;
     for (mn, v) in mods {
+        if check_cache {
+            if let Some(path) = cache.get(&mn) {
+                println!("Using cached version of {}", mn.bright_cyan());
+                files.push((mn.author, modfile!(o, path)?));
+                continue;
+            }
+        }
         let v = v.as_ref();
         // flush!()?;
-        let filename = cache_dir.join(format!("{}.zip", mn));
-        ensure_dir(&cache_dir)?;
+        let filename = cache.to_cache_path(&mn);
         let pb = ProgressBar::new(v.file_size)
             .with_style(
                 ProgressStyle::with_template("{msg}{bar} {bytes}/{total_bytes} {duration}")?
                     .progress_chars(".. "),
             )
-            .with_message(format!("Downloading {mn}..."));
-        let file = download_file_with_progress(&v.url, filename, |current, _| {
-            pb.set_position(current);
+            .with_message(format!("Downloading {} ...", mn.bright_cyan()));
+        let mut file = modfile!(filename)?;
+        download_with_progress(&mut file, &v.url, |delta, _, _| {
+            pb.inc(delta);
         })
-        .context(format!("Error downloading {}", mn))?;
+        .context(format!("Error downloading {}", mn.red()))?;
         pb.finish();
         files.push((mn.author, file));
     }
-    println!("Installing packages...");
+    let pb = ProgressBar::new_spinner().with_message("Installing packages...");
     for (author, f) in files {
         if !CONFIG.is_server() {
             ensure_dir(CONFIG.install_dir())?;
@@ -95,6 +117,7 @@ pub fn download_and_install(mods: Vec<(ModName, impl AsRef<ModVersion>)>) -> Res
             todo!();
         }
     }
+    pb.finish_and_clear();
     println!("Done!");
     Ok(())
 }

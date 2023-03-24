@@ -17,7 +17,7 @@ pub mod utils;
 mod macros;
 
 use model::ModName;
-use utils::validate_modnames;
+use utils::validate_modname;
 
 #[derive(Parser)]
 #[clap(name = "Papa")]
@@ -41,7 +41,7 @@ enum Commands {
         #[clap(help = "Mod name(s) to install")]
         #[clap(required = true)]
         // #[clap(required_unless_present = "url")]
-        #[clap(value_parser = validate_modnames)]
+        #[clap(value_parser = validate_modname)]
         mod_names: Vec<ModName>,
 
         // ///alternate url to use - won't be tracked or updated
@@ -65,7 +65,7 @@ enum Commands {
     Remove {
         #[clap(value_name = "MOD")]
         #[clap(help = "Mod name(s) to remove")]
-        #[clap(value_parser = validate_modnames)]
+        #[clap(value_parser = validate_modname)]
         #[clap(required = true)]
         mod_names: Vec<ModName>,
     },

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     config::CONFIG,
     model::ModName,
@@ -14,7 +16,7 @@ pub fn update(yes: bool) -> Result<()> {
     println!("Checking for outdated packages...");
     let index = get_package_index()?;
     let local = find_mods(CONFIG.install_dir())?;
-    let mut outdated: Vec<(ModName, &ModVersion)> = vec![];
+    let mut outdated: HashMap<ModName, &ModVersion> = HashMap::new();
     for l in local {
         let Ok(l) = &l else { continue };
         debug!("Checking if mod '{}' is out of date", l.manifest.name);
@@ -22,7 +24,7 @@ pub fn update(yes: bool) -> Result<()> {
         if let Some(m) = index.get_item(&l.into()) {
             debug!("Checking mod {:?}", m);
             if m.latest != l.manifest.version_number {
-                outdated.push((m.into(), m.get_latest().expect("Missing latest version")));
+                outdated.insert(m.into(), m.get_latest().expect("Missing latest version"));
             }
         }
     }
@@ -46,8 +48,8 @@ pub fn update(yes: bool) -> Result<()> {
         String::new()
     };
 
-    if !answer.to_lowercase().starts_with("n") {
-        download_and_install(outdated)?;
+    if !answer.to_lowercase().trim().starts_with("n") {
+        download_and_install(outdated.into_iter().collect(), false)?;
         Ok(())
     } else {
         Ok(())
