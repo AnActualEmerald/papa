@@ -1,10 +1,11 @@
 use anyhow::{anyhow, Result};
 use thermite::model::ModVersion;
+use tracing::warn;
 
 use crate::config::DIRS;
 use crate::model::{ModName, Cache};
-use crate::readln;
-use crate::traits::Index;
+use crate::{readln, get_answer};
+use crate::traits::{Index, Answer};
 use crate::utils::{download_and_install, to_file_size_string};
 
 use owo_colors::OwoColorize;
@@ -15,6 +16,12 @@ pub fn install(mods: Vec<ModName>, assume_yes: bool, force: bool, _global: bool)
     let mut valid: Vec<(ModName, &ModVersion)> = vec![];
     let mut should_fail = false;
     for mn in mods {
+        if mn.name.to_lowercase() == "northstar"  && mn.author.to_lowercase() == "northstar" {
+            warn!("Can't install Northstar like a normal mod");
+            println!("Not installing Northstar - use {} instead", "papa ns init".bright_cyan());
+            should_fail = !force;
+            continue;
+        }
         if let Some(m) = remote_index.get_item(&mn) {
             if let Some(version) = &mn.version {
                 let Some(mv) = m.get_version(version) else {
@@ -69,13 +76,8 @@ pub fn install(mods: Vec<ModName>, assume_yes: bool, force: bool, _global: bool)
         to_file_size_string(total_size).bright_green().bold()
     );
 
-    let answer = if !assume_yes {
-        readln!("OK? [Y/n]: ")?
-    } else {
-        String::new()
-    };
-
-    if !answer.to_lowercase().trim().starts_with("n") {
+    let answer = get_answer!(assume_yes)?;
+    if !answer.is_no() {
         download_and_install(valid, !force)?;
     }
 

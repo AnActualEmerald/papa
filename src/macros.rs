@@ -54,3 +54,17 @@ macro_rules! modfile {
         File::options().read(true).write(true).open($path)
     }};
 }
+
+#[macro_export]
+macro_rules! get_answer {
+    ($yes:expr) => {
+        get_answer!($yes, "OK? [Y/n]: ")
+    };
+    ($yes:expr, $msg: literal) => {
+        if $yes {
+            Ok(String::new())
+        } else {
+            readln!($msg)
+        }
+    };
+}

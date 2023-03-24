@@ -2,9 +2,11 @@ use std::collections::HashMap;
 
 use crate::{
     config::CONFIG,
+    core::commands::northstar,
+    get_answer,
     model::ModName,
     readln,
-    traits::Index,
+    traits::{Answer, Index},
     utils::{download_and_install, to_file_size_string},
 };
 use anyhow::Result;
@@ -17,6 +19,7 @@ pub fn update(yes: bool) -> Result<()> {
     let index = get_package_index()?;
     let local = find_mods(CONFIG.install_dir())?;
     let mut outdated: HashMap<ModName, &ModVersion> = HashMap::new();
+
     for l in local {
         let Ok(l) = &l else { continue };
         debug!("Checking if mod '{}' is out of date", l.manifest.name);
@@ -29,9 +32,15 @@ pub fn update(yes: bool) -> Result<()> {
         }
     }
 
+    let ns_update = northstar::update_check().unwrap_or(None).is_some();
+
     if outdated.len() == 0 {
-        println!("All packages up to date!");
-        return Ok(());
+        if ns_update {
+            return ns_prompt();
+        } else {
+            println!("All packages up to date!");
+            return Ok(());
+        }
     }
 
     let filesize = to_file_size_string(outdated.iter().map(|(_, v)| v.file_size).sum());
@@ -42,16 +51,23 @@ pub fn update(yes: bool) -> Result<()> {
     }
     println!("\nTotal download size: {}", filesize.bold());
 
-    let answer = if !yes {
-        readln!("OK? [Y/n]: ")?
-    } else {
-        String::new()
-    };
+    let answer = get_answer!(yes)?;
 
-    if !answer.to_lowercase().trim().starts_with("n") {
+    if !answer.is_no() {
         download_and_install(outdated.into_iter().collect(), false)?;
+        if ns_update {
+            ns_prompt()?;
+        }
         Ok(())
     } else {
         Ok(())
     }
+}
+
+fn ns_prompt() -> Result<()> {
+    if !northstar::update_ns()? {
+        println!("Run {} at any time to update", "papa ns update".bright_cyan());
+    }
+
+    Ok(())
 }

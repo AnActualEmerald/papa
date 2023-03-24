@@ -20,6 +20,7 @@ lazy_static! {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
+    game_dir: Option<PathBuf>,
     install_dir: PathBuf,
     is_server: bool,
 }
@@ -40,11 +41,20 @@ impl Config {
     pub fn set_is_server(&mut self, is_server: bool) {
         self.is_server = is_server;
     }
+
+    pub fn set_game_dir(&mut self, game_dir: impl Into<Option<PathBuf>>) {
+        self.game_dir = game_dir.into();
+    }
+
+    pub fn game_dir(&self) -> Option<&PathBuf> {
+        self.game_dir.as_ref()
+    }
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
+            game_dir: None,
             install_dir: "./mods".into(),
             is_server: false,
         }

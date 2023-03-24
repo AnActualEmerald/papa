@@ -8,6 +8,11 @@ use crate::model::ModName;
 
 const SCORE_THRESHOLD: i32 = 75;
 
+pub trait Answer {
+    fn is_no(&self) -> bool;
+    fn is_yes(&self) -> bool;
+}
+
 pub trait Index<T> {
     fn get_item(&self, name: &ModName) -> Option<&T>;
     fn search(&self, term: &str) -> Vec<&T>;
@@ -87,5 +92,15 @@ impl Index<InstalledMod> for Vec<Result<InstalledMod, ThermiteError>> {
 
         res.sort_by(|l, r| l.0.cmp(&r.0));
         res.iter().map(|v| v.1).rev().collect()
+    }
+}
+
+impl Answer for String {
+    fn is_no(&self) -> bool {
+        self.to_lowercase().trim().starts_with("n")
+    }
+
+    fn is_yes(&self) -> bool {
+        self.to_lowercase().trim().starts_with("y")
     }
 }
