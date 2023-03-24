@@ -7,13 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- Remove message is now less spammy
-- Index file now saves mod paths relative to the file
+- Use `libthermite` to manage package manipulation
 
-### Fixed
-- `update` now handles linked mods correctly
-
-
+### Removed
+- No longer use index file to track mods
 
 ## v2.2.0
 

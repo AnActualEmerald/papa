@@ -15,8 +15,6 @@
 - Search Thunderstore for mods from the command line
 - Download a mod *and* its dependencies with one command
 - Easily keep your mods up to date
-- Per-directory tracking makes hosting multiple servers with different mods from one machine easy
-- Enable and disable mods independent of N*'s own enabling and disabling
 
 ## Usage
 
@@ -38,8 +36,14 @@ Or create a file at `.config/papa/config.toml` and set `install_dir` to whatever
 Download the `.deb` file from the latest release and install it using whatever you usually use to install packages:
 ```bash
 
-sudo apt install ./papa_2.1.0.deb
+sudo apt install ./papa_3.0.0.deb
 
+```
+
+### Arch Linux
+Community maintained `papa` and `papa-bin` packages are available on the AUR:
+```bash
+paru -S papa
 ```
 
 ### Windows
@@ -58,6 +62,9 @@ or from the git repo
  cargo install --git https://github.com/AnActualEmerald/papa
 ```
 If you want to build from source but don't have cargo installed, you should check out [rustup.rs](https://rustup.rs)
+#### Dependencies
+* pkgconfig
+* openssl
 
 ## Caveats 
-- The default install directory is **relative to the current working directory**, meaning that running the command in ~/ will install mods into ~/mods
+- The default install directory is **relative to the current working directory**, meaning that running `papa install` in `~/` will install mods into `~/mods`
