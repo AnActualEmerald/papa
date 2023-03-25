@@ -27,7 +27,7 @@ impl Index<Mod> for Vec<Mod> {
     }
 
     fn search(&self, term: &str) -> Vec<&Mod> {
-        if term.len() == 0 {
+        if term.is_empty() {
             return self.iter().collect();
         }
         let matcher = SkimMatcherV2::default();
@@ -68,7 +68,7 @@ impl Index<InstalledMod> for Vec<Result<InstalledMod, ThermiteError>> {
     }
 
     fn search(&self, term: &str) -> Vec<&InstalledMod> {
-        if term.len() == 0 {
+        if term.is_empty() {
             return self.iter().filter_map(|v| v.as_ref().ok()).collect();
         }
         let matcher = SkimMatcherV2::default();
@@ -97,10 +97,10 @@ impl Index<InstalledMod> for Vec<Result<InstalledMod, ThermiteError>> {
 
 impl Answer for String {
     fn is_no(&self) -> bool {
-        self.to_lowercase().trim().starts_with("n")
+        self.to_lowercase().trim().starts_with('n')
     }
 
     fn is_yes(&self) -> bool {
-        self.to_lowercase().trim().starts_with("y")
+        self.to_lowercase().trim().starts_with('y')
     }
 }

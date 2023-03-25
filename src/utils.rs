@@ -1,5 +1,5 @@
 use std::{
-    fs::{self, File},
+    fs,
     path::Path,
 };
 
@@ -81,7 +81,7 @@ pub fn download_and_install(
     println!("Downloading packages...");
     let mut files = vec![];
     let cache_dir = DIRS.cache_dir();
-    ensure_dir(&cache_dir)?;
+    ensure_dir(cache_dir)?;
     let cache = Cache::from_dir(cache_dir)?;
     for (mn, v) in mods {
         if check_cache {

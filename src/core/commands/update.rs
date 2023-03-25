@@ -34,7 +34,7 @@ pub fn update(yes: bool) -> Result<()> {
 
     let ns_update = northstar::update_check().unwrap_or(None).is_some();
 
-    if outdated.len() == 0 {
+    if outdated.is_empty() {
         if ns_update {
             return ns_prompt();
         } else {
@@ -43,7 +43,7 @@ pub fn update(yes: bool) -> Result<()> {
         }
     }
 
-    let filesize = to_file_size_string(outdated.iter().map(|(_, v)| v.file_size).sum());
+    let filesize = to_file_size_string(outdated.values().map(|v| v.file_size).sum());
 
     println!("Found {} outdated packages:\n", outdated.len().bold());
     for (name, _) in outdated.iter() {

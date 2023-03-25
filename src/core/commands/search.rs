@@ -10,7 +10,7 @@ pub fn search(term: &[String]) -> Result<()> {
     debug!("Searching for term '{}'", term.bold());
 
     let res = index.search(&term);
-    if res.len() == 0 {
+    if res.is_empty() {
         println!("No mods matched '{}'", term.bold());
         return Ok(());
     }

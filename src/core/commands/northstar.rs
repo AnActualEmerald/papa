@@ -1,14 +1,14 @@
-use std::path::{Path, PathBuf};
+use std::path::{Path};
 use std::time::Duration;
 
 use crate::config::DIRS;
-use crate::traits::{Index, Answer};
+use crate::traits::{Answer, Index};
 use crate::{
     config::{write_config, CONFIG},
     model::ModName,
     NstarCommands,
 };
-use crate::{flush, modfile, readln, get_answer};
+use crate::{ get_answer, modfile, readln};
 use anyhow::{anyhow, Result};
 use indicatif::{ProgressBar, ProgressStyle};
 use owo_colors::OwoColorize;
@@ -19,7 +19,9 @@ use tracing::{debug, warn};
 pub fn northstar(commands: &NstarCommands) -> Result<()> {
     match commands {
         NstarCommands::Init { force, path } => init_ns(*force, path.as_ref())?,
-        NstarCommands::Update {} =>  { update_ns()?; },
+        NstarCommands::Update {} => {
+            update_ns()?;
+        }
     }
 
     Ok(())
@@ -37,15 +39,13 @@ fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
     debug!("Installing N* to '{}'", titanfall.display());
 
     //try to detect existing installation
-    if !force {
-        if titanfall.join("NorthstarLauncher.exe").try_exists()? {
-            println!("Found an existing Northstar installation, updating config!");
-            let mut new_config = CONFIG.clone();
-            new_config.set_game_dir(titanfall.clone());
-            new_config.set_install_dir(titanfall.join("R2Northstar").join("mods"));
-            write_config(&new_config)?;
-            return Ok(());
-        }
+    if !force && titanfall.join("NorthstarLauncher.exe").try_exists()? {
+        println!("Found an existing Northstar installation, updating config!");
+        let mut new_config = CONFIG.clone();
+        new_config.set_game_dir(titanfall.clone());
+        new_config.set_install_dir(titanfall.join("R2Northstar").join("mods"));
+        write_config(&new_config)?;
+        return Ok(());
     }
 
     let index = get_package_index()?;
@@ -74,9 +74,7 @@ fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
     println!();
 
     let pb = ProgressBar::new_spinner()
-        .with_style(ProgressStyle::with_template(
-            "{prefix} {msg} {spinner}",
-        )?)
+        .with_style(ProgressStyle::with_template("{prefix} {msg} {spinner}")?)
         .with_prefix("Installing Northstar...")
         .with_message("");
     pb.enable_steady_tick(Duration::from_millis(50));
