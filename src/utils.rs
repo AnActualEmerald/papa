@@ -83,6 +83,7 @@ pub fn download_and_install(
     let cache_dir = DIRS.cache_dir();
     ensure_dir(cache_dir)?;
     let cache = Cache::from_dir(cache_dir)?;
+    
     for (mn, v) in mods {
         if check_cache {
             if let Some(path) = cache.get(&mn) {
@@ -108,21 +109,27 @@ pub fn download_and_install(
         pb.finish();
         files.push((mn, file));
     }
-    let pb = ProgressBar::new_spinner().with_style(ProgressStyle::with_template("{prefix}{msg} {spinner} {pos}/{len}")?).with_prefix("Installing ");
+    
+    let mut pb = ProgressBar::new_spinner().with_style(ProgressStyle::with_template("{prefix}{msg}\t{spinner}\t{pos}/{len}")?.tick_chars("(|)|\0")).with_prefix("Installing ");
+    pb.set_tab_width(1);
     pb.enable_steady_tick(Duration::from_millis(100));
     pb.set_length(files.len() as u64);
-    for (mn, f) in files.iter(){
-        pb.set_message(format!("{mn}"));
+    
+    for (mn, f) in files.iter().progress_with(pb.clone()){
+      
+        pb.set_message(format!("{}", mn.bright_cyan()));
         if !CONFIG.is_server() {
             ensure_dir(CONFIG.install_dir())?;
             install_mod(&mn.author,  f, CONFIG.install_dir())?;
+            pb.suspend(|| println!("Installed {}", mn.bright_cyan()));
         } else {
             todo!();
         }
-        pb.inc(1);
     }
+
     pb.set_prefix("");
-    pb.finish_with_message("Installed");
+    pb.set_tab_width(0);
+    pb.finish_with_message("Installed ");
     println!("Done!");
     Ok(())
 }
