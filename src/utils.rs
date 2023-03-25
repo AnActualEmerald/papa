@@ -1,6 +1,6 @@
 use std::{
     fs,
-    path::Path,
+    path::Path, time::Duration,
 };
 
 use crate::{
@@ -9,7 +9,7 @@ use crate::{
     modfile,
 };
 use anyhow::{Context, Result};
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressStyle, ProgressIterator};
 use lazy_static::lazy_static;
 use owo_colors::OwoColorize;
 use regex::Regex;
@@ -87,7 +87,7 @@ pub fn download_and_install(
         if check_cache {
             if let Some(path) = cache.get(&mn) {
                 println!("Using cached version of {}", mn.bright_cyan());
-                files.push((mn.author, modfile!(o, path)?));
+                files.push((mn, modfile!(o, path)?));
                 continue;
             }
         }
@@ -99,25 +99,30 @@ pub fn download_and_install(
                 ProgressStyle::with_template("{msg}{bar} {bytes}/{total_bytes} {duration}")?
                     .progress_chars(".. "),
             )
-            .with_message(format!("Downloading {} ...", mn.bright_cyan()));
+            .with_message(format!("Downloading {}", mn.bright_cyan()));
         let mut file = modfile!(filename)?;
         download_with_progress(&mut file, &v.url, |delta, _, _| {
             pb.inc(delta);
         })
         .context(format!("Error downloading {}", mn.red()))?;
         pb.finish();
-        files.push((mn.author, file));
+        files.push((mn, file));
     }
-    let pb = ProgressBar::new_spinner().with_message("Installing packages...");
-    for (author, f) in files {
+    let pb = ProgressBar::new_spinner().with_style(ProgressStyle::with_template("{prefix}{msg} {spinner} {pos}/{len}")?).with_prefix("Installing ");
+    pb.enable_steady_tick(Duration::from_millis(100));
+    pb.set_length(files.len() as u64);
+    for (mn, f) in files.iter(){
+        pb.set_message(format!("{mn}"));
         if !CONFIG.is_server() {
             ensure_dir(CONFIG.install_dir())?;
-            install_mod(author, &f, CONFIG.install_dir())?;
+            install_mod(&mn.author,  f, CONFIG.install_dir())?;
         } else {
             todo!();
         }
+        pb.inc(1);
     }
-    pb.finish_and_clear();
+    pb.set_prefix("");
+    pb.finish_with_message("Installed");
     println!("Done!");
     Ok(())
 }
