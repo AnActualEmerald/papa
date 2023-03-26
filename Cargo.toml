@@ -14,7 +14,7 @@ exclude = ["commands_old"]
 members = ["crates/nsargs", "thermite"]
 
 [dependencies]
-libthermite = {path = "./thermite", version = "0.6.0", features = ["steam"]}
+libthermite = {path = "./thermite", version = "0.6.2", features = ["steam"]}
 anyhow = "1.0.70"
 clap = { version = "4.1.13", features = ["derive", "color"] }
 directories = "4.0.1"
