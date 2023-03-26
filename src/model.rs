@@ -88,18 +88,48 @@ impl AsRef<ModName> for ModName {
     }
 }
 
+impl TryFrom<String> for ModName {
+    type Error = anyhow::Error;
+
+    fn try_from(value: String) -> std::result::Result<ModName, Self::Error> {
+        validate_modname(&value).map_err(|e| anyhow!("{e}"))
+    }
+}
+
+impl TryFrom<&str> for ModName {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &str) -> std::result::Result<ModName, Self::Error> {
+        validate_modname(value).map_err(|e| anyhow!("{e}"))
+    }
+}
+
+pub struct BorrowedModName<'a> {
+    author: &'a str,
+    name: &'a str,
+    version: Option<&'a str>,
+}
+
+impl<'a> From<&'a InstalledMod> for BorrowedModName<'a> {
+    fn from(value: &'a InstalledMod) -> Self {
+        Self {
+            author: &value.author,
+            name: &value.manifest.name,
+            version: Some(&value.manifest.version_number),
+        }
+    }
+}
+
 pub struct Cache {
     packages: BTreeMap<ModName, PathBuf>,
     root: PathBuf,
 }
 
 impl Cache {
-
     pub fn to_cache_path(&self, name: impl AsRef<ModName>) -> PathBuf {
         let name = name.as_ref();
         self.root.join(format!("{name}"))
     }
-
 
     #[inline]
     pub fn get(&self, name: impl AsRef<ModName>) -> Option<&PathBuf> {
@@ -140,6 +170,9 @@ impl Cache {
             }
         }
 
-        Ok(Self { packages, root: path.to_owned()})
+        Ok(Self {
+            packages,
+            root: path.to_owned(),
+        })
     }
 }

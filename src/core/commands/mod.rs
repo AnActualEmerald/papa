@@ -15,3 +15,9 @@ pub use remove::remove;
 
 mod update;
 pub use update::update;
+
+mod enable;
+pub use enable::enable;
+
+mod disable;
+pub use disable::disable;
