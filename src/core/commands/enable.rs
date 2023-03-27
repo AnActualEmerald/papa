@@ -52,7 +52,7 @@ pub fn enable(mods: BTreeSet<String>) -> Result<()> {
         acted.insert(idx.clone());
     }
 
-    let diff = acted.difference(&mods);
+    let diff = mods.difference(&acted);
     for m in diff {
         println!("Couldn't find {}", m.bright_cyan());
     }

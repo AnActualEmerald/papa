@@ -70,7 +70,7 @@ let mut acted = BTreeSet::new();
     }
 
 
-        for m in acted.difference(&mods) {
+        for m in mods.difference(&acted) {
             println!("Couldn't find {}", m.bright_cyan());
         }
     
