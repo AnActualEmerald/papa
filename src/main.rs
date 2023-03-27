@@ -1,7 +1,7 @@
 // #[cfg(feature = "northstar")]
 // use crate::core::northstar::{init_northstar, update_northstar};
 
-use std::path::PathBuf;
+use std::{path::PathBuf, collections::{BTreeSet, HashSet}};
 
 use clap::{Parser, Subcommand};
 use tracing::debug;
@@ -196,8 +196,8 @@ fn main() {
             force,
             global,
         } => core::install(mod_names, yes, force, global),
-        Commands::Disable { mods } => core::disable(mods),
-        Commands::Enable { mods } => core::enable(mods),
+        Commands::Disable { mods } => core::disable(mods.into_iter().collect()),
+        Commands::Enable { mods } => core::enable(mods.into_iter().collect()),
         Commands::Search { term } => core::search(&term),
         Commands::Remove { mod_names } => core::remove(mod_names),
         // Commands::Clear { full } => clear(&ctx, full),

@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use anyhow::Result;
 use owo_colors::OwoColorize;
 use thermite::{
@@ -9,9 +11,9 @@ use tracing::debug;
 
 use crate::{config::CONFIG, get_answer, model::ModName, traits::Answer};
 
-pub fn disable(mut mods: Vec<String>) -> Result<()> {
+pub fn disable(mut mods: BTreeSet<String>) -> Result<()> {
     for m in mods.iter() {
-        if CORE_MODS.contains(&m.as_str()) {
+        if CORE_MODS.contains(&m.to_lowercase().as_str()) {
             println!(
                 "Disabling Northstar core mods can break things, are you sure you want to do this?"
             );
@@ -29,35 +31,25 @@ pub fn disable(mut mods: Vec<String>) -> Result<()> {
     let installed = find_mods(dir)?
         .into_iter()
         .filter_map(|v| v.ok())
-        .filter(|v| {
-            debug!("Checking if {} should be disabled", ModName::from(v));
-            let res = mods.iter().enumerate().find_map(|(i, m)| {
+        .filter_map(|v| {
+            debug!("Checking if {} should be enabled", ModName::from(&v));
+            let res = mods.iter().find(|m| {
                 if let Ok(mn) = TryInto::<ModName>::try_into(m.as_str()) {
-                    if (mn.author.to_lowercase() == v.author.to_lowercase()
+                    (mn.author.to_lowercase() == v.author.to_lowercase()
                         && mn.name.to_lowercase() == v.manifest.name.to_lowercase())
                         || m.to_lowercase() == v.mod_json.name.to_lowercase()
-                    {
-                        Some(i)
-                    } else {
-                        None
-                    }
-                } else if m.to_lowercase() == v.mod_json.name.to_lowercase() {
-                    Some(i)
                 } else {
-                    None
+                    m.to_lowercase() == v.mod_json.name.to_lowercase()
                 }
             });
 
-            if let Some(i) = res {
-                debug!("Yes");
-                mods.swap_remove(i);
-                true
+            if let Some(m) = res {
+                Some((m, v))
             } else {
-                debug!("No");
-                false
+                None
             }
         })
-        .collect::<Vec<InstalledMod>>();
+        .collect::<Vec<(&String, InstalledMod)>>();
 
     let mut enabled_mods = match get_enabled_mods(dir.join("..")) {
         Ok(mods) => mods,
@@ -67,31 +59,21 @@ pub fn disable(mut mods: Vec<String>) -> Result<()> {
 
     debug!("Enabled mods: {:?}", enabled_mods.mods);
 
-    for i in installed {
-        if CORE_MODS.contains(&i.mod_json.name.as_str()) {
-            match i.mod_json.name.as_str() {
-                "Northstar.Client" => enabled_mods.client = false,
-                "Northstar.Custom" => enabled_mods.custom = false,
-                "Northstar.CustomServers" => enabled_mods.servers = false,
-                _ => unimplemented!(),
-            }
-
-            println!("Disabled {}", format!("{}", i.mod_json.name).bright_red());
-
-            continue;
-        }
-        enabled_mods.mods.insert(i.mod_json.name.clone(), false);
+let mut acted = BTreeSet::new();
+    for (idx, i) in installed {
+        enabled_mods.set(&i.mod_json.name, false);
         println!(
             "Disabled {}",
-            format!("{}.{}", i.author, i.mod_json.name).bright_red()
+            format!("{}", i.mod_json.name).bright_red()
         );
+        acted.insert(idx.clone());
     }
 
-    if !mods.is_empty() {
-        for m in mods {
+
+        for m in acted.difference(&mods) {
             println!("Couldn't find {}", m.bright_cyan());
         }
-    }
+    
 
     Ok(())
 }
