@@ -6,11 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+
+## v3.0.0
+
 ### Changed
 - Use `libthermite` to manage package manipulation
 
 ### Removed
 - No longer use index file to track mods
+- global mods (will be reimplemented in the future)
 
 ## v2.2.0
 
