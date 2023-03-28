@@ -56,4 +56,5 @@ jobs:
           files: |
             LICENSE
             target/wix/*.msi
+            target/release/papa
         
