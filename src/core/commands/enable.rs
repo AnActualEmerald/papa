@@ -28,11 +28,7 @@ pub fn enable(mods: BTreeSet<String>) -> Result<()> {
                 }
             });
 
-            if let Some(m) = res {
-                Some((m, v))
-            } else {
-                None
-            }
+            res.map(|m| (m, v))
         })
         .collect::<Vec<(&String, InstalledMod)>>();
 
@@ -47,7 +43,7 @@ pub fn enable(mods: BTreeSet<String>) -> Result<()> {
     let mut acted = BTreeSet::new();
     for (idx, i) in installed {
         enabled_mods.set(&i.mod_json.name, true);
-        println!("Enabled {}", format!("{}", i.mod_json.name).bright_green());
+        println!("Enabled {}", i.mod_json.name.bright_green());
         acted.insert(idx.clone());
     }
 

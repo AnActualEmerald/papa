@@ -1,7 +1,7 @@
 // #[cfg(feature = "northstar")]
 // use crate::core::northstar::{init_northstar, update_northstar};
 
-use std::{path::PathBuf};
+use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 use tracing::debug;
@@ -211,7 +211,6 @@ fn main() {
         // Commands::Cluster { command } => cluster(&mut ctx, command),
         // #[cfg(feature = "profiles")]
         // Commands::Profile { command } => profile(&mut ctx, command),
-        _ => todo!(),
     };
 
     if let Err(e) = res {

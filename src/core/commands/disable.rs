@@ -43,11 +43,7 @@ pub fn disable(mods: BTreeSet<String>) -> Result<()> {
                 }
             });
 
-            if let Some(m) = res {
-                Some((m, v))
-            } else {
-                None
-            }
+            res.map(|m| (m, v))
         })
         .collect::<Vec<(&String, InstalledMod)>>();
 
@@ -59,21 +55,16 @@ pub fn disable(mods: BTreeSet<String>) -> Result<()> {
 
     debug!("Enabled mods: {:?}", enabled_mods.mods);
 
-let mut acted = BTreeSet::new();
+    let mut acted = BTreeSet::new();
     for (idx, i) in installed {
         enabled_mods.set(&i.mod_json.name, false);
-        println!(
-            "Disabled {}",
-            format!("{}", i.mod_json.name).bright_red()
-        );
+        println!("Disabled {}", i.mod_json.name.bright_red());
         acted.insert(idx.clone());
     }
 
-
-        for m in mods.difference(&acted) {
-            println!("Couldn't find {}", m.bright_cyan());
-        }
-    
+    for m in mods.difference(&acted) {
+        println!("Couldn't find {}", m.bright_cyan());
+    }
 
     Ok(())
 }

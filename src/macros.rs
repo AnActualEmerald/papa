@@ -64,7 +64,7 @@ macro_rules! get_answer {
         if $yes {
             Ok(String::new())
         } else {
-            crate::readln!($msg)
+            $crate::readln!($msg)
         }
     };
 }

@@ -104,21 +104,21 @@ impl TryFrom<&str> for ModName {
     }
 }
 
-pub struct BorrowedModName<'a> {
-    author: &'a str,
-    name: &'a str,
-    version: Option<&'a str>,
-}
+// pub struct BorrowedModName<'a> {
+//     author: &'a str,
+//     name: &'a str,
+//     version: Option<&'a str>,
+// }
 
-impl<'a> From<&'a InstalledMod> for BorrowedModName<'a> {
-    fn from(value: &'a InstalledMod) -> Self {
-        Self {
-            author: &value.author,
-            name: &value.manifest.name,
-            version: Some(&value.manifest.version_number),
-        }
-    }
-}
+// impl<'a> From<&'a InstalledMod> for BorrowedModName<'a> {
+//     fn from(value: &'a InstalledMod) -> Self {
+//         Self {
+//             author: &value.author,
+//             name: &value.manifest.name,
+//             version: Some(&value.manifest.version_number),
+//         }
+//     }
+// }
 
 pub struct Cache {
     packages: BTreeMap<ModName, PathBuf>,
