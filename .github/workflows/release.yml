@@ -1,9 +1,9 @@
 name: Release
 
 on:
-  create:
+  push:
     tags:
-      - "v*.*.*"
+      - v*.*.*
 
 env:
   CARGO_TERM_COLOR: always
