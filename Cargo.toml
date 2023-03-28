@@ -1,6 +1,6 @@
 [package]
 name = "papa"
-version = "3.0.0-rc.2"
+version = "3.0.0-rc.3"
 edition = "2021"
 license = "MIT"
 description = "A cli mod manager for the Northstar launcher"
@@ -31,11 +31,6 @@ lazy_static = "1.4.0"
 fuzzy-matcher = "0.3.7"
 indicatif = "0.17.3"
 # rustyline = {version = "10.1.0", default_features = false}
-
-[package.metadata.bundle]
-identifier = "me.greenboi.papa"
-linux_use_terminal = true
-deb_depends = ["openssl"]
 
 
 [features]

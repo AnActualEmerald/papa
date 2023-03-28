@@ -3,7 +3,7 @@ use thermite::model::ModVersion;
 use tracing::warn;
 
 use crate::model::{ModName};
-use crate::{readln, get_answer};
+use crate::{get_answer};
 use crate::traits::{Index, Answer};
 use crate::utils::{download_and_install, to_file_size_string};
 

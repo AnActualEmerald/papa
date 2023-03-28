@@ -11,7 +11,7 @@ use tracing::debug;
 
 use crate::{config::CONFIG, get_answer, model::ModName, traits::Answer};
 
-pub fn disable(mut mods: BTreeSet<String>) -> Result<()> {
+pub fn disable(mods: BTreeSet<String>) -> Result<()> {
     for m in mods.iter() {
         if CORE_MODS.contains(&m.to_lowercase().as_str()) {
             println!(

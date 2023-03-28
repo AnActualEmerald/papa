@@ -8,7 +8,7 @@ use crate::{
     model::ModName,
     NstarCommands,
 };
-use crate::{ get_answer, modfile, readln};
+use crate::{ get_answer, modfile};
 use anyhow::{anyhow, Result};
 use indicatif::{ProgressBar, ProgressStyle};
 use owo_colors::OwoColorize;

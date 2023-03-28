@@ -8,7 +8,6 @@ use crate::{config::CONFIG, model::ModName};
 use thermite::{
     model::{EnabledMods, InstalledMod},
     prelude::{find_mods, get_enabled_mods, ThermiteError},
-    CORE_MODS,
 };
 
 pub fn enable(mods: BTreeSet<String>) -> Result<()> {

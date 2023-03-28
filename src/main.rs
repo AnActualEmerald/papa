@@ -1,7 +1,7 @@
 // #[cfg(feature = "northstar")]
 // use crate::core::northstar::{init_northstar, update_northstar};
 
-use std::{path::PathBuf, collections::{BTreeSet, HashSet}};
+use std::{path::PathBuf};
 
 use clap::{Parser, Subcommand};
 use tracing::debug;
