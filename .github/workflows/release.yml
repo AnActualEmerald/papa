@@ -49,7 +49,7 @@ jobs:
       - name: Build
         run: cargo build --release
       - name: Bundle
-        run: cargo wix -p papa -b "C:\Program Files (x86)\WiX Toolset v3.11\bin"
+        run: cargo wix -p papa -b "C:\Program Files (x86)\WiX Toolset v3.11\bin" --nocapture
       - name: Release
         uses: softprops/action-gh-release@v0.1.15
         with: 
