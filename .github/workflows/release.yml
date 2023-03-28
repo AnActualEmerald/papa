@@ -1,0 +1,36 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  release:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install cargo-bundle
+      uses: baptiste0928/cargo-install@v2.0.0
+      with: 
+        crate: cargo-bundle
+    - name: Build
+      run: cargo build --release
+    - name: Bundle
+      run: cargo bundle --release
+    - name: Release
+      uses: softprops/action-gh-release@v0.1.15
+      with: 
+        draft: true
+        files: |
+          LICENSE
+          target/release/bundle/*/*
+          
