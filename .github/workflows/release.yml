@@ -48,7 +48,7 @@ jobs:
       - name: Build
         run: cargo build --release
       - name: Bundle
-        run: cargo wix --install-version ${{ github.ref_name }}
+        run: cargo wix -p papa
       - name: Release
         uses: softprops/action-gh-release@v0.1.15
         with: 
