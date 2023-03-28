@@ -9,29 +9,51 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  release:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-
-    runs-on: ${{ matrix.os }}
+  linux:
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: recursive
-    - name: Install cargo-bundle
+    - name: Install cargo-deb
       uses: baptiste0928/cargo-install@v2.0.0
       with: 
-        crate: cargo-bundle
+        crate: cargo-deb
+  #  - name: Install cargo-generate-rpm
+  #    uses: baptiste0928/cargo-install@v2.0.0
+  #    with: 
+  #      crate: cargo-generate-rpm
     - name: Build
       run: cargo build --release
     - name: Bundle
-      run: cargo bundle --release
+      run: cargo deb
     - name: Release
       uses: softprops/action-gh-release@v0.1.15
       with: 
         draft: true
         files: |
           LICENSE
-          target/release/bundle/*/*
+          target/release/debian/*.deb
           
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Install cargo-wix
+        uses: baptiste0928/cargo-install@v2.0.0
+        with: 
+          crate: cargo-wix
+      - name: Build
+        run: cargo build --release
+      - name: Bundle
+        run: cargo wix
+      - name: Release
+        uses: softprops/action-gh-release@v0.1.15
+        with: 
+          draft: true
+          files: |
+            LICENSE
+            target/wix/*.msi
+        
