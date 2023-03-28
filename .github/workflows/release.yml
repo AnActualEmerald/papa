@@ -34,6 +34,7 @@ jobs:
         files: |
           LICENSE
           target/debian/*.deb
+          target/release/papa
           
   windows:
     runs-on: windows-latest
@@ -56,5 +57,5 @@ jobs:
           files: |
             LICENSE
             target/wix/*.msi
-            target/release/papa
+            target/release/papa.exe
         
