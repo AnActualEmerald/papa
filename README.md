@@ -4,7 +4,10 @@
  <br>
  Papa
 <br>
-<a href="https://github.com/AnActualEmerald/papa/actions/workflows/rust.yml"><img alt="GitHub Workflow Status" src="https://github.com/AnActualEmerald/papa/actions/workflows/rust.yml/badge.svg"></a> <a href="https://crates.io/crates/papa"><img alt="Crates.io (latest)" src="https://img.shields.io/crates/dv/papa"></a>
+<a href="https://github.com/AnActualEmerald/papa/actions/workflows/rust.yml"> 
+ <img alt="Rust workflow badge" src="https://github.com/AnActualEmerald/papa/actions/workflows/rust.yml/badge.svg">
+</a>
+<img alt="Crates.io (latest)" src="https://img.shields.io/crates/dv/papa">
 </h1>
 
 
@@ -15,35 +18,35 @@
 - Search Thunderstore for mods from the command line
 - Download a mod *and* its dependencies with one command
 - Easily keep your mods up to date
-- Per-directory tracking makes hosting multiple servers with different mods from one machine easy
-- Enable and disable mods independent of N*'s own enabling and disabling
 
 ## Usage
 
 ```bash
-papa install server_utilities #install a mod
+papa install fifty.server_utilities #install a mod
 papa list #list installed mods
 papa update #update any out of date mods
-papa remove server_utilities #uninstall a mod
-papa clear #clear the download cache
+papa remove fifty.server_utilities #uninstall a mod
 ```
 
 ## Installation
-Regardless of which method you use, I recommend setting your mods directory to something useful before using `papa`
+I suggest that you initialize Northstar to set everything up automatically
 ```bash
-papa config -m /PATH/TO/MODS/FOLDER/
+papa ns init
 ```
-Or initialize Northstar to set everything up automatically
-```bash
-papa ns init /PATH/TO/TITANFALL2/
-```
+Or create a file at `.config/papa/config.toml` and set `install_dir` to whatever directory you want
 
 ### Ubuntu/Debian(& derivatives)
 Download the `.deb` file from the latest release and install it using whatever you usually use to install packages:
 ```bash
 
-sudo apt install ./papa_2.1.0.deb
+sudo apt install ./papa_3.0.0.deb
 
+```
+
+### Arch Linux
+Community maintained `papa` and `papa-bin` packages are available on the AUR:
+```bash
+paru -S papa
 ```
 
 ### Windows
@@ -62,8 +65,9 @@ or from the git repo
  cargo install --git https://github.com/AnActualEmerald/papa
 ```
 If you want to build from source but don't have cargo installed, you should check out [rustup.rs](https://rustup.rs)
+#### Dependencies
+* pkgconfig
+* openssl
 
 ## Caveats 
-- The default install directory is **relative to the current working directory**, meaning that running the command in ~/ will install mods into ~/mods
-- Installed mods are tracked by a `.papa.ron` file in the mods directory, so each directory will have its own list of mods
-- For now updates will blow up any changes made within the mod files themselves
+- The default install directory is **relative to the current working directory**, meaning that running `papa install` in `~/` will install mods into `~/mods`

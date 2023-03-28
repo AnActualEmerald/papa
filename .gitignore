@@ -1,3 +1,6 @@
 /target
 /mods
+/northstar
 Cargo.lock
+.pijul
+.ignore

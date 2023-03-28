@@ -1,41 +1,54 @@
 [package]
 name = "papa"
-version = "2.2.0"
+version = "3.0.0-rc.2"
 edition = "2021"
 license = "MIT"
 description = "A cli mod manager for the Northstar launcher"
 readme = "README.md"
 authors = ["AnActualEmerald"]
 repository = "https://github.com/AnActualEmerald/papa"
-
+exclude = ["commands_old"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[workspace]
+members = ["crates/nsargs", "thermite"]
 
 [dependencies]
-anyhow = "1.0.58"
-clap = { version = "3.2.8", features = ["derive", "color"] }
-convert_case = "0.5.0"
+libthermite = {path = "./thermite", version = "0.6.3", features = ["steam"]}
+anyhow = "1.0.70"
+clap = { version = "4.1.13", features = ["derive", "color"] }
 directories = "4.0.1"
-env_logger = "0.9.0"
-futures-util = "0.3.21"
-indicatif = "0.16.2"
-log = "0.4.17"
-regex = "1.5.6"
-reqwest = { version = "0.11.11", features = ["stream"] }
-ron = "0.7.1"
-rustyline = "9.1.2"
-serde = { version = "1.0.138", features = ["derive"] }
-serde_json = "1.0.82"
-tokio = { version = "1.19.2", features = ["full"] }
-toml = "0.5.9"
-zip = "0.6.2"
+regex = {version = "1.7.0", default_features = false, features = ["std"] }
+serde = { version = "1.0.158", features = ["derive"] }
+serde_json = "1.0.94"
+toml = "0.5.11"
+zip = "0.6.4"
+tracing = { version = "0.1.37" }
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
+owo-colors = "3.5.0"
+figment = { version = "0.10.8", features = ["toml", "env"] }
+lazy_static = "1.4.0"
+fuzzy-matcher = "0.3.7"
+indicatif = "0.17.3"
+# rustyline = {version = "10.1.0", default_features = false}
+
+[package.metadata.bundle]
+identifier = "me.greenboi.papa"
+linux_use_terminal = true
+deb_depends = ["openssl"]
+
 
 [features]
 default = ["northstar"]
 northstar = []
 launcher = ["northstar"]
+cluster = []
+profiles = []
 
 [profile.release]
 strip = true
 lto = true
 opt-level = "z"
+codegen-units = 1
+panic = "abort"
+
