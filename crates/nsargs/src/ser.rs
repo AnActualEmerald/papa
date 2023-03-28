@@ -6,6 +6,7 @@ use crate::error::{self, Error};
 pub struct Serializer {
     output: String,
     last: String,
+    map_accum: String,
     in_struct: bool,
 }
 
@@ -196,7 +197,7 @@ impl<'a> serde::ser::Serializer for &'a mut Serializer {
     }
 
     fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
-        self.output += &format!("\"");
+        self.map_accum += &format!("\"");
         Ok(self)
     }
 
@@ -310,8 +311,8 @@ impl<'a> ser::SerializeMap for &'a mut Serializer {
         T: serde::Serialize,
     {
         key.serialize(&mut **self)?;
-        self.output += self.last.trim_matches('"').into();
-        Ok(self.output += " ")
+        self.map_accum += self.last.trim_matches('"').into();
+        Ok(self.map_accum += " ")
     }
 
     fn serialize_value<T: ?Sized>(&mut self, value: &T) -> Result<(), Self::Error>
@@ -319,12 +320,15 @@ impl<'a> ser::SerializeMap for &'a mut Serializer {
         T: serde::Serialize,
     {
         value.serialize(&mut **self)?;
-        self.output += self.last.trim_matches('"').into();
-        Ok(self.output += " ")
+        self.map_accum += self.last.trim_matches('"').into();
+        Ok(self.map_accum += " ")
     }
 
     fn end(self) -> Result<Self::Ok, Self::Error> {
-        self.output += "\"";
+        self.map_accum = self.map_accum.trim().to_owned();
+        self.map_accum += "\"";
+        self.last = self.map_accum.clone();
+        self.map_accum = String::new();
         Ok(true)
     }
 }
