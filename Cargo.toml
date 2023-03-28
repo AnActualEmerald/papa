@@ -32,6 +32,8 @@ fuzzy-matcher = "0.3.7"
 indicatif = "0.17.3"
 # rustyline = {version = "10.1.0", default_features = false}
 
+[package.metadata.wix]
+name = "papa"
 
 [features]
 default = ["northstar"]
