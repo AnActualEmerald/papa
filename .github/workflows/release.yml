@@ -33,7 +33,7 @@ jobs:
         draft: true
         files: |
           LICENSE
-          target/release/debian/*.deb
+          target/debian/*.deb
           
   windows:
     runs-on: windows-latest
