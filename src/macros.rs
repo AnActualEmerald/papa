@@ -29,29 +29,29 @@ macro_rules! flush {
 #[macro_export]
 macro_rules! modfile {
     ($path:expr) => {{
-        use std::fs::File;
-        File::options()
-            .create(true)
+        use std::fs::OpenOptions;
+        OpenOptions::new()
             .write(true)
+            .create(true)
             .read(true)
             .truncate(true)
             .open($path)
     }};
     (wo, $path:expr) => {{
-        use std::fs::File;
-        File::options()
+        use std::fs::OpenOptions;
+        OpenOptions::new()
             .create(true)
             .write(true)
             .truncate(true)
             .open($path)
     }};
     (ro, $path:expr) => {{
-        use std::fs::File;
-        File::options().create(true).read(true).open($path)
+        use std::fs::OpenOptions;
+        OpenOptions::new().create(true).read(true).open($path)
     }};
     (o, $path:expr) => {{
-        use std::fs::File;
-        File::options().read(true).write(true).open($path)
+        use std::fs::OpenOptions;
+        OpenOptions::new().read(true).write(true).open($path)
     }};
 }
 
