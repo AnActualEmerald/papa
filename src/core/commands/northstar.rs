@@ -53,6 +53,7 @@ fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
         .get_item(&ModName::new("northstar", "Northstar", None))
         .ok_or(anyhow!("Couldn't find Northstar in the package index"))?;
 
+    std::fs::create_dir_all(DIRS.cache_dir())?;
     let mut nsfile = modfile!(DIRS
         .cache_dir()
         .join(format!("{}.zip", ModName::from(nsmod))))?;

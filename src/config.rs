@@ -63,6 +63,7 @@ impl Default for Config {
 
 pub fn write_config(cfg: &Config) -> Result<()> {
     let cereal = toml::to_string_pretty(cfg)?;
+    fs::create_dir_all(DIRS.config_dir())?;
     fs::write(DIRS.config_dir().join("config.toml"), cereal)?;
     Ok(())
 }
