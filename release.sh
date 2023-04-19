@@ -15,12 +15,12 @@ msg="# managed by release.sh"
 sed -E -i "s/^version = .* $msg$/version = \"${1#v}\" $msg/" Cargo.toml
 
 # generate changelog
-git cliff -l --tag "$1" --prepend CHANGELOG.md 
+git cliff -u --tag "$1" --prepend CHANGELOG.md 
 
 git add -A && git commit -m "chore(release): prep for $1"
 git show
 
-changelog=$(git cliff --unreleased --strip header)
-git tag -s -a "$1" -m "Released $1" -m "$changelog"
+changelog=$(git cliff --unreleased --strip header --tag "$1")
+git tag -s -a "$1" -m "Release $1" -m "$changelog"
 git tag -v "$1"
 echo "Done! (ready to 'git push' and 'git push --tags')"
