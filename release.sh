@@ -12,15 +12,15 @@ echo "Prep for release $1..."
 
 # update version
 msg="# managed by release.sh"
-sed -E -i "s/^version = .* $msg$/version = \"${1#v}\" $msg/" papa*/Cargo.toml
+sed -E -i "s/^version = .* $msg$/version = \"${1#v}\" $msg/" Cargo.toml
 
 # generate changelog
-git cliff --tag "$1" --prepend CHANGELOG.md 
+git cliff -l --tag "$1" --prepend CHANGELOG.md 
 
 git add -A && git commit -m "chore(release): prep for $1"
 git show
 
-changelog=$(git cliff --unrelease --strip all)
-git tag -s -a "$1" -m "Release $1" -m "$changelog"
+changelog=$(git cliff --unreleased --strip all)
+git tag -s -a "$1" -m "Released $1" -m "$changelog"
 git tag -v "$1"
 echo "Done! (ready to 'git push' and 'git push --tags')"
