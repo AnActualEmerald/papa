@@ -20,7 +20,7 @@ git cliff -l --tag "$1" --prepend CHANGELOG.md
 git add -A && git commit -m "chore(release): prep for $1"
 git show
 
-changelog=$(git cliff --unreleased --strip all)
+changelog=$(git cliff --unreleased --strip header)
 git tag -s -a "$1" -m "Released $1" -m "$changelog"
 git tag -v "$1"
 echo "Done! (ready to 'git push' and 'git push --tags')"
