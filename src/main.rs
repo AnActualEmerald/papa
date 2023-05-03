@@ -29,10 +29,10 @@ struct Cli {
     #[clap(subcommand)]
     command: Commands,
     ///Show debug output
-    #[clap(short, long)]
+    #[clap(global=true, short, long)]
     debug: bool,
     ///Don't check cache before downloading
-    #[arg(global = true, short='C', long="no-cache")]
+    #[clap(global = true, short='C', long="no-cache")]
     no_cache: bool,
 }
 
@@ -119,9 +119,23 @@ enum Commands {
     },
 
     ///Disable mod(s) or sub-mod(s)
-    Disable { mods: Vec<String> },
+    Disable { 
+        mods: Vec<String>,
+
+        ///Disable all mods excluding core N* mods
+        #[clap(short, long)] 
+        all: bool, 
+
+        ///Force disable mods including core N* mods
+        #[clap(short, long)]
+        force: bool 
+    },
     ///Enable mod(s) or sub-mod(s)
-    Enable { mods: Vec<String> },
+    Enable { 
+        mods: Vec<String>, 
+        #[arg(short, long)]
+        all: bool 
+    },
 
     //These will only be available on linux for now because symlinks on Windows are weird
     // #[cfg(target_os = "linux")]
@@ -200,8 +214,8 @@ fn main() {
             force,
             global,
         } => core::install(mod_names, yes, force, cli.no_cache),
-        Commands::Disable { mods } => core::disable(mods.into_iter().collect()),
-        Commands::Enable { mods } => core::enable(mods.into_iter().collect()),
+        Commands::Disable { mods, all, force } => core::disable(mods.into_iter().collect(), all, force),
+        Commands::Enable { mods, all } => core::enable(mods.into_iter().collect(), all),
         Commands::Search { term } => core::search(&term),
         Commands::Remove { mod_names } => core::remove(mod_names),
         // Commands::Clear { full } => clear(&ctx, full),

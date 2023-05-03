@@ -10,13 +10,16 @@ use thermite::{
     prelude::{find_mods, get_enabled_mods, ThermiteError},
 };
 
-pub fn enable(mods: BTreeSet<String>) -> Result<()> {
+pub fn enable(mods: BTreeSet<String>, all: bool) -> Result<()> {
     let dir = CONFIG.install_dir();
     debug!("Getting installed mods from {}", dir.display());
     let installed = find_mods(dir)?
         .into_iter()
         .filter_map(|v| v.ok())
         .filter_map(|v| {
+            if all {
+                return Some((ModName::from(&v).to_string(), v));
+            }
             debug!("Checking if {} should be enabled", ModName::from(&v));
             let res = mods.iter().find(|m| {
                 if let Ok(mn) = TryInto::<ModName>::try_into(m.as_str()) {
@@ -28,9 +31,9 @@ pub fn enable(mods: BTreeSet<String>) -> Result<()> {
                 }
             });
 
-            res.map(|m| (m, v))
+            res.map(|m| (m.clone(), v))
         })
-        .collect::<Vec<(&String, InstalledMod)>>();
+        .collect::<Vec<(String, InstalledMod)>>();
 
     let mut enabled_mods = match get_enabled_mods(dir.join("..")) {
         Ok(mods) => mods,

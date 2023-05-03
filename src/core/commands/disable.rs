@@ -11,8 +11,9 @@ use tracing::debug;
 
 use crate::{config::CONFIG, get_answer, model::ModName, traits::Answer};
 
-pub fn disable(mods: BTreeSet<String>) -> Result<()> {
+pub fn disable(mods: BTreeSet<String>, all: bool, force: bool) -> Result<()> {
     for m in mods.iter() {
+        if force { break; }
         if CORE_MODS.contains(&m.to_lowercase().as_str()) {
             println!(
                 "Disabling Northstar core mods can break things, are you sure you want to do this?"
@@ -32,6 +33,17 @@ pub fn disable(mods: BTreeSet<String>) -> Result<()> {
         .into_iter()
         .filter_map(|v| v.ok())
         .filter_map(|v| {
+            if all {
+                let name = ModName::from(&v);
+                debug!("Checking {name}");
+                if name.author.to_lowercase() == "northstar" && !force {
+                    debug!("Skipping mod {name} when disabling all");
+                    return None;
+                } else {
+                    return Some((name.to_string(), v));
+                }
+            }
+
             debug!("Checking if {} should be enabled", ModName::from(&v));
             let res = mods.iter().find(|m| {
                 if let Ok(mn) = TryInto::<ModName>::try_into(m.as_str()) {
@@ -43,9 +55,9 @@ pub fn disable(mods: BTreeSet<String>) -> Result<()> {
                 }
             });
 
-            res.map(|m| (m, v))
+            res.map(|m| (m.clone(), v))
         })
-        .collect::<Vec<(&String, InstalledMod)>>();
+        .collect::<Vec<(String, InstalledMod)>>();
 
     let mut enabled_mods = match get_enabled_mods(dir.join("..")) {
         Ok(mods) => mods,
