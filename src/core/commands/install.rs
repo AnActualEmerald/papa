@@ -77,7 +77,7 @@ pub fn install(mods: Vec<ModName>, assume_yes: bool, force: bool, no_cache: bool
 
     let answer = get_answer!(assume_yes)?;
     if !answer.is_no() {
-        download_and_install(valid, !no_cache)?;
+        download_and_install(valid, !no_cache, force)?;
     }
 
     Ok(())

@@ -234,8 +234,6 @@ fn main() {
     if let Err(e) = res {
         if cli.debug {
             debug!("{:#?}", e);
-        } else {
-            println!("{}", e);
         }
     }
 }

@@ -53,7 +53,7 @@ pub fn update(yes: bool, no_cache: bool) -> Result<()> {
     let answer = get_answer!(yes)?;
 
     if !answer.is_no() {
-        download_and_install(outdated.into_iter().collect(), !no_cache)?;
+        download_and_install(outdated.into_iter().collect(), !no_cache, false)?;
         if ns_update {
             ns_prompt()?;
         }

@@ -17,7 +17,7 @@ use thermite::{
     model::ModVersion,
     prelude::{download_with_progress, install_mod},
 };
-use tracing::debug;
+use tracing::{debug, error};
 
 lazy_static! {
     static ref RE: Regex = Regex::new(r"^(\w+)\.(\w+)(?:@(\d+\.\d+\.\d+))?$").unwrap();
@@ -72,6 +72,7 @@ pub fn ensure_dir(dir: impl AsRef<Path>) -> Result<()> {
 pub fn download_and_install(
     mods: Vec<(ModName, impl AsRef<ModVersion>)>,
     check_cache: bool,
+    cont: bool
 ) -> Result<()> {
     if mods.is_empty() {
         println!("Nothing to do!");
@@ -114,14 +115,28 @@ pub fn download_and_install(
     pb.set_tab_width(1);
     pb.enable_steady_tick(Duration::from_millis(100));
     pb.set_length(files.len() as u64);
+
+    let mut had_error = false;
     
     for (mn, f) in files.iter().progress_with(pb.clone()){
       
         pb.set_message(format!("{}", mn.bright_cyan()));
         if !CONFIG.is_server() {
             ensure_dir(CONFIG.install_dir())?;
-            install_mod(&mn.author,  f, CONFIG.install_dir())?;
-            pb.suspend(|| println!("Installed {}", mn.bright_cyan()));
+            if let Err(e) = install_mod(&mn.author,  f, CONFIG.install_dir()) {
+                had_error = true;
+                pb.suspend(|| {
+                    println!("Failed to install {}: {e}", mn.bright_red());
+                    debug!("{e:?}");
+                });
+                if !cont {
+                    pb.finish_and_clear();
+                    println!("Aborted due to error");
+                    return Err(e.into());
+                }
+            } else {
+                pb.suspend(|| println!("Installed {}", mn.bright_cyan()));
+            }
         } else {
             todo!();
         }
@@ -130,6 +145,10 @@ pub fn download_and_install(
     pb.set_prefix("");
     pb.set_tab_width(0);
     pb.finish_with_message("Installed ");
-    println!("Done!");
+    if had_error {
+        println!("Finished with errors")
+    }else {
+        println!("Done!");
+    }
     Ok(())
 }
