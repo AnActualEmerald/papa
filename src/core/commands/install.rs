@@ -10,7 +10,7 @@ use crate::utils::{download_and_install, to_file_size_string};
 use owo_colors::OwoColorize;
 use thermite::prelude::*;
 
-pub fn install(mods: Vec<ModName>, assume_yes: bool, force: bool, _global: bool) -> Result<()> {
+pub fn install(mods: Vec<ModName>, assume_yes: bool, force: bool, no_cache: bool) -> Result<()> {
     let remote_index = get_package_index()?;
     let mut valid: Vec<(ModName, &ModVersion)> = vec![];
     let mut should_fail = false;
@@ -77,7 +77,7 @@ pub fn install(mods: Vec<ModName>, assume_yes: bool, force: bool, _global: bool)
 
     let answer = get_answer!(assume_yes)?;
     if !answer.is_no() {
-        download_and_install(valid, !force)?;
+        download_and_install(valid, !no_cache)?;
     }
 
     Ok(())

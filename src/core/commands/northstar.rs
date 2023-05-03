@@ -54,6 +54,7 @@ fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
         .ok_or(anyhow!("Couldn't find Northstar in the package index"))?;
 
     std::fs::create_dir_all(DIRS.cache_dir())?;
+    //TODO: remove this file after install
     let mut nsfile = modfile!(DIRS
         .cache_dir()
         .join(format!("{}.zip", ModName::from(nsmod))))?;

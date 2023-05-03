@@ -13,7 +13,7 @@ use owo_colors::OwoColorize;
 use thermite::{model::ModVersion, prelude::*};
 use tracing::debug;
 
-pub fn update(yes: bool) -> Result<()> {
+pub fn update(yes: bool, no_cache: bool) -> Result<()> {
     println!("Checking for outdated packages...");
     let index = get_package_index()?;
     let local = find_mods(CONFIG.install_dir())?;
@@ -53,7 +53,7 @@ pub fn update(yes: bool) -> Result<()> {
     let answer = get_answer!(yes)?;
 
     if !answer.is_no() {
-        download_and_install(outdated.into_iter().collect(), false)?;
+        download_and_install(outdated.into_iter().collect(), !no_cache)?;
         if ns_update {
             ns_prompt()?;
         }

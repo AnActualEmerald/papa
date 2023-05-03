@@ -28,8 +28,12 @@ use utils::validate_modname;
 struct Cli {
     #[clap(subcommand)]
     command: Commands,
+    ///Show debug output
     #[clap(short, long)]
     debug: bool,
+    ///Don't check cache before downloading
+    #[arg(global = true, short='C', long="no-cache")]
+    no_cache: bool,
 }
 
 #[derive(Subcommand)]
@@ -56,7 +60,7 @@ enum Commands {
         #[clap(short, long)]
         force: bool,
 
-        ///Make mod globally available
+        ///Make mod globally available (currently non-functioning)
         #[clap(short, long)]
         global: bool,
     },
@@ -188,14 +192,14 @@ fn main() {
     debug!("Config: {:#?}", *config::CONFIG);
 
     let res = match cli.command {
-        Commands::Update { yes } => core::update(yes),
+        Commands::Update { yes, } => core::update(yes, cli.no_cache),
         Commands::List { global, all } => core::list(global, all),
         Commands::Install {
             mod_names,
             yes,
             force,
             global,
-        } => core::install(mod_names, yes, force, global),
+        } => core::install(mod_names, yes, force, cli.no_cache),
         Commands::Disable { mods } => core::disable(mods.into_iter().collect()),
         Commands::Enable { mods } => core::enable(mods.into_iter().collect()),
         Commands::Search { term } => core::search(&term),
