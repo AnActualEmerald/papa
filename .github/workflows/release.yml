@@ -27,10 +27,18 @@ jobs:
       run: cargo build --release
     - name: Bundle
       run: cargo deb
+    - name: Create release notes
+      id: changelog
+      uses: orhun/git-cliff-action@v2.0.6
+      with:
+        args: -v -l
     - name: Release
       uses: softprops/action-gh-release@v0.1.15
       with: 
         draft: true
+        body_path: ${{ steps.changelog.outputs.changelog }}
+        name: Version ${{ github.ref }}
+        prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
         files: |
           LICENSE
           target/debian/*.deb
@@ -54,6 +62,7 @@ jobs:
         uses: softprops/action-gh-release@v0.1.15
         with: 
           draft: true
+          append_body: true
           files: |
             LICENSE
             target/wix/*.msi
