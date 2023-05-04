@@ -22,10 +22,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update release script tag message formatting
 - More release script tweaks
 
-## [Unreleased]
-
-
-
 ## v3.0.0
 
 ### Changed
