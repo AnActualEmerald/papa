@@ -21,6 +21,6 @@ git add -A && git commit -m "chore(release): prep for $1"
 git show
 
 changelog=$(git cliff --unreleased --strip header --tag "$1")
-git tag -s -a "$1" -m "Release $1" -m "$changelog"
+git tag -s -a "$1" -m "Version $1" -m "$changelog"
 git tag -v "$1"
 echo "Done! (ready to 'git push' and 'git push --tags')"

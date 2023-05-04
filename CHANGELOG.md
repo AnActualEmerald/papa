@@ -6,11 +6,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-# Changelog
-All notable changes to this project will be documented in this file.
+## v3.1.0-alpha
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+### Bug Fixes
+
+- Properly continue with `force` flag
+
+### Features
+
+- Add `no-cache` flag
+- Add `all` flag to `enable` and `disable` commands
+
+### Miscellaneous Tasks
+
+- Update release script tag message formatting
+- More release script tweaks
 
 ## [Unreleased]
 

@@ -1,6 +1,6 @@
 [package]
 name = "papa"
-version = "3.0.1" # managed by release.sh
+version = "3.1.0-alpha" # managed by release.sh
 edition = "2021"
 license = "MIT"
 description = "A cli mod manager for the Northstar launcher"
