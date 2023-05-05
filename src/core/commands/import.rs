@@ -5,7 +5,10 @@ use std::{io::ErrorKind, path::PathBuf};
 
 use crate::model::ModName;
 
-pub fn import(file: PathBuf) -> Result<()> {
+use super::install;
+
+pub fn import(file: PathBuf, yes: bool, force: bool, no_cache: bool) -> Result<()> {
+    println!("Loading '{}'...", file.display().bright_cyan());
     let raw = match read_to_string(&file) {
         Ok(s) => s,
         Err(e) if e.kind() == ErrorKind::NotFound => {
@@ -18,12 +21,12 @@ pub fn import(file: PathBuf) -> Result<()> {
         }
     };
 
+    println!("Parsing mod list...");
     let list: Vec<ModName> = ron::from_str::<Vec<String>>(&raw).map(|v| {
         v.into_iter()
             .filter_map(|modname| ModName::try_from(modname).ok())
             .collect()
     })?;
 
-    println!("{list:?}");
-    Ok(())
+    install(list, yes, force, no_cache)
 }
