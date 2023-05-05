@@ -2,9 +2,9 @@ use anyhow::{anyhow, Result};
 use thermite::model::ModVersion;
 use tracing::warn;
 
-use crate::model::{ModName};
-use crate::{get_answer};
-use crate::traits::{Index, Answer};
+use crate::get_answer;
+use crate::model::ModName;
+use crate::traits::{Answer, Index};
 use crate::utils::{download_and_install, to_file_size_string};
 
 use owo_colors::OwoColorize;
@@ -15,9 +15,12 @@ pub fn install(mods: Vec<ModName>, assume_yes: bool, force: bool, no_cache: bool
     let mut valid: Vec<(ModName, &ModVersion)> = vec![];
     let mut should_fail = false;
     for mn in mods {
-        if mn.name.to_lowercase() == "northstar"  && mn.author.to_lowercase() == "northstar" {
+        if mn.name.to_lowercase() == "northstar" && mn.author.to_lowercase() == "northstar" {
             warn!("Can't install Northstar like a normal mod");
-            println!("Not installing Northstar - use {} instead", "papa ns init".bright_cyan());
+            println!(
+                "Not installing Northstar - use {} instead",
+                "papa ns init".bright_cyan()
+            );
             should_fail = !force;
             continue;
         }

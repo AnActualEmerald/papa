@@ -29,15 +29,22 @@ struct Cli {
     #[clap(subcommand)]
     command: Commands,
     ///Show debug output
-    #[clap(global=true, short, long)]
+    #[clap(global = true, short, long)]
     debug: bool,
     ///Don't check cache before downloading
-    #[clap(global = true, short='C', long="no-cache")]
+    #[clap(global = true, short = 'C', long = "no-cache")]
     no_cache: bool,
 }
 
 #[derive(Subcommand)]
 enum Commands {
+    ///Import a list of mods, installing them to the current install directory
+    Import {
+        ///'papa.ron' file to import
+        #[arg(required = true)]
+        file: PathBuf,
+    },
+
     ///Install a mod or mods from https://northstar.thunderstore.io/
     #[clap(alias = "i")]
     Install {
@@ -119,22 +126,22 @@ enum Commands {
     },
 
     ///Disable mod(s) or sub-mod(s)
-    Disable { 
+    Disable {
         mods: Vec<String>,
 
         ///Disable all mods excluding core N* mods
-        #[clap(short, long)] 
-        all: bool, 
+        #[clap(short, long)]
+        all: bool,
 
         ///Force disable mods including core N* mods
         #[clap(short, long)]
-        force: bool 
+        force: bool,
     },
     ///Enable mod(s) or sub-mod(s)
-    Enable { 
-        mods: Vec<String>, 
+    Enable {
+        mods: Vec<String>,
         #[arg(short, long)]
-        all: bool 
+        all: bool,
     },
 
     //These will only be available on linux for now because symlinks on Windows are weird
@@ -206,7 +213,7 @@ fn main() {
     debug!("Config: {:#?}", *config::CONFIG);
 
     let res = match cli.command {
-        Commands::Update { yes, } => core::update(yes, cli.no_cache),
+        Commands::Update { yes } => core::update(yes, cli.no_cache),
         Commands::List { global, all } => core::list(global, all),
         Commands::Install {
             mod_names,
@@ -214,10 +221,13 @@ fn main() {
             force,
             global,
         } => core::install(mod_names, yes, force, cli.no_cache),
-        Commands::Disable { mods, all, force } => core::disable(mods.into_iter().collect(), all, force),
+        Commands::Disable { mods, all, force } => {
+            core::disable(mods.into_iter().collect(), all, force)
+        }
         Commands::Enable { mods, all } => core::enable(mods.into_iter().collect(), all),
         Commands::Search { term } => core::search(&term),
         Commands::Remove { mod_names } => core::remove(mod_names),
+        Commands::Import { file } => core::import(file),
         // Commands::Clear { full } => clear(&ctx, full),
         #[cfg(feature = "northstar")]
         Commands::Northstar { command } => core::northstar(&command),

@@ -1,7 +1,4 @@
-use std::{
-    fs,
-    path::Path, time::Duration,
-};
+use std::{fs, path::Path, time::Duration};
 
 use crate::{
     config::{CONFIG, DIRS},
@@ -9,7 +6,7 @@ use crate::{
     modfile,
 };
 use anyhow::{Context, Result};
-use indicatif::{ProgressBar, ProgressStyle, ProgressIterator};
+use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use lazy_static::lazy_static;
 use owo_colors::OwoColorize;
 use regex::Regex;
@@ -72,7 +69,7 @@ pub fn ensure_dir(dir: impl AsRef<Path>) -> Result<()> {
 pub fn download_and_install(
     mods: Vec<(ModName, impl AsRef<ModVersion>)>,
     check_cache: bool,
-    cont: bool
+    cont: bool,
 ) -> Result<()> {
     if mods.is_empty() {
         println!("Nothing to do!");
@@ -84,7 +81,7 @@ pub fn download_and_install(
     let cache_dir = DIRS.cache_dir();
     ensure_dir(cache_dir)?;
     let cache = Cache::from_dir(cache_dir)?;
-    
+
     for (mn, v) in mods {
         if check_cache {
             if let Some(path) = cache.get(&mn) {
@@ -110,20 +107,24 @@ pub fn download_and_install(
         pb.finish();
         files.push((mn, file));
     }
-    
-    let mut pb = ProgressBar::new_spinner().with_style(ProgressStyle::with_template("{prefix}{msg}\t{spinner}\t{pos}/{len}")?.tick_chars("(|)|\0")).with_prefix("Installing ");
+
+    let mut pb = ProgressBar::new_spinner()
+        .with_style(
+            ProgressStyle::with_template("{prefix}{msg}\t{spinner}\t{pos}/{len}")?
+                .tick_chars("(|)|\0"),
+        )
+        .with_prefix("Installing ");
     pb.set_tab_width(1);
     pb.enable_steady_tick(Duration::from_millis(100));
     pb.set_length(files.len() as u64);
 
     let mut had_error = false;
-    
-    for (mn, f) in files.iter().progress_with(pb.clone()){
-      
+
+    for (mn, f) in files.iter().progress_with(pb.clone()) {
         pb.set_message(format!("{}", mn.bright_cyan()));
         if !CONFIG.is_server() {
             ensure_dir(CONFIG.install_dir())?;
-            if let Err(e) = install_mod(&mn.author,  f, CONFIG.install_dir()) {
+            if let Err(e) = install_mod(&mn.author, f, CONFIG.install_dir()) {
                 had_error = true;
                 pb.suspend(|| {
                     println!("Failed to install {}: {e}", mn.bright_red());
@@ -147,7 +148,7 @@ pub fn download_and_install(
     pb.finish_with_message("Installed ");
     if had_error {
         println!("Finished with errors")
-    }else {
+    } else {
         println!("Done!");
     }
     Ok(())

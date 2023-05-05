@@ -65,7 +65,10 @@ pub fn update(yes: bool, no_cache: bool) -> Result<()> {
 
 fn ns_prompt() -> Result<()> {
     if !northstar::update_ns()? {
-        println!("Run {} at any time to update", "papa ns update".bright_cyan());
+        println!(
+            "Run {} at any time to update",
+            "papa ns update".bright_cyan()
+        );
     }
 
     Ok(())
