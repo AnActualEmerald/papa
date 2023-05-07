@@ -24,6 +24,10 @@ pub fn update(yes: bool, no_cache: bool) -> Result<()> {
         debug!("Checking if mod '{}' is out of date", l.manifest.name);
 
         if let Some(m) = index.get_item(&l.into()) {
+            if m.author.to_lowercase() == "northstar" {
+                debug!("Skipping Northstar core mod");
+                continue;
+            }
             debug!("Checking mod {:?}", m);
             if m.latest != l.manifest.version_number {
                 outdated.insert(m.into(), m.get_latest().expect("Missing latest version"));
