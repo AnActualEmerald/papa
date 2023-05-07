@@ -14,7 +14,7 @@ use thermite::{
     model::ModVersion,
     prelude::{download_with_progress, install_mod},
 };
-use tracing::{debug, error};
+use tracing::debug;
 
 lazy_static! {
     static ref RE: Regex = Regex::new(r"^(\w+)\.(\w+)(?:@(\d+\.\d+\.\d+))?$").unwrap();
