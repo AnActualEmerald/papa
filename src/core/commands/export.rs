@@ -9,7 +9,7 @@ pub fn export(file: PathBuf) -> Result<()> {
     let mods: Vec<String> = find_mods(CONFIG.install_dir())?
         .into_iter()
         .filter_map(|m| {
-            m.map(|v| ModName::from(v)).ok().and_then(|v| {
+            m.map(ModName::from).ok().and_then(|v| {
                 if v.author.to_lowercase() == "northstar" {
                     None
                 } else {

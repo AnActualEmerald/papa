@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use owo_colors::OwoColorize;
 use std::fs::read_to_string;
 use std::{io::ErrorKind, path::PathBuf};
