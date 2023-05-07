@@ -6,6 +6,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v3.1.0-alpha.1
+
+### Bug Fixes
+
+- Properly continue with `force` flag
+- Filter northstar core mods when performing update check
+
+### Features
+
+- Add `no-cache` flag
+- Add `all` flag to `enable` and `disable` commands
+- Import and export mod lists (#23)
+
+### Miscellaneous Tasks
+
+- Update release script tag message formatting
+- More release script tweaks
+- Add ignore_tags regex to cliff config
+- Remove unused files
+- Update .gitignore
+- Clippy fixes
+
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
 ## v3.1.0-alpha
 
 ### Bug Fixes
