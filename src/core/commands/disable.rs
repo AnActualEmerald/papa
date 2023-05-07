@@ -13,7 +13,9 @@ use crate::{config::CONFIG, get_answer, model::ModName, traits::Answer};
 
 pub fn disable(mods: BTreeSet<String>, all: bool, force: bool) -> Result<()> {
     for m in mods.iter() {
-        if force { break; }
+        if force {
+            break;
+        }
         if CORE_MODS.contains(&m.to_lowercase().as_str()) {
             println!(
                 "Disabling Northstar core mods can break things, are you sure you want to do this?"

@@ -29,24 +29,48 @@ struct Cli {
     #[clap(subcommand)]
     command: Commands,
     ///Show debug output
-    #[clap(global=true, short, long)]
+    #[clap(global = true, short, long)]
     debug: bool,
     ///Don't check cache before downloading
-    #[clap(global = true, short='C', long="no-cache")]
+    #[clap(global = true, short = 'C', long = "no-cache")]
     no_cache: bool,
 }
 
 #[derive(Subcommand)]
 enum Commands {
+    ///Export the list of currently installed mods
+    Export {
+        #[clap(default_value = "papa.ron")]
+        file: PathBuf,
+    },
+
+    ///Import a list of mods, installing them to the current install directory
+    Import {
+        ///'papa.ron' file to import
+        #[arg(default_value = "papa.ron")]
+        file: PathBuf,
+
+        ///Don't ask for confirmation
+        #[clap(short, long)]
+        yes: bool,
+
+        ///Force installation
+        #[clap(short, long)]
+        force: bool,
+    },
+
     ///Install a mod or mods from https://northstar.thunderstore.io/
     #[clap(alias = "i")]
     Install {
         #[clap(value_name = "MOD")]
         #[clap(help = "Mod name(s) to install")]
-        #[clap(required = true)]
-        // #[clap(required_unless_present = "url")]
+        #[clap(required_unless_present = "file")]
         #[clap(value_parser = validate_modname)]
         mod_names: Vec<ModName>,
+
+        ///File to read the list of mods from
+        #[arg(short = 'F', long)]
+        file: Option<PathBuf>,
 
         // ///alternate url to use - won't be tracked or updated
         // #[clap(short, long)]
@@ -119,22 +143,22 @@ enum Commands {
     },
 
     ///Disable mod(s) or sub-mod(s)
-    Disable { 
+    Disable {
         mods: Vec<String>,
 
         ///Disable all mods excluding core N* mods
-        #[clap(short, long)] 
-        all: bool, 
+        #[clap(short, long)]
+        all: bool,
 
         ///Force disable mods including core N* mods
         #[clap(short, long)]
-        force: bool 
+        force: bool,
     },
     ///Enable mod(s) or sub-mod(s)
-    Enable { 
-        mods: Vec<String>, 
+    Enable {
+        mods: Vec<String>,
         #[arg(short, long)]
-        all: bool 
+        all: bool,
     },
 
     //These will only be available on linux for now because symlinks on Windows are weird
@@ -206,18 +230,32 @@ fn main() {
     debug!("Config: {:#?}", *config::CONFIG);
 
     let res = match cli.command {
-        Commands::Update { yes, } => core::update(yes, cli.no_cache),
+        Commands::Update { yes } => core::update(yes, cli.no_cache),
         Commands::List { global, all } => core::list(global, all),
+        Commands::Install {
+            file, yes, force, ..
+        } if file.is_some() => {
+            let Some(f) = file else {
+                return
+            };
+
+            core::import(f, yes, force, cli.no_cache)
+        }
         Commands::Install {
             mod_names,
             yes,
             force,
             global,
+            ..
         } => core::install(mod_names, yes, force, cli.no_cache),
-        Commands::Disable { mods, all, force } => core::disable(mods.into_iter().collect(), all, force),
+        Commands::Disable { mods, all, force } => {
+            core::disable(mods.into_iter().collect(), all, force)
+        }
         Commands::Enable { mods, all } => core::enable(mods.into_iter().collect(), all),
         Commands::Search { term } => core::search(&term),
         Commands::Remove { mod_names } => core::remove(mod_names),
+        Commands::Import { file, yes, force } => core::import(file, yes, force, cli.no_cache),
+        Commands::Export { file } => core::export(file),
         // Commands::Clear { full } => clear(&ctx, full),
         #[cfg(feature = "northstar")]
         Commands::Northstar { command } => core::northstar(&command),

@@ -1,4 +1,4 @@
-use std::path::{Path};
+use std::path::Path;
 use std::time::Duration;
 
 use crate::config::DIRS;
@@ -8,7 +8,7 @@ use crate::{
     model::ModName,
     NstarCommands,
 };
-use crate::{ get_answer, modfile};
+use crate::{get_answer, modfile};
 use anyhow::{anyhow, Result};
 use indicatif::{ProgressBar, ProgressStyle};
 use owo_colors::OwoColorize;
