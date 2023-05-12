@@ -15,7 +15,7 @@ msg="# managed by release.sh"
 sed -E -i "s/^version = .* $msg$/version = \"${1#v}\" $msg/" Cargo.toml
 
 # generate changelog
-git cliff -u --tag "$1" --prepend CHANGELOG.md 
+git cliff > CHANGELOG.md
 
 git add -A && git commit -m "chore(release): prep for $1"
 git show
