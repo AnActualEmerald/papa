@@ -1,4 +1,8 @@
-use std::{fs, path::Path, time::Duration};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    time::Duration,
+};
 
 use crate::{
     config::{CONFIG, DIRS},
@@ -70,10 +74,10 @@ pub fn download_and_install(
     mods: Vec<(ModName, impl AsRef<ModVersion>)>,
     check_cache: bool,
     cont: bool,
-) -> Result<()> {
+) -> Result<Vec<PathBuf>> {
     if mods.is_empty() {
         println!("Nothing to do!");
-        return Ok(());
+        return Ok(vec![]);
     }
 
     println!("Downloading packages...");
@@ -120,23 +124,29 @@ pub fn download_and_install(
 
     let mut had_error = false;
 
+    let mut installed = vec![];
+
     for (mn, f) in files.iter().progress_with(pb.clone()) {
         pb.set_message(format!("{}", mn.bright_cyan()));
         if !CONFIG.is_server() {
             ensure_dir(CONFIG.install_dir())?;
-            if let Err(e) = install_mod(&mn.author, f, CONFIG.install_dir()) {
-                had_error = true;
-                pb.suspend(|| {
-                    println!("Failed to install {}: {e}", mn.bright_red());
-                    debug!("{e:?}");
-                });
-                if !cont {
-                    pb.finish_and_clear();
-                    println!("Aborted due to error");
-                    return Err(e.into());
+            match install_mod(&mn.author, f, CONFIG.install_dir()) {
+                Err(e) => {
+                    had_error = true;
+                    pb.suspend(|| {
+                        println!("Failed to install {}: {e}", mn.bright_red());
+                        debug!("{e:?}");
+                    });
+                    if !cont {
+                        pb.finish_and_clear();
+                        println!("Aborted due to error");
+                        return Err(e.into());
+                    }
                 }
-            } else {
-                pb.suspend(|| println!("Installed {}", mn.bright_cyan()));
+                Ok(mut p) => {
+                    pb.suspend(|| println!("Installed {}", mn.bright_cyan()));
+                    installed.append(&mut p);
+                }
             }
         } else {
             todo!();
@@ -151,5 +161,5 @@ pub fn download_and_install(
     } else {
         println!("Done!");
     }
-    Ok(())
+    Ok(installed)
 }
