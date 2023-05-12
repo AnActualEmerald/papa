@@ -35,6 +35,9 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    ///Show the current config and environment info
+    Env {},
+
     ///Export the list of currently installed mods
     Export {
         #[clap(default_value = "papa.ron")]
@@ -202,6 +205,7 @@ fn main() {
         Commands::Remove { mod_names } => core::remove(mod_names),
         Commands::Import { file, yes, force } => core::import(file, yes, force, cli.no_cache),
         Commands::Export { file } => core::export(file),
+        Commands::Env {} => core::env(),
         // Commands::Clear { full } => clear(&ctx, full),
         #[cfg(feature = "northstar")]
         Commands::Northstar { command } => core::northstar(&command),
