@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fs};
 
 use crate::{
     config::CONFIG,
@@ -10,17 +10,22 @@ use crate::{
 };
 use anyhow::Result;
 use owo_colors::OwoColorize;
-use thermite::{model::ModVersion, prelude::*};
-use tracing::debug;
+use thermite::{
+    model::{InstalledMod, ModVersion},
+    prelude::*,
+};
+use tracing::{debug, warn};
 
 pub fn update(yes: bool, no_cache: bool) -> Result<()> {
     println!("Checking for outdated packages...");
     let index = get_package_index()?;
-    let local = find_mods(CONFIG.install_dir())?;
+    let local: Vec<InstalledMod> = find_mods(CONFIG.install_dir())?
+        .into_iter()
+        .filter_map(|v| v.ok())
+        .collect();
     let mut outdated: HashMap<ModName, &ModVersion> = HashMap::new();
 
-    for l in local {
-        let Ok(l) = &l else { continue };
+    for l in &local {
         debug!("Checking if mod '{}' is out of date", l.manifest.name);
 
         if let Some(m) = index.get_item(&l.into()) {
@@ -57,10 +62,30 @@ pub fn update(yes: bool, no_cache: bool) -> Result<()> {
     let answer = get_answer!(yes)?;
 
     if !answer.is_no() {
-        download_and_install(outdated.into_iter().collect(), !no_cache, false)?;
+        let installed =
+            download_and_install(outdated.clone().into_iter().collect(), !no_cache, false)?;
+
+        //clean any old folders
+        for l in &local {
+            debug!("Checking if {} should be cleaned", ModName::from(l));
+            if !installed.contains(&l.path)
+                && outdated
+                    .keys()
+                    .any(|k| k.author == l.author && k.name == l.manifest.name)
+            {
+                if let Err(e) = fs::remove_dir_all(&l.path) {
+                    warn!("Unable to remove old mod folder {}", l.path.display());
+                    debug!("{e}")
+                } else {
+                    debug!("Cleaned old folder '{}'", l.path.display());
+                }
+            }
+        }
+
         if ns_update {
             ns_prompt()?;
         }
+
         Ok(())
     } else {
         Ok(())
