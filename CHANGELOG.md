@@ -31,6 +31,10 @@ All notable changes to this project will be documented in this file.
 - Publish crate from CI
 - Bump dependencies
 
+### Styling
+
+- Remove timestamp from log messages
+
 ## v3.0.1
 
 ### Fix
