@@ -15,5 +15,10 @@ pub fn env() -> Result<()> {
         "Cache directory: {}",
         DIRS.cache_dir().display().bright_cyan()
     );
+
+    if let Some(path) = &CONFIG.config_path {
+        println!("\nConfig file: {}", path.display().bright_cyan());
+    }
+
     Ok(())
 }

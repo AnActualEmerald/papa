@@ -11,11 +11,16 @@ use serde::{Deserialize, Serialize};
 lazy_static! {
     pub static ref DIRS: ProjectDirs =
         ProjectDirs::from("me", "greenboi", "Papa").expect("Unable to find base dirs");
-    pub static ref CONFIG: Config = Figment::from(Serialized::defaults(Config::default()))
-        .merge(Toml::file(DIRS.config_dir().join("config.toml")))
-        .merge(Env::prefixed("PAPA_"))
-        .extract()
-        .expect("Error reading configuration");
+    pub static ref CONFIG: Config = {
+        let path = DIRS.config_dir().join("config.toml");
+        let mut cfg: Config = Figment::from(Serialized::defaults(Config::default()))
+            .merge(Toml::file(&path))
+            .merge(Env::prefixed("PAPA_"))
+            .extract()
+            .expect("Error reading configuration");
+        cfg.config_path = Some(path);
+        cfg
+    };
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -23,6 +28,8 @@ pub struct Config {
     game_dir: Option<PathBuf>,
     install_dir: PathBuf,
     is_server: bool,
+    #[serde(skip)]
+    pub config_path: Option<PathBuf>,
 }
 
 impl Config {
@@ -57,6 +64,7 @@ impl Default for Config {
             game_dir: None,
             install_dir: "./mods".into(),
             is_server: false,
+            config_path: None,
         }
     }
 }
