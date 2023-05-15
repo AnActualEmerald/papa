@@ -172,6 +172,7 @@ fn main() {
     }
 
     let subscriber = FmtSubscriber::builder()
+        .without_time()
         .with_env_filter(EnvFilter::from_default_env())
         .finish();
 
