@@ -16,7 +16,7 @@ All notable changes to this project will be documented in this file.
 
 - Add `no-cache` flag
 - Add `all` flag to `enable` and `disable` commands
-- Import and export mod lists (#23)
+- Import and export mod lists ([#23](https://github.com/anactualemerald/papa/pull/23))
 - Add env command
 
 ### Miscellaneous Tasks
@@ -30,6 +30,8 @@ All notable changes to this project will be documented in this file.
 - Fix changelog header
 - Publish crate from CI
 - Bump dependencies
+- Replace PR and issue numbers with links in changelog
+- Bump `libthermite` version
 
 ### Styling
 
@@ -39,7 +41,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fix
 
-- Create non existing file directories for download cache and config (#15)
+- Create non existing file directories for download cache and config ([#15](https://github.com/anactualemerald/papa/pull/15))
 
 ### Miscellaneous Tasks
 
