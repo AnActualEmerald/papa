@@ -10,11 +10,9 @@ repository = "https://github.com/AnActualEmerald/papa"
 exclude = ["commands_old"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[workspace]
-members = ["crates/nsargs", "thermite"]
 
 [dependencies]
-libthermite = {path = "./thermite", version = "0.6.4-beta", features = ["steam"]}
+libthermite = {path = "./thermite", version = "0.6.5", features = ["steam"]}
 anyhow = "1.0.71"
 clap = { version = "4.2.7", features = ["derive", "color"] }
 directories = "5.0.1"
