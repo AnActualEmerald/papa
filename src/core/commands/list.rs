@@ -20,16 +20,9 @@ pub fn list(global: bool, all: bool) -> Result<()> {
     let mut grouped_mods: BTreeMap<ModName, BTreeSet<String>> = BTreeMap::new();
     let mut disabled: BTreeMap<ModName, BTreeSet<String>> = BTreeMap::new();
     for m in mods {
-        let m = if let Err(e) = m {
-            println!("Error reading mod: {}", e);
-            continue;
-        } else {
-            m.unwrap()
-        };
-
         let local_name = m.mod_json.name.clone();
-        let mn = m.into();
 
+        let mn = m.into();
         let process_mod = |mod_group: &mut BTreeMap<ModName, BTreeSet<String>>| {
             if let Some(group) = mod_group.get_mut(&mn) {
                 debug!("Adding submod {} to group {}", local_name, mn);
@@ -47,6 +40,8 @@ pub fn list(global: bool, all: bool) -> Result<()> {
             } else {
                 process_mod(&mut disabled);
             }
+        } else {
+            process_mod(&mut grouped_mods);
         }
     }
 

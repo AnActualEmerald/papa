@@ -43,7 +43,7 @@ fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
         println!("Found an existing Northstar installation, updating config!");
         let mut new_config = CONFIG.clone();
         new_config.set_game_dir(titanfall.clone());
-        new_config.set_install_dir(titanfall.join("R2Northstar").join("mods"));
+        new_config.set_install_dir(titanfall.join("R2Northstar").join("packages"));
         write_config(&new_config)?;
         return Ok(());
     }
@@ -85,7 +85,7 @@ fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
 
     let mut new_config = CONFIG.clone();
     new_config.set_game_dir(titanfall.clone());
-    new_config.set_install_dir(titanfall.join("R2Northstar").join("mods"));
+    new_config.set_install_dir(titanfall.join("R2Northstar").join("packages"));
     write_config(&new_config)?;
 
     Ok(())

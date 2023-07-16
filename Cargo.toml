@@ -12,7 +12,7 @@ exclude = ["commands_old"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-libthermite = {path = "./thermite", version = "0.6.5", features = ["steam"]}
+libthermite = {path = "./thermite", version = "0.7.0-alpha", features = ["steam"]}
 anyhow = "1.0.71"
 clap = { version = "4.2.7", features = ["derive", "color"] }
 directories = "5.0.1"

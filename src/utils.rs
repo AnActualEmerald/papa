@@ -90,7 +90,7 @@ pub fn download_and_install(
         if check_cache {
             if let Some(path) = cache.get(&mn) {
                 println!("Using cached version of {}", mn.bright_cyan());
-                files.push((mn, modfile!(o, path)?));
+                files.push((mn, v.as_ref().full_name.clone(), modfile!(o, path)?));
                 continue;
             }
         }
@@ -109,7 +109,7 @@ pub fn download_and_install(
         })
         .context(format!("Error downloading {}", mn.red()))?;
         pb.finish();
-        files.push((mn, file));
+        files.push((mn, v.full_name.clone(), file));
     }
 
     let mut pb = ProgressBar::new_spinner()
@@ -126,11 +126,12 @@ pub fn download_and_install(
 
     let mut installed = vec![];
 
-    for (mn, f) in files.iter().progress_with(pb.clone()) {
+    for (mn, full_name, f) in files.iter().progress_with(pb.clone()) {
         pb.set_message(format!("{}", mn.bright_cyan()));
         if !CONFIG.is_server() {
             ensure_dir(CONFIG.install_dir())?;
-            match install_mod(&mn.author, f, CONFIG.install_dir()) {
+            let mod_path = CONFIG.install_dir().join(full_name);
+            match install_mod(f, &mod_path) {
                 Err(e) => {
                     had_error = true;
                     pb.suspend(|| {
@@ -143,9 +144,9 @@ pub fn download_and_install(
                         return Err(e.into());
                     }
                 }
-                Ok(mut p) => {
+                _ => {
                     pb.suspend(|| println!("Installed {}", mn.bright_cyan()));
-                    installed.append(&mut p);
+                    installed.push(mod_path);
                 }
             }
         } else {

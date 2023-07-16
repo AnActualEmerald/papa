@@ -1,7 +1,6 @@
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
 use thermite::model::{InstalledMod, Mod};
-use thermite::prelude::ThermiteError;
 use tracing::debug;
 
 use crate::model::ModName;
@@ -60,20 +59,19 @@ impl Index<Mod> for Vec<Mod> {
     }
 }
 
-impl Index<InstalledMod> for Vec<Result<InstalledMod, ThermiteError>> {
+impl Index<InstalledMod> for Vec<InstalledMod> {
     fn get_item(&self, name: &ModName) -> Option<&InstalledMod> {
         self.iter()
-            .filter_map(|v| v.as_ref().ok())
             .find(|v| v.mod_json.name.to_lowercase() == name.name.to_lowercase())
     }
 
     fn search(&self, term: &str) -> Vec<&InstalledMod> {
         if term.is_empty() {
-            return self.iter().filter_map(|v| v.as_ref().ok()).collect();
+            return self.iter().collect();
         }
         let matcher = SkimMatcherV2::default();
         let mut res = vec![];
-        for v in self.iter().filter_map(|v| v.as_ref().ok()) {
+        for v in self {
             let author = matcher.fuzzy_indices(&v.author, term);
             let name = matcher.fuzzy_indices(&v.manifest.name, term);
 

@@ -1,7 +1,11 @@
 set positional-arguments
+set dotenv-load
 
 build:
     cargo build
 
-@test *args='':
-    cargo run --features="cluster" -- $@
+debug *args='': 
+    RUST_LOG=debug cargo run -- $@
+
+echo:
+    echo "$PAPA_install_dir"

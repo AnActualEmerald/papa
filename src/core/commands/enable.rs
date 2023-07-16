@@ -15,7 +15,6 @@ pub fn enable(mods: BTreeSet<String>, all: bool) -> Result<()> {
     debug!("Getting installed mods from {}", dir.display());
     let installed = find_mods(dir)?
         .into_iter()
-        .filter_map(|v| v.ok())
         .filter_map(|v| {
             if all {
                 return Some((ModName::from(&v).to_string(), v));

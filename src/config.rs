@@ -62,7 +62,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             game_dir: None,
-            install_dir: "./mods".into(),
+            install_dir: "./packages".into(),
             is_server: false,
             config_path: None,
         }

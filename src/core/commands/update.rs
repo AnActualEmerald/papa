@@ -19,10 +19,7 @@ use tracing::{debug, warn};
 pub fn update(yes: bool, no_cache: bool) -> Result<()> {
     println!("Checking for outdated packages...");
     let index = get_package_index()?;
-    let local: Vec<InstalledMod> = find_mods(CONFIG.install_dir())?
-        .into_iter()
-        .filter_map(|v| v.ok())
-        .collect();
+    let local: Vec<InstalledMod> = find_mods(CONFIG.install_dir())?;
     let mut outdated: HashMap<ModName, &ModVersion> = HashMap::new();
 
     for l in &local {
