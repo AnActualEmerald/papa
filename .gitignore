@@ -1,8 +1,10 @@
 /target
 /mods
 /northstar
+/packages
 Cargo.lock
 .pijul
 .ignore
 ns_*
 *.ron
+.env

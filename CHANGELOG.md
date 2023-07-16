@@ -3,7 +3,13 @@
 All notable changes to this project will be documented in this file.
 
 
-## unreleased
+## v4.0.0-alpha
+
+### Features
+
+- Support new N* package standard
+
+## v3.1.0
 
 ### Bug Fixes
 
