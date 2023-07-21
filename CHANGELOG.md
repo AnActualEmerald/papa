@@ -3,11 +3,15 @@
 All notable changes to this project will be documented in this file.
 
 
-## v4.0.0-alpha
+## v4.0.0
 
 ### Features
 
 - Support new N* package standard
+
+### Miscellaneous Tasks
+
+- Update dependencies
 
 ## v3.1.0
 
