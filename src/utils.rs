@@ -130,8 +130,8 @@ pub fn download_and_install(
         pb.set_message(format!("{}", mn.bright_cyan()));
         if !CONFIG.is_server() {
             ensure_dir(CONFIG.install_dir())?;
-            let mod_path = CONFIG.install_dir().join(full_name);
-            match install_mod(f, &mod_path) {
+            let mod_path = CONFIG.install_dir();
+            match install_mod(full_name, f, &mod_path) {
                 Err(e) => {
                     had_error = true;
                     pb.suspend(|| {
@@ -144,7 +144,7 @@ pub fn download_and_install(
                         return Err(e.into());
                     }
                 }
-                _ => {
+                Ok(mod_path) => {
                     pb.suspend(|| println!("Installed {}", mn.bright_cyan()));
                     installed.push(mod_path);
                 }

@@ -12,22 +12,22 @@ exclude = ["commands_old"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-libthermite = {path = "./thermite", version = "0.7.0-alpha", features = ["steam"]}
-anyhow = "1.0.71"
-clap = { version = "4.2.7", features = ["derive", "color"] }
+libthermite = {path = "./thermite", version = "0.7.0-beta", features = ["steam"]}
+anyhow = "1.0.72"
+clap = { version = "4.3.17", features = ["derive", "color"] }
 directories = "5.0.1"
 regex = { version = "1.8.1", default_features = false, features = ["std"] }
-serde = { version = "1.0.163", features = ["derive"] }
-serde_json = "1.0.96"
-toml = "0.7.3"
-zip = "0.6.5"
+serde = { version = "1.0.174", features = ["derive"] }
+serde_json = "1.0.103"
+toml = "0.7.6"
+zip = "0.6.6"
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 owo-colors = "3.5.0"
-figment = { version = "0.10.8", features = ["toml", "env"] }
+figment = { version = "0.10.10", features = ["toml", "env"] }
 lazy_static = "1.4.0"
 fuzzy-matcher = "0.3.7"
-indicatif = "0.17.3"
+indicatif = "0.17.5"
 ron = "0.8.0"
 # rustyline = {version = "10.1.0", default_features = false}
 
