@@ -5,9 +5,11 @@
  Papa
 <br>
 <a href="https://github.com/AnActualEmerald/papa/actions/workflows/rust.yml"> 
- <img alt="Rust workflow badge" src="https://github.com/AnActualEmerald/papa/actions/workflows/rust.yml/badge.svg">
+ <img alt="Rust workflow badge" src="https://github.com/AnActualEmerald/papa/actions/workflows/rust.yml/badge.svg" />
 </a>
-<img alt="Crates.io (latest)" src="https://img.shields.io/crates/dv/papa">
+<a href="https://crates.io/crates/papa">
+ <img alt="Crates.io (latest)" src="https://img.shields.io/crates/dv/papa" />
+</a>
 </h1>
 
 
@@ -28,6 +30,13 @@ papa update #update any out of date mods
 papa remove fifty.server_utilities #uninstall a mod
 ```
 
+## Upgrading to v4.0.0
+v4 includes support for Northstar's new native thunderstore package loading, meaning that
+mods that live in the current `mods` directory won't be managed by `papa` anymore. I suggest
+running `papa export` before updating to v4, and then running `papa import` to reinstall your
+mods in the new `package` directory. The old mods will need to be removed manually, 
+just be sure to not delete the `Northstar.` core mods (or at least run `papa ns init -f` to reinstall them afterwards)
+
 ## Installation
 I suggest that you initialize Northstar to set everything up automatically
 ```bash
@@ -39,7 +48,7 @@ Or create a file at `.config/papa/config.toml` and set `install_dir` to whatever
 Download the `.deb` file from the latest release and install it using whatever you usually use to install packages:
 ```bash
 
-sudo apt install ./papa_3.0.0.deb
+sudo apt install ./papa_4.0.0.deb
 
 ```
 
