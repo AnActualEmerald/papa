@@ -21,7 +21,7 @@ use thermite::{
 use tracing::debug;
 
 lazy_static! {
-    static ref RE: Regex = Regex::new(r"^(\w+)\.(\w+)(?:@(\d+\.\d+\.\d+))?$").unwrap();
+    static ref RE: Regex = Regex::new(r"^(\S\w+)[\.-](\w+)(?:[@-](\d+\.\d+\.\d+))?$").unwrap();
 }
 
 pub fn validate_modname(input: &str) -> Result<ModName, String> {
@@ -163,4 +163,20 @@ pub fn download_and_install(
         println!("Done!");
     }
     Ok(installed)
+}
+
+
+#[cfg(test)]
+mod test {
+    use crate::utils::validate_modname;
+
+
+    #[test]
+    fn suceed_validate_modname() {
+        let test_name = "foo.bar@0.1.0";
+        assert!(validate_modname(test_name).is_ok());
+    }
+
+    
+
 }

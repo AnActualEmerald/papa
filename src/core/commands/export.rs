@@ -13,7 +13,7 @@ pub fn export(file: PathBuf) -> Result<()> {
             if v.author.to_lowercase() == "northstar" {
                 None
             } else {
-                Some(v.to_string())
+                Some(v.as_modstr().to_string())
             }
         })
         .collect();

@@ -2,6 +2,7 @@ use std::{
     collections::BTreeMap,
     fmt::Display,
     path::{Path, PathBuf},
+    ops::Deref,
 };
 
 use anyhow::{anyhow, Result};
@@ -27,6 +28,18 @@ impl ModName {
             author: author.into(),
             name: name.into(),
             version,
+        }
+    }
+
+    pub fn into_modstring(self) -> ModString {
+        ModString {
+            inner: self
+        }
+    }
+
+    pub fn as_modstr<'a>(&'a self) -> ModStr<'a>{
+        ModStr {
+            inner: &self
         }
     }
 }
@@ -104,21 +117,69 @@ impl TryFrom<&str> for ModName {
     }
 }
 
-// pub struct BorrowedModName<'a> {
-//     author: &'a str,
-//     name: &'a str,
-//     version: Option<&'a str>,
-// }
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct ModString {
+    inner: ModName
+}
 
-// impl<'a> From<&'a InstalledMod> for BorrowedModName<'a> {
-//     fn from(value: &'a InstalledMod) -> Self {
-//         Self {
-//             author: &value.author,
-//             name: &value.manifest.name,
-//             version: Some(&value.manifest.version_number),
-//         }
-//     }
-// }
+impl Deref for ModString {
+    type Target = ModName;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl<T: Into<ModName>> From<T> for ModString {
+    fn from(value: T) -> Self {
+        Self {
+            inner: value.into()
+        }
+    }
+}
+
+impl Display for ModString {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}-{}", self.author, self.inner.name)?;
+        if let Some(version) = &self.version {
+            write!(f, "-{}", version)?;
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct ModStr<'a> {
+    inner: &'a ModName
+}
+
+impl<'a> Deref for ModStr<'a> {
+    type Target = ModName;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl<'a> From<&'a ModName> for ModStr<'a> {
+    fn from(value: &'a ModName) -> Self {
+        Self {
+            inner: value
+        }
+    }
+}
+
+impl<'a> Display for ModStr<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}-{}", self.author, self.inner.name)?;
+        if let Some(version) = &self.version {
+            write!(f, "-{}", version)?;
+        }
+
+        Ok(())
+    }
+}
 
 pub struct Cache {
     packages: BTreeMap<ModName, PathBuf>,

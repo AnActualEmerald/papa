@@ -1,6 +1,9 @@
 set positional-arguments
 set dotenv-load
 
+run *args='':
+    cargo run -- $@
+
 build:
     cargo build
 
