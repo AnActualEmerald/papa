@@ -131,7 +131,7 @@ pub fn download_and_install(
         if !CONFIG.is_server() {
             ensure_dir(CONFIG.install_dir())?;
             let mod_path = CONFIG.install_dir();
-            match install_mod(full_name, f, &mod_path) {
+            match install_mod(full_name, f, mod_path) {
                 Err(e) => {
                     had_error = true;
                     pb.suspend(|| {

@@ -18,7 +18,7 @@ use utils::validate_modname;
 
 #[derive(Parser)]
 #[clap(name = "Papa")]
-#[clap(author = "AnAcutalEmerald <emerald_actual@proton.me>")]
+#[clap(author = "AnAcutalEmerald <emerald@emeraldgreen.dev>")]
 #[clap(about = "Command line mod manager for Northstar")]
 #[clap(after_help = "Welcome back. Cockpit cooling reactivated.")]
 #[clap(version)]
@@ -40,13 +40,14 @@ enum Commands {
 
     ///Export the list of currently installed mods
     Export {
+        ///File to export to 
         #[clap(default_value = "papa.ron")]
         file: PathBuf,
     },
 
     ///Import a list of mods, installing them to the current install directory
     Import {
-        ///'papa.ron' file to import
+        ///File to import
         #[arg(default_value = "papa.ron")]
         file: PathBuf,
 
@@ -205,7 +206,7 @@ fn main() {
         Commands::Search { term } => core::search(&term),
         Commands::Remove { mod_names } => core::remove(mod_names),
         Commands::Import { file, yes, force } => core::import(file, yes, force, cli.no_cache),
-        Commands::Export { file } => core::export(file),
+        Commands::Export { file} => core::export(file),
         Commands::Env {} => core::env(),
         // Commands::Clear { full } => clear(&ctx, full),
         #[cfg(feature = "northstar")]

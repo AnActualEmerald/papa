@@ -37,9 +37,9 @@ impl ModName {
         }
     }
 
-    pub fn as_modstr<'a>(&'a self) -> ModStr<'a>{
+    pub fn as_modstr(&self) -> ModStr<'_>{
         ModStr {
-            inner: &self
+            inner: self
         }
     }
 }
@@ -158,7 +158,7 @@ impl<'a> Deref for ModStr<'a> {
     type Target = ModName;
 
     fn deref(&self) -> &Self::Target {
-        &self.inner
+        self.inner
     }
 }
 
