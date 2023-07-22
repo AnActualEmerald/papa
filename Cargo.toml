@@ -34,6 +34,10 @@ ron = "0.8.0"
 [package.metadata.wix]
 name = "papa"
 
+[[package.metadata.generate-rpm.assets]]
+source = "target/release/papa"
+dest = "/usr/bin/papa"
+
 [features]
 default = ["northstar"]
 northstar = []
