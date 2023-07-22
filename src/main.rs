@@ -40,7 +40,7 @@ enum Commands {
 
     ///Export the list of currently installed mods
     Export {
-        ///File to export to 
+        ///File to export to
         #[clap(default_value = "papa.ron")]
         file: PathBuf,
     },
@@ -146,6 +146,10 @@ enum Commands {
         #[clap(subcommand)]
         command: NstarCommands,
     },
+
+    #[cfg(feature = "launcher")]
+    #[clap(alias("start"))]
+    Run {},
 }
 
 #[derive(Subcommand)]
@@ -206,11 +210,13 @@ fn main() {
         Commands::Search { term } => core::search(&term),
         Commands::Remove { mod_names } => core::remove(mod_names),
         Commands::Import { file, yes, force } => core::import(file, yes, force, cli.no_cache),
-        Commands::Export { file} => core::export(file),
+        Commands::Export { file } => core::export(file),
         Commands::Env {} => core::env(),
         // Commands::Clear { full } => clear(&ctx, full),
         #[cfg(feature = "northstar")]
         Commands::Northstar { command } => core::northstar(&command),
+        #[cfg(feature = "launcher")]
+        Commands::Run {} => core::run(),
     };
 
     if let Err(e) = res {

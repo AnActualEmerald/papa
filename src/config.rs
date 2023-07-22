@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -25,11 +26,13 @@ lazy_static! {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
-    game_dir: Option<PathBuf>,
-    install_dir: PathBuf,
-    is_server: bool,
     #[serde(skip)]
     pub config_path: Option<PathBuf>,
+    game_dir: Option<PathBuf>,
+    install_dir: PathBuf,
+    #[serde(default)]
+    install_type: InstallType,
+    is_server: bool,
 }
 
 impl Config {
@@ -56,6 +59,14 @@ impl Config {
     pub fn game_dir(&self) -> Option<&PathBuf> {
         self.game_dir.as_ref()
     }
+
+    pub fn install_type(&self) -> &InstallType {
+        &self.install_type
+    }
+
+    pub fn set_install_type(&mut self, install_type: InstallType) {
+        self.install_type = install_type;
+    }
 }
 
 impl Default for Config {
@@ -65,7 +76,24 @@ impl Default for Config {
             install_dir: "./packages".into(),
             is_server: false,
             config_path: None,
+            install_type: InstallType::Other,
         }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum InstallType {
+    Steam,
+    Origin,
+    EA,
+    #[default]
+    Other,
+}
+
+impl Display for InstallType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
     }
 }
 

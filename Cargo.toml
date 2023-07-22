@@ -29,6 +29,7 @@ lazy_static = "1.4.0"
 fuzzy-matcher = "0.3.7"
 indicatif = "0.17.5"
 ron = "0.8.0"
+open = "5.0.0"
 # rustyline = {version = "10.1.0", default_features = false}
 
 [package.metadata.wix]
@@ -39,7 +40,7 @@ source = "target/release/papa"
 dest = "/usr/bin/papa"
 
 [features]
-default = ["northstar"]
+default = ["northstar", "launcher"]
 northstar = []
 launcher = ["northstar"]
 cluster = []

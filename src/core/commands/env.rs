@@ -8,6 +8,7 @@ pub fn env() -> Result<()> {
         "Mod installation directory: {}",
         CONFIG.install_dir().display().bright_cyan()
     );
+    println!("Install type: {}", CONFIG.install_type().bright_cyan());
     if let Some(dir) = CONFIG.game_dir() {
         println!("Game install directory: {}", dir.display().bright_cyan());
     }
