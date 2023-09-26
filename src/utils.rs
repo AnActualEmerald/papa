@@ -90,7 +90,7 @@ pub fn download_and_install(
         if check_cache {
             if let Some(path) = cache.get(&mn) {
                 println!("Using cached version of {}", mn.bright_cyan());
-                files.push((mn, v.as_ref().full_name.clone(), modfile!(o, path)?));
+                files.push((mn, v.as_ref().full_name.clone(), modfile!(z, path)?));
                 continue;
             }
         }

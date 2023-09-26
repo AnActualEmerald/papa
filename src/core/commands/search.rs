@@ -1,6 +1,7 @@
 use crate::traits::Index;
 use anyhow::Result;
 use owo_colors::OwoColorize;
+use textwrap::Options;
 use thermite::prelude::*;
 use tracing::debug;
 
@@ -18,9 +19,15 @@ pub fn search(term: &[String]) -> Result<()> {
     println!("Found packages: ");
     for m in res {
         let latest = m.get_latest().unwrap();
-        let desc = latest.desc.clone();
+        // ensures that descriptions with newline characters don't break the formatting
+        let desc = {
+            let opt = Options::with_termwidth();
+            let tmp = textwrap::fill(&latest.desc, opt);
+            textwrap::indent(&tmp, "    ")
+        };
+        
         println!(
-            " {}.{}@{} - {}\n    {}",
+            " {}.{}@{} - {}\n{}",
             m.author.bright_blue(),
             m.name.bright_blue(),
             m.latest.bright_blue(),

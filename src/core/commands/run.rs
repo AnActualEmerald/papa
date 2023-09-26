@@ -2,7 +2,6 @@ use anyhow::Result;
 
 use crate::config::InstallType::*;
 use crate::config::CONFIG;
-use crate::flush;
 
 pub fn run() -> Result<()> {
     match CONFIG.install_type() {

@@ -49,7 +49,7 @@ macro_rules! modfile {
         use std::fs::OpenOptions;
         OpenOptions::new().create(true).read(true).open($path)
     }};
-    (o, $path:expr) => {{
+    (z, $path:expr) => {{
         use std::fs::OpenOptions;
         OpenOptions::new().read(true).write(true).open($path)
     }};

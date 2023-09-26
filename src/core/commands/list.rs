@@ -3,12 +3,11 @@ use std::collections::{BTreeMap, BTreeSet};
 use anyhow::{Context, Result};
 use owo_colors::OwoColorize;
 use thermite::prelude::*;
-use tracing::{debug, instrument, trace};
+use tracing::{debug, trace};
 
 use crate::{config::CONFIG, model::ModName};
 
-#[instrument]
-pub fn list(global: bool, all: bool) -> Result<()> {
+pub fn list(global: bool, _all: bool) -> Result<()> {
     if global {
         todo!();
     }
