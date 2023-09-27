@@ -1,7 +1,9 @@
 use std::fmt::Display;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
+use anyhow::anyhow;
 use anyhow::Result;
 use directories::ProjectDirs;
 use figment::providers::{Env, Format, Serialized, Toml};
@@ -9,7 +11,6 @@ use figment::Figment;
 use lazy_static::lazy_static;
 use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
-use anyhow::anyhow;
 
 lazy_static! {
     pub static ref DIRS: ProjectDirs =
@@ -34,6 +35,8 @@ pub struct Config {
     install_dir: Option<PathBuf>,
     #[serde(default = "default_profile")]
     current_profile: String,
+    #[serde(default = "default_ignore_list")]
+    ignore: Vec<String>,
     #[serde(default)]
     install_type: InstallType,
     is_server: bool,
@@ -47,7 +50,11 @@ impl Config {
         } else if let Some(dir) = &self.game_dir {
             dir.join(&self.current_profile).join("packages")
         } else {
-            println!("Please run '{}' or set '{}' in the config", "papa ns init".bright_cyan(), "install_dir".bright_cyan());
+            println!(
+                "Please run '{}' or set '{}' in the config",
+                "papa ns init".bright_cyan(),
+                "install_dir".bright_cyan()
+            );
             return Err(anyhow!("Unintialized config"));
         })
     }
@@ -97,13 +104,18 @@ impl Default for Config {
             is_server: false,
             config_path: None,
             current_profile: default_profile(),
+            ignore: vec![],
             install_type: InstallType::Other,
         }
     }
 }
 
-fn default_profile() ->  String {
+pub fn default_profile() -> String {
     "R2Northstar".into()
+}
+
+pub fn default_ignore_list() -> Vec<String> {
+    [""].into_iter().map(|v| v.to_string()).collect()
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, Default)]

@@ -30,6 +30,7 @@ indicatif = { default-features = false, version = "0.17.5" }
 ron = "0.8.0"
 open = "5.0.0"
 textwrap = { version = "0.16.0", default-features = false, features = ["terminal_size"] }
+copy_dir = "0.1.3"
 # rustyline = {version = "10.1.0", default_features = false}
 
 [package.metadata.wix]
