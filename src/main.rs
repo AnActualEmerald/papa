@@ -1,3 +1,4 @@
+use core::profile::ProfileCommands;
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
@@ -15,6 +16,8 @@ mod macros;
 
 use model::ModName;
 use utils::validate_modname;
+
+use crate::core::profile;
 
 #[derive(Parser)]
 #[clap(name = "Papa")]
@@ -147,9 +150,16 @@ enum Commands {
         command: NstarCommands,
     },
 
+    ///Start Northstar through steam or origin
     #[cfg(feature = "launcher")]
     #[clap(alias("start"))]
     Run {},
+
+    #[clap(alias = "p", alias = "profiles")]
+    Profile {
+        #[clap(subcommand)]
+        command: ProfileCommands
+    }
 }
 
 #[derive(Subcommand)]
@@ -217,6 +227,7 @@ fn main() {
         Commands::Northstar { command } => core::northstar(&command),
         #[cfg(feature = "launcher")]
         Commands::Run {} => core::run(),
+        Commands::Profile { command } => profile::handle(&command)
     };
 
     if let Err(e) = res {

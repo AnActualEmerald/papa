@@ -7,7 +7,7 @@ use crate::{config::CONFIG, model::ModName};
 use thermite::prelude::*;
 
 pub fn remove(mods: Vec<ModName>) -> Result<()> {
-    let locals = find_mods(CONFIG.install_dir())?;
+    let locals = find_mods(CONFIG.install_dir()?)?;
 
     for m in mods {
         debug!("Searching for '{m}'");

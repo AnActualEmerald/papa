@@ -129,8 +129,8 @@ pub fn download_and_install(
     for (mn, full_name, f) in files.iter().progress_with(pb.clone()) {
         pb.set_message(format!("{}", mn.bright_cyan()));
         if !CONFIG.is_server() {
-            ensure_dir(CONFIG.install_dir())?;
-            let mod_path = CONFIG.install_dir();
+            ensure_dir(CONFIG.install_dir()?)?;
+            let mod_path = CONFIG.install_dir()?;
             match install_mod(full_name, f, mod_path) {
                 Err(e) => {
                     had_error = true;
@@ -177,6 +177,6 @@ mod test {
         assert!(validate_modname(test_name).is_ok());
     }
 
-    
+
 
 }

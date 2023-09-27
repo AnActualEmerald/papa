@@ -11,9 +11,9 @@ use thermite::{
 };
 
 pub fn enable(mods: BTreeSet<String>, all: bool) -> Result<()> {
-    let dir = CONFIG.install_dir();
+    let dir = CONFIG.install_dir()?;
     debug!("Getting installed mods from {}", dir.display());
-    let installed = find_mods(dir)?
+    let installed = find_mods(&dir)?
         .into_iter()
         .filter_map(|v| {
             if all {
