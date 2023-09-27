@@ -171,7 +171,11 @@ pub enum NstarCommands {
 }
 
 fn main() {
-    let cli = Cli::parse();
+    let cli = Cli::try_parse();
+    if let Err(e) = cli {
+        e.exit();
+    }
+    let cli = cli.unwrap();
     if cli.debug {
         std::env::set_var("RUST_LOG", "DEBUG");
     }
@@ -191,9 +195,7 @@ fn main() {
         Commands::Install {
             file, yes, force, ..
         } if file.is_some() => {
-            let Some(f) = file else {
-                return
-            };
+            let Some(f) = file else { return };
 
             core::import(f, yes, force, cli.no_cache)
         }
