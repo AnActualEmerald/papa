@@ -33,6 +33,9 @@ fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
     } else if let Some(dir) = titanfall() {
         dir
     } else {
+        println!(
+            "Couldn't automatically locate your Titanfall installation.\nPlease provide a path."
+        );
         return Err(anyhow!("Unable to locate Titanfall 2 in Steam libraries"));
     };
 
@@ -134,12 +137,12 @@ pub fn update_ns() -> Result<bool> {
 
 pub fn update_check() -> Result<Option<(InstalledMod, Mod)>> {
     let index = get_package_index()?;
-    let mods = find_mods(CONFIG.install_dir())?;
+    let mods = find_mods(CONFIG.install_dir()?)?;
     let Some(ns_client) = mods.get_item(&ModName::new("northstar", "Northstar.Client", None))
     else {
         debug!(
             "Didn't find 'Northstar.Client' in '{}'",
-            CONFIG.install_dir().display()
+            CONFIG.install_dir()?.display()
         );
         return Err(anyhow!("Unable to find Northstar.Client mod"));
     };

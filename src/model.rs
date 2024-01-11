@@ -1,8 +1,8 @@
 use std::{
     collections::BTreeMap,
     fmt::Display,
-    path::{Path, PathBuf},
     ops::Deref,
+    path::{Path, PathBuf},
 };
 
 use anyhow::{anyhow, Result};
@@ -32,15 +32,11 @@ impl ModName {
     }
 
     pub fn into_modstring(self) -> ModString {
-        ModString {
-            inner: self
-        }
+        ModString { inner: self }
     }
 
-    pub fn as_modstr(&self) -> ModStr<'_>{
-        ModStr {
-            inner: self
-        }
+    pub fn as_modstr(&self) -> ModStr<'_> {
+        ModStr { inner: self }
     }
 }
 
@@ -119,7 +115,7 @@ impl TryFrom<&str> for ModName {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ModString {
-    inner: ModName
+    inner: ModName,
 }
 
 impl Deref for ModString {
@@ -133,7 +129,7 @@ impl Deref for ModString {
 impl<T: Into<ModName>> From<T> for ModString {
     fn from(value: T) -> Self {
         Self {
-            inner: value.into()
+            inner: value.into(),
         }
     }
 }
@@ -151,7 +147,7 @@ impl Display for ModString {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ModStr<'a> {
-    inner: &'a ModName
+    inner: &'a ModName,
 }
 
 impl<'a> Deref for ModStr<'a> {
@@ -164,9 +160,7 @@ impl<'a> Deref for ModStr<'a> {
 
 impl<'a> From<&'a ModName> for ModStr<'a> {
     fn from(value: &'a ModName) -> Self {
-        Self {
-            inner: value
-        }
+        Self { inner: value }
     }
 }
 

@@ -1,4 +1,5 @@
-use std::path::PathBuf;
+use core::profile::ProfileCommands;
+use std::{path::PathBuf, process::ExitCode};
 
 use clap::{Parser, Subcommand};
 use tracing::debug;
@@ -15,6 +16,8 @@ mod macros;
 
 use model::ModName;
 use utils::validate_modname;
+
+use crate::core::profile;
 
 #[derive(Parser)]
 #[clap(name = "Papa")]
@@ -147,9 +150,19 @@ enum Commands {
         command: NstarCommands,
     },
 
+    ///Start Northstar through steam or origin
     #[cfg(feature = "launcher")]
     #[clap(alias("start"))]
-    Run {},
+    Run {
+        #[arg(short = 'P', long = "no-profile")]
+        no_profile: bool,
+    },
+
+    #[clap(alias = "p", alias = "profiles")]
+    Profile {
+        #[clap(subcommand)]
+        command: ProfileCommands,
+    },
 }
 
 #[derive(Subcommand)]
@@ -170,7 +183,7 @@ pub enum NstarCommands {
     // Start {},
 }
 
-fn main() {
+fn main() -> ExitCode {
     let cli = Cli::try_parse();
     if let Err(e) = cli {
         e.exit();
@@ -195,8 +208,9 @@ fn main() {
         Commands::Install {
             file, yes, force, ..
         } if file.is_some() => {
-            let Some(f) = file else { return };
-
+            let Some(f) = file else {
+                return ExitCode::FAILURE;
+            };
             core::import(f, yes, force, cli.no_cache)
         }
         Commands::Install {
@@ -218,12 +232,16 @@ fn main() {
         #[cfg(feature = "northstar")]
         Commands::Northstar { command } => core::northstar(&command),
         #[cfg(feature = "launcher")]
-        Commands::Run {} => core::run(),
+        Commands::Run { no_profile } => core::run(no_profile),
+        Commands::Profile { command } => profile::handle(&command),
     };
 
     if let Err(e) = res {
         if cli.debug {
             debug!("{:#?}", e);
         }
+        return ExitCode::FAILURE;
     }
+
+    ExitCode::SUCCESS
 }

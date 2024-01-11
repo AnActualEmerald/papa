@@ -11,10 +11,10 @@ pub fn list(global: bool, _all: bool) -> Result<()> {
     if global {
         todo!();
     }
-    let mods = find_mods(CONFIG.install_dir()).context("Error finding mods")?;
+    let mods = find_mods(CONFIG.install_dir()?).context("Error finding mods")?;
     debug!("Found {} mods", mods.len());
     trace!("{:?}", mods);
-    let enabled_mods = get_enabled_mods(CONFIG.install_dir().join("..")).ok();
+    let enabled_mods = get_enabled_mods(CONFIG.install_dir()?.join("..")).ok();
 
     let mut grouped_mods: BTreeMap<ModName, BTreeSet<String>> = BTreeMap::new();
     let mut disabled: BTreeMap<ModName, BTreeSet<String>> = BTreeMap::new();

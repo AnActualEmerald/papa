@@ -1,12 +1,15 @@
+use std::collections::HashSet;
 use std::fmt::Display;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
+use anyhow::anyhow;
 use anyhow::Result;
 use directories::ProjectDirs;
 use figment::providers::{Env, Format, Serialized, Toml};
 use figment::Figment;
 use lazy_static::lazy_static;
+use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 
 lazy_static! {
@@ -29,15 +32,31 @@ pub struct Config {
     #[serde(skip)]
     pub config_path: Option<PathBuf>,
     game_dir: Option<PathBuf>,
-    install_dir: PathBuf,
+    install_dir: Option<PathBuf>,
+    #[serde(default = "default_profile")]
+    current_profile: String,
+    #[serde(default = "default_ignore_list")]
+    ignore: HashSet<String>,
     #[serde(default)]
     install_type: InstallType,
     is_server: bool,
 }
 
 impl Config {
-    pub fn install_dir(&self) -> &Path {
-        Path::new(&self.install_dir)
+    pub fn install_dir(&self) -> Result<PathBuf> {
+        // let the explicit install dir override the game dir + profile
+        Ok(if let Some(dir) = &self.install_dir {
+            dir.clone()
+        } else if let Some(dir) = &self.game_dir {
+            dir.join(&self.current_profile).join("packages")
+        } else {
+            println!(
+                "Please run '{}' or set '{}' in the config",
+                "papa ns init".bright_cyan(),
+                "install_dir".bright_cyan()
+            );
+            return Err(anyhow!("Unintialized config"));
+        })
     }
 
     pub fn is_server(&self) -> bool {
@@ -45,7 +64,7 @@ impl Config {
     }
 
     pub fn set_install_dir(&mut self, install_dir: impl Into<PathBuf>) {
-        self.install_dir = install_dir.into();
+        self.install_dir = install_dir.into().into();
     }
 
     pub fn set_is_server(&mut self, is_server: bool) {
@@ -67,18 +86,50 @@ impl Config {
     pub fn set_install_type(&mut self, install_type: InstallType) {
         self.install_type = install_type;
     }
+
+    pub fn current_profile(&self) -> &str {
+        self.current_profile.as_ref()
+    }
+
+    pub fn set_current_profile(&mut self, current_profile: impl Into<String>) {
+        self.current_profile = current_profile.into();
+    }
+
+    pub fn is_ignored(&self, val: &str) -> bool {
+        self.ignore.contains(val)
+    }
+
+    pub fn add_ignored(&mut self, val: impl Into<String>) -> bool {
+        self.ignore.insert(val.into())
+    }
+
+    pub fn remove_ignored(&mut self, val: impl AsRef<str>) -> bool {
+        self.ignore.remove(val.as_ref())
+    }
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
             game_dir: None,
-            install_dir: "./packages".into(),
+            install_dir: None,
             is_server: false,
             config_path: None,
+            current_profile: default_profile(),
+            ignore: default_ignore_list(),
             install_type: InstallType::Other,
         }
     }
+}
+
+pub fn default_profile() -> String {
+    "R2Northstar".into()
+}
+
+pub fn default_ignore_list() -> HashSet<String> {
+    let list = include_str!("./ignore_list.csv").trim();
+
+    list.split('\n').map(String::from).collect()
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, Default)]

@@ -25,7 +25,7 @@ pub fn search(term: &[String]) -> Result<()> {
             let tmp = textwrap::fill(&latest.desc, opt);
             textwrap::indent(&tmp, "    ")
         };
-        
+
         println!(
             " {}.{}@{} - {}\n{}",
             m.author.bright_blue(),

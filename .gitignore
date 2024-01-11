@@ -2,7 +2,6 @@
 /mods
 /northstar
 /packages
-Cargo.lock
 .pijul
 .ignore
 ns_*
