@@ -1,5 +1,5 @@
 use core::profile::ProfileCommands;
-use std::path::PathBuf;
+use std::{path::PathBuf, process::{exit, ExitCode}};
 
 use clap::{Parser, Subcommand};
 use tracing::debug;
@@ -180,7 +180,7 @@ pub enum NstarCommands {
     // Start {},
 }
 
-fn main() {
+fn main() -> ExitCode {
     let cli = Cli::parse();
     if cli.debug {
         std::env::set_var("RUST_LOG", "DEBUG");
@@ -202,7 +202,7 @@ fn main() {
             file, yes, force, ..
         } if file.is_some() => {
             let Some(f) = file else {
-                return
+                return ExitCode::FAILURE;
             };
 
             core::import(f, yes, force, cli.no_cache)
@@ -234,5 +234,8 @@ fn main() {
         if cli.debug {
             debug!("{:#?}", e);
         }
+        return ExitCode::FAILURE;
     }
+
+    ExitCode::SUCCESS
 }

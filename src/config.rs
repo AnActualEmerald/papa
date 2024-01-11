@@ -1,7 +1,7 @@
+use std::collections::HashSet;
 use std::fmt::Display;
 use std::fs;
-use std::path::{Path, PathBuf};
-use std::rc::Rc;
+use std::path::PathBuf;
 
 use anyhow::anyhow;
 use anyhow::Result;
@@ -36,7 +36,7 @@ pub struct Config {
     #[serde(default = "default_profile")]
     current_profile: String,
     #[serde(default = "default_ignore_list")]
-    ignore: Vec<String>,
+    ignore: HashSet<String>,
     #[serde(default)]
     install_type: InstallType,
     is_server: bool,
@@ -94,6 +94,19 @@ impl Config {
     pub fn set_current_profile(&mut self, current_profile: impl Into<String>) {
         self.current_profile = current_profile.into();
     }
+
+    pub fn is_ignored(&self, val: &str) -> bool {
+        self.ignore.contains(val)
+    }
+
+    pub fn add_ignored(&mut self, val: impl Into<String>) -> bool {
+        self.ignore.insert(val.into())
+    }
+
+    pub fn remove_ignored(&mut self, val: impl AsRef<str>) -> bool {
+        self.ignore.remove(val.as_ref())
+    }
+
 }
 
 impl Default for Config {
@@ -104,7 +117,7 @@ impl Default for Config {
             is_server: false,
             config_path: None,
             current_profile: default_profile(),
-            ignore: vec![],
+            ignore: default_ignore_list(),
             install_type: InstallType::Other,
         }
     }
@@ -114,8 +127,10 @@ pub fn default_profile() -> String {
     "R2Northstar".into()
 }
 
-pub fn default_ignore_list() -> Vec<String> {
-    [""].into_iter().map(|v| v.to_string()).collect()
+pub fn default_ignore_list() -> HashSet<String> {
+    let list = include_str!("./ignore_list.csv").trim();
+
+    list.split('\n').map(String::from).collect()
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, Default)]

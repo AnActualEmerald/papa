@@ -7,7 +7,8 @@ pub fn run() -> Result<()> {
     match CONFIG.install_type() {
         Steam => {
             println!("Launching Titanfall 2 using steam...");
-            open::that_detached(format!("steam://launch/{}", thermite::TITANFALL_STEAM_ID))?;
+            let profile = CONFIG.current_profile();
+            open::that_detached(format!("steam://launch/{}//-profile={profile}/", thermite::TITANFALL_STEAM_ID))?;
             println!("Done!");
         }
         Origin => {

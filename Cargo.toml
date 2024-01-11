@@ -13,7 +13,7 @@ repository = "https://github.com/AnActualEmerald/papa"
 [dependencies]
 libthermite = {path = "./thermite", version = "0.7.0-beta", features = ["steam"], default-features = false }
 anyhow = "1.0.72"
-clap = { version = "4.3.19", features = ["std", "derive"], default-features = false }
+clap = { version = "4.3.19", features = ["std", "derive", "help", "color", "usage"], default-features = false }
 directories = "5.0.1"
 regex = { version = "1.9.1", default-features = false, features = ["perf"]}
 serde = { version = "1.0.174", default-features = false }

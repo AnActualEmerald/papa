@@ -5,11 +5,26 @@ use clap::Subcommand;
 use copy_dir::copy_dir;
 use owo_colors::OwoColorize;
 
-use crate::config::CONFIG;
+use crate::{config::{CONFIG, write_config}, utils::init_msg};
 
 #[derive(Subcommand)]
 pub enum ProfileCommands {
+    #[clap(alias = "s", alias = "choose", alias = "activate")]
+    ///Select a profile
+    Select {
+        ///Name of the profile to select
+        name: OsString,
+    },
+    ///Ignore a directory, preventing it from displayed as a profile
+    Ignore {
+        name: OsString,
+    },
+    ///Un-ignore a directory, allowing it to be displayed as a profile
+    Unignore {
+        name: OsString,
+    },
     #[clap(alias("ls"))]
+    ///List profiles
     List,
     ///Create an empty profile
     #[clap(alias("n"))]
@@ -21,6 +36,7 @@ pub enum ProfileCommands {
     },
 
     #[clap(alias = "dupe", alias = "cp", alias = "copy")]
+    ///Clone an existing profile
     Clone {
         source: String,
         new: Option<String>,
@@ -34,27 +50,58 @@ pub fn handle(command: &ProfileCommands) -> Result<()> {
         ProfileCommands::List => list_profiles(),
         ProfileCommands::New { name, force } => new_profile(name, *force),
         ProfileCommands::Clone { source, new, force } => clone_profile(source, new, *force),
+        ProfileCommands::Select { name } => activate_profile(name),
+        ProfileCommands::Ignore { name } => {
+            let mut cfg = CONFIG.clone();
+            cfg.add_ignored(name.to_string_lossy());
+            write_config(&cfg)?;
+            Ok(())
+        },
+        ProfileCommands::Unignore { name } => {
+            let mut cfg = CONFIG.clone();
+            cfg.remove_ignored(name.to_string_lossy());
+            write_config(&cfg)?;
+            Ok(())
+        }
     }
 }
 
-fn list_profiles() -> Result<()> {
-    let list: Vec<&'static str> = {
-        let list = include_str!("../../ignore_list.csv");
-
-        list.split('\n').collect()
+fn activate_profile(name: &OsString) -> Result<()> {
+    let Some(dir) = CONFIG.game_dir() else {
+        return init_msg();
     };
 
+    if CONFIG.is_ignored(name.to_str().expect("OsString")) {
+        println!("Directory {} is on the ignore list. Please run '{}' and try again.", name.to_string_lossy().bright_red(), format!("papa profile unignore {}", name.to_string_lossy()).bright_cyan());
+        return Err(anyhow!("Profile was ignored"));
+    }
+
+    let real = dir.join(&name);
+    if !real.try_exists()? {
+        println!("Profile {} doesn't exist", name.to_string_lossy().bright_cyan());
+        return Err(anyhow!("Profile not found"));
+    }
+
+    let mut cfg = CONFIG.clone();
+    cfg.set_current_profile(name.to_str().expect("OsString"));
+    write_config(&cfg)?;
+
+    println!("Made {} the active profile", name.to_string_lossy().bright_cyan());
+
+    Ok(())
+}
+
+fn list_profiles() -> Result<()> {
     let Some(dir) = CONFIG.game_dir() else {
-        println!("Please run '{}' first", "papa ns init".bright_cyan());
-        return Err(anyhow!("Game path not set"));
+        return init_msg();
     };
 
     let mut profiles = vec![];
     for candidate in dir.read_dir()? {
         let candidate = candidate?;
         if !candidate.file_type()?.is_dir()
-            || list.contains(
-                &candidate
+            || CONFIG.is_ignored(
+                candidate
                     .file_name()
                     .to_str()
                     .expect("Unable to convert from OsString"),
@@ -93,8 +140,7 @@ fn list_profiles() -> Result<()> {
 
 fn new_profile(name: &OsString, force: bool) -> Result<()> {
     let Some(dir) = CONFIG.game_dir() else {
-        println!("Please run '{}' first", "papa ns init".bright_cyan());
-        return Err(anyhow!("Game path not set"));
+        return init_msg();
     };
 
     let prof = dir.join(name);
@@ -115,8 +161,7 @@ fn new_profile(name: &OsString, force: bool) -> Result<()> {
 
 fn clone_profile(source: &String, new: &Option<String>, force: bool) -> Result<()> {
     let Some(game) = CONFIG.game_dir() else {
-        println!("Please run '{}' first", "papa ns init".bright_cyan());
-        return Err(anyhow!("Game path not set"));
+        return init_msg();
     };
     let source_dir = game.join(&source);
     let target_dir = if let Some(target) = new {
