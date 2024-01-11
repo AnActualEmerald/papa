@@ -1,5 +1,5 @@
 use core::profile::ProfileCommands;
-use std::{path::PathBuf, process::{exit, ExitCode}};
+use std::{path::PathBuf, process::{ExitCode}};
 
 use clap::{Parser, Subcommand};
 use tracing::debug;

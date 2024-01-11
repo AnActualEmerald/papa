@@ -78,7 +78,7 @@ fn activate_profile(name: &OsString) -> Result<()> {
         return Err(anyhow!("Profile was ignored"));
     }
 
-    let real = dir.join(&name);
+    let real = dir.join(name);
     if !real.try_exists()? {
         println!("Profile {} doesn't exist", name.to_string_lossy().bright_cyan());
         return Err(anyhow!("Profile not found"));
@@ -124,7 +124,7 @@ fn list_profiles() -> Result<()> {
     println!("Available profiles:");
     for name in profiles
         .iter()
-        .filter_map(|v| v.file_name().map(|os| os.to_str()).flatten())
+        .filter_map(|v| v.file_name().and_then(|os| os.to_str()))
     {
         println!(
             "{:<4}{}",
@@ -165,7 +165,7 @@ fn clone_profile(source: &String, new: &Option<String>, force: bool) -> Result<(
     let Some(game) = CONFIG.game_dir() else {
         return init_msg();
     };
-    let source_dir = game.join(&source);
+    let source_dir = game.join(source);
     let target_dir = if let Some(target) = new {
         game.join(target)
     } else {
@@ -184,7 +184,7 @@ fn clone_profile(source: &String, new: &Option<String>, force: bool) -> Result<(
         }
     }
 
-    copy_dir(&source_dir, &target_dir)?;
+    copy_dir(source_dir, &target_dir)?;
 
     println!(
         "Cloned profile '{}' to '{}'",
