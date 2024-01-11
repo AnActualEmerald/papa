@@ -153,7 +153,10 @@ enum Commands {
     ///Start Northstar through steam or origin
     #[cfg(feature = "launcher")]
     #[clap(alias("start"))]
-    Run {},
+    Run {
+        #[arg(short = 'P', long = "no-profile")]
+        no_profile: bool
+    },
 
     #[clap(alias = "p", alias = "profiles")]
     Profile {
@@ -226,7 +229,7 @@ fn main() -> ExitCode {
         #[cfg(feature = "northstar")]
         Commands::Northstar { command } => core::northstar(&command),
         #[cfg(feature = "launcher")]
-        Commands::Run {} => core::run(),
+        Commands::Run { no_profile } => core::run(no_profile),
         Commands::Profile { command } => profile::handle(&command)
     };
 

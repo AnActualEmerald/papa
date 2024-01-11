@@ -33,6 +33,7 @@ fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
     } else if let Some(dir) = titanfall() {
         dir
     } else {
+        println!("Couldn't automatically locate your Titanfall installation.\nPlease provide a path.");
         return Err(anyhow!("Unable to locate Titanfall 2 in Steam libraries"));
     };
 

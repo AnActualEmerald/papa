@@ -17,11 +17,11 @@ pub enum ProfileCommands {
     },
     ///Ignore a directory, preventing it from displayed as a profile
     Ignore {
-        name: OsString,
+        name: String,
     },
     ///Un-ignore a directory, allowing it to be displayed as a profile
     Unignore {
-        name: OsString,
+        name: String,
     },
     #[clap(alias("ls"))]
     ///List profiles
@@ -53,14 +53,16 @@ pub fn handle(command: &ProfileCommands) -> Result<()> {
         ProfileCommands::Select { name } => activate_profile(name),
         ProfileCommands::Ignore { name } => {
             let mut cfg = CONFIG.clone();
-            cfg.add_ignored(name.to_string_lossy());
+            cfg.add_ignored(name);
             write_config(&cfg)?;
+            println!("Added {} to ignore list", name.bright_cyan());
             Ok(())
         },
         ProfileCommands::Unignore { name } => {
             let mut cfg = CONFIG.clone();
-            cfg.remove_ignored(name.to_string_lossy());
+            cfg.remove_ignored(name);
             write_config(&cfg)?;
+            println!("Removed {} from ignore list", name.bright_cyan());
             Ok(())
         }
     }
@@ -126,7 +128,7 @@ fn list_profiles() -> Result<()> {
     {
         println!(
             "{:<4}{}",
-            if profiles.len() > 1 && name == CONFIG.current_profile() {
+            if name == CONFIG.current_profile() {
                 "-->"
             } else {
                 ""
