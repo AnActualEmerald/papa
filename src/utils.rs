@@ -171,18 +171,13 @@ pub fn init_msg() -> Result<(), anyhow::Error> {
     Err(anyhow::anyhow!("Game path not set"))
 }
 
-
 #[cfg(test)]
 mod test {
     use crate::utils::validate_modname;
-
 
     #[test]
     fn suceed_validate_modname() {
         let test_name = "foo.bar@0.1.0";
         assert!(validate_modname(test_name).is_ok());
     }
-
-
-
 }

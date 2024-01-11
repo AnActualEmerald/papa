@@ -5,7 +5,7 @@ use clap::Subcommand;
 use copy_dir::copy_dir;
 use owo_colors::OwoColorize;
 
-use crate::{config::{CONFIG, write_config}, utils::init_msg};
+use crate::{config::CONFIG, update_cfg, utils::init_msg};
 
 #[derive(Subcommand)]
 pub enum ProfileCommands {
@@ -13,16 +13,12 @@ pub enum ProfileCommands {
     ///Select a profile
     Select {
         ///Name of the profile to select
-        name: OsString,
+        name: String,
     },
     ///Ignore a directory, preventing it from displayed as a profile
-    Ignore {
-        name: String,
-    },
+    Ignore { name: String },
     ///Un-ignore a directory, allowing it to be displayed as a profile
-    Unignore {
-        name: String,
-    },
+    Unignore { name: String },
     #[clap(alias("ls"))]
     ///List profiles
     List,
@@ -52,43 +48,41 @@ pub fn handle(command: &ProfileCommands) -> Result<()> {
         ProfileCommands::Clone { source, new, force } => clone_profile(source, new, *force),
         ProfileCommands::Select { name } => activate_profile(name),
         ProfileCommands::Ignore { name } => {
-            let mut cfg = CONFIG.clone();
-            cfg.add_ignored(name);
-            write_config(&cfg)?;
+            update_cfg!(ignore(name))?;
             println!("Added {} to ignore list", name.bright_cyan());
             Ok(())
-        },
+        }
         ProfileCommands::Unignore { name } => {
-            let mut cfg = CONFIG.clone();
-            cfg.remove_ignored(name);
-            write_config(&cfg)?;
+            update_cfg!(unignore(name))?;
             println!("Removed {} from ignore list", name.bright_cyan());
             Ok(())
         }
     }
 }
 
-fn activate_profile(name: &OsString) -> Result<()> {
+fn activate_profile(name: &String) -> Result<()> {
     let Some(dir) = CONFIG.game_dir() else {
         return init_msg();
     };
 
-    if CONFIG.is_ignored(name.to_str().expect("OsString")) {
-        println!("Directory {} is on the ignore list. Please run '{}' and try again.", name.to_string_lossy().bright_red(), format!("papa profile unignore {}", name.to_string_lossy()).bright_cyan());
+    if CONFIG.is_ignored(&name) {
+        println!(
+            "Directory {} is on the ignore list. Please run '{}' and try again.",
+            name.bright_red(),
+            format!("papa profile unignore {}", name).bright_cyan()
+        );
         return Err(anyhow!("Profile was ignored"));
     }
 
     let real = dir.join(name);
     if !real.try_exists()? {
-        println!("Profile {} doesn't exist", name.to_string_lossy().bright_cyan());
+        println!("Profile {} doesn't exist", name.bright_cyan());
         return Err(anyhow!("Profile not found"));
     }
 
-    let mut cfg = CONFIG.clone();
-    cfg.set_current_profile(name.to_str().expect("OsString"));
-    write_config(&cfg)?;
+    update_cfg!(profile(name))?;
 
-    println!("Made {} the active profile", name.to_string_lossy().bright_cyan());
+    println!("Made {} the active profile", name.bright_cyan());
 
     Ok(())
 }

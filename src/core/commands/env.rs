@@ -6,7 +6,11 @@ pub fn env() -> Result<()> {
     println!("Current config:\n");
     println!(
         "Mod installation directory: {}",
-        CONFIG.install_dir().map(|v| v.display().to_string()).unwrap_or_else(|_| "[none]".into()).bright_cyan()
+        CONFIG
+            .install_dir()
+            .map(|v| v.display().to_string())
+            .unwrap_or_else(|_| "[none]".into())
+            .bright_cyan()
     );
     println!("Install type: {}", CONFIG.install_type().bright_cyan());
     if let Some(dir) = CONFIG.game_dir() {

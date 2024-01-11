@@ -106,7 +106,6 @@ impl Config {
     pub fn remove_ignored(&mut self, val: impl AsRef<str>) -> bool {
         self.ignore.remove(val.as_ref())
     }
-
 }
 
 impl Default for Config {

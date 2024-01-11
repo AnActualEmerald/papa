@@ -1,5 +1,5 @@
 use core::profile::ProfileCommands;
-use std::{path::PathBuf, process::{ExitCode}};
+use std::{path::PathBuf, process::ExitCode};
 
 use clap::{Parser, Subcommand};
 use tracing::debug;
@@ -155,14 +155,14 @@ enum Commands {
     #[clap(alias("start"))]
     Run {
         #[arg(short = 'P', long = "no-profile")]
-        no_profile: bool
+        no_profile: bool,
     },
 
     #[clap(alias = "p", alias = "profiles")]
     Profile {
         #[clap(subcommand)]
-        command: ProfileCommands
-    }
+        command: ProfileCommands,
+    },
 }
 
 #[derive(Subcommand)]
@@ -230,7 +230,7 @@ fn main() -> ExitCode {
         Commands::Northstar { command } => core::northstar(&command),
         #[cfg(feature = "launcher")]
         Commands::Run { no_profile } => core::run(no_profile),
-        Commands::Profile { command } => profile::handle(&command)
+        Commands::Profile { command } => profile::handle(&command),
     };
 
     if let Err(e) = res {
