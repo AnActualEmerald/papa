@@ -183,7 +183,7 @@ pub enum NstarCommands {
     // Start {},
 }
 
-fn main() {
+fn main() -> ExitCode {
     let cli = Cli::try_parse();
     if let Err(e) = cli {
         e.exit();
