@@ -29,7 +29,7 @@ pub fn northstar(commands: &NstarCommands) -> Result<()> {
 
 fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
     let titanfall = if let Some(path) = path {
-        path.as_ref().canonicalize()?
+        path.as_ref().to_path_buf()
     } else if let Some(dir) = titanfall() {
         dir
     } else {

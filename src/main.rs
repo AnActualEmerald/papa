@@ -183,8 +183,12 @@ pub enum NstarCommands {
     // Start {},
 }
 
-fn main() -> ExitCode {
-    let cli = Cli::parse();
+fn main() {
+    let cli = Cli::try_parse();
+    if let Err(e) = cli {
+        e.exit();
+    }
+    let cli = cli.unwrap();
     if cli.debug {
         std::env::set_var("RUST_LOG", "DEBUG");
     }
@@ -207,7 +211,6 @@ fn main() -> ExitCode {
             let Some(f) = file else {
                 return ExitCode::FAILURE;
             };
-
             core::import(f, yes, force, cli.no_cache)
         }
         Commands::Install {
