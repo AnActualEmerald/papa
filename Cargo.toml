@@ -18,11 +18,11 @@ directories = "5.0.1"
 regex = { version = "1.9.1", default-features = false, features = ["perf"]}
 serde = { version = "1.0.174", default-features = false }
 serde_json = { default-features = false, version = "1.0.103" }
-toml = { default-features = false, features = ["display"], version = "0.7.6" }
+toml = { default-features = false, features = ["display"], version = "0.8" }
 zip = { default-features = false, version = "0.6.6" }
 tracing = { default-features = false, version = "0.1.37" }
 tracing-subscriber = { version = "0.3.17", features = ["fmt", "env-filter"], default-features = false }
-owo-colors = "3.5.0"
+owo-colors = "4.0"
 figment = { version = "0.10.10", features = ["toml", "env"], default-features = false }
 lazy_static = "1.4.0"
 fuzzy-matcher = "0.3.7"
