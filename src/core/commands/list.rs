@@ -1,4 +1,7 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    io::{ErrorKind, IsTerminal, Write},
+};
 
 use anyhow::{Context, Result};
 use owo_colors::OwoColorize;
@@ -42,6 +45,27 @@ pub fn list(global: bool, _all: bool) -> Result<()> {
         } else {
             process_mod(&mut grouped_mods);
         }
+    }
+
+    if !std::io::stdout().is_terminal() {
+        let out = std::io::stdout();
+        for (group, name) in grouped_mods {
+            if let Err(e) = write!(out.lock(), "{}\n", group.name) {
+                if e.kind() != ErrorKind::BrokenPipe {
+                    return Err(e.into());
+                }
+            }
+
+            for n in name {
+                if let Err(e) = write!(out.lock(), "{n}\n") {
+                    if e.kind() != ErrorKind::BrokenPipe {
+                        return Err(e.into());
+                    }
+                }
+            }
+        }
+
+        return Ok(());
     }
 
     println!("Installed mods: ");

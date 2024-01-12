@@ -1,7 +1,11 @@
-use std::{ffi::OsString, fs};
+use std::{
+    ffi::OsString,
+    fs,
+    io::{ErrorKind, IsTerminal, Write},
+};
 
 use anyhow::{anyhow, Result};
-use clap::Subcommand;
+use clap::{Subcommand, ValueHint, builder::{PossibleValuesParser, PossibleValue}};
 use copy_dir::copy_dir;
 use owo_colors::OwoColorize;
 
@@ -13,12 +17,19 @@ pub enum ProfileCommands {
     ///Select a profile
     Select {
         ///Name of the profile to select
+        #[clap(value_hint = ValueHint::Other)]
         name: String,
     },
     ///Ignore a directory, preventing it from displayed as a profile
-    Ignore { name: String },
+    Ignore {
+        #[clap(value_hint = ValueHint::Other)]
+        name: String,
+    },
     ///Un-ignore a directory, allowing it to be displayed as a profile
-    Unignore { name: String },
+    Unignore {
+        #[clap(value_hint = ValueHint::Other)]
+        name: String,
+    },
     #[clap(alias("ls"))]
     ///List profiles
     List,
@@ -26,6 +37,7 @@ pub enum ProfileCommands {
     #[clap(alias("n"))]
     New {
         ///Name of the profile to create
+        #[clap(value_hint = ValueHint::Other)]
         name: OsString,
         #[arg(long, short)]
         force: bool,
@@ -34,7 +46,9 @@ pub enum ProfileCommands {
     #[clap(alias = "dupe", alias = "cp", alias = "copy")]
     ///Clone an existing profile
     Clone {
+        #[clap(value_hint = ValueHint::Other)]
         source: String,
+        #[clap(value_hint = ValueHint::Other)]
         new: Option<String>,
         #[arg(long, short)]
         force: bool,
@@ -108,6 +122,22 @@ fn list_profiles() -> Result<()> {
 
         let path = candidate.path();
         profiles.push(path);
+    }
+
+    // output the raw list if we're in a script or pipeline
+    if !std::io::stdout().is_terminal() {
+        let out = std::io::stdout();
+        for p in profiles {
+            if let Some(name) = p.file_name().and_then(|os| os.to_str()) {
+                if let Err(e) = write!(out.lock(), "{name}\n") {
+                    if e.kind() != ErrorKind::BrokenPipe {
+                        return Err(e.into());
+                    }
+                }
+            }
+        }
+
+        return Ok(());
     }
 
     if profiles.is_empty() {
