@@ -15,7 +15,7 @@ pub fn run(no_profile: bool) -> Result<()> {
             };
             open::that_detached(format!(
                 "steam://launch/{}{profile}",
-                thermite::TITANFALL_STEAM_ID
+                thermite::TITANFALL2_STEAM_ID
             ))?;
             println!("Done!");
         }
@@ -26,7 +26,7 @@ pub fn run(no_profile: bool) -> Result<()> {
             }
             open::that_detached(format!(
                 "origin://LaunchGame/{}",
-                thermite::TITANFALL_ORIGIN_IDS[0]
+                thermite::TITANFALL2_ORIGIN_IDS[0]
             ))?;
             println!("Done!");
         }

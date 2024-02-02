@@ -5,7 +5,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
-use clap::{Subcommand, ValueHint, builder::{PossibleValuesParser, PossibleValue}};
+use clap::{Subcommand, ValueHint};
 use copy_dir::copy_dir;
 use owo_colors::OwoColorize;
 

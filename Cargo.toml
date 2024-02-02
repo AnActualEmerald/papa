@@ -11,7 +11,7 @@ repository = "https://github.com/AnActualEmerald/papa"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-libthermite = {path = "./thermite", version = "0.7.0", features = ["steam"], default-features = false }
+libthermite = {path = "./thermite", version = "0.7.1", features = ["steam"], default-features = false }
 anyhow = "1.0.72"
 clap = { version = "4.3.19", features = ["std", "derive", "help", "color", "usage"], default-features = false }
 directories = "5.0.1"
