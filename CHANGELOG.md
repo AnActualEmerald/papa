@@ -3,15 +3,39 @@
 All notable changes to this project will be documented in this file.
 
 
-## v4.0.0
+## v4.1.0-rc
+
+### Bug Fixes
+
+- Don't try to canonicalize path that might not exist
+
+### Dependencies
+
+- Update dependencies
+- Update `libthermite` to 0.7.1
 
 ### Features
 
-- Support new N* package standard
+- Write standard mod strings to exported mod lists
+- Launch game through steam and origin
+- Profiles ([#26](https://github.com/anactualemerald/papa/pull/26))
 
 ### Miscellaneous Tasks
 
 - Update dependencies
+- Add `.rpm` bundle
+- Remove nsargs crate
+- Update action versions
+
+## v4.0.0
+
+### Dependencies
+
+- Update dependencies
+
+### Features
+
+- Support new N* package standard
 
 ## v3.1.0
 
@@ -21,6 +45,10 @@ All notable changes to this project will be documented in this file.
 - Filter northstar core mods when performing update check
 - Don't use bash commands in windows workflow
 - Clean old mod folders on update
+
+### Dependencies
+
+- Bump dependencies
 
 ### Features
 
@@ -39,7 +67,6 @@ All notable changes to this project will be documented in this file.
 - Clippy fixes
 - Fix changelog header
 - Publish crate from CI
-- Bump dependencies
 - Replace PR and issue numbers with links in changelog
 - Bump `libthermite` version
 
