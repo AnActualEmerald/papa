@@ -85,5 +85,5 @@ jobs:
                   append_body: true
                   files: |
                       LICENSE
-                      target\wix\*.msi
-                      target\release\papa_${{ github.ref_name }}_windows.zip
+                      target/wix/*.msi
+                      target/release/papa_${{ github.ref_name }}_windows.zip
