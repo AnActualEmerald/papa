@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 
-## v4.1.0-rc.1
+## v4.1.0-rc.2
 
 ### Bug Fixes
 
