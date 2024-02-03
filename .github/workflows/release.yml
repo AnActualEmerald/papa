@@ -14,7 +14,7 @@ jobs:
         env:
             CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_TOKEN }}
         steps:
-            - uses: actions/checkout@v3
+            - uses: actions/checkout@v4
               with:
                   submodules: recursive
             - name: Publish crate
@@ -22,15 +22,15 @@ jobs:
     linux:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v3
+            - uses: actions/checkout@v4
               with:
                   submodules: recursive
             - name: Install cargo-deb
-              uses: baptiste0928/cargo-install@v2.0.0
+              uses: baptiste0928/cargo-install@v3.0.0
               with:
                   crate: cargo-deb
             - name: Install cargo-generate-rpm
-              uses: baptiste0928/cargo-install@v2.0.0
+              uses: baptiste0928/cargo-install@v3.0.0
               with:
                   crate: cargo-generate-rpm
             - name: Build
@@ -43,9 +43,9 @@ jobs:
               run: tar czvf papa.tar.gz -C target/release papa
             - name: Create release notes
               id: changelog
-              uses: orhun/git-cliff-action@v2.0.6
+              uses: orhun/git-cliff-action@v2.3.0
               with:
-                  args: -v -l
+                  args: -v -l --strip all
             - name: Release
               uses: softprops/action-gh-release@v0.1.15
               with:
@@ -62,11 +62,11 @@ jobs:
     windows:
         runs-on: windows-latest
         steps:
-            - uses: actions/checkout@v3
+            - uses: actions/checkout@v4
               with:
                   submodules: recursive
             - name: Install cargo-wix
-              uses: baptiste0928/cargo-install@v2.0.0
+              uses: baptiste0928/cargo-install@v3.0.0
               with:
                   crate: cargo-wix
             - name: Build
