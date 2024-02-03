@@ -27,7 +27,11 @@ pub fn install(mods: Vec<ModName>, assume_yes: bool, force: bool, no_cache: bool
         if let Some(m) = remote_index.get_item(&mn) {
             if let Some(version) = &mn.version {
                 let Some(mv) = m.get_version(version) else {
-                    println!("Package {} has no version {}", format!("{}.{}", mn.author, mn.name).bright_cyan(), version.bright_cyan());
+                    println!(
+                        "Package {} has no version {}",
+                        format!("{}.{}", mn.author, mn.name).bright_cyan(),
+                        version.bright_cyan()
+                    );
                     should_fail = true;
                     continue;
                 };

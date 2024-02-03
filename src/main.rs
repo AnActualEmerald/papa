@@ -1,7 +1,9 @@
-use std::path::PathBuf;
+use core::profile::ProfileCommands;
+use std::{path::PathBuf, process::ExitCode};
 
-use clap::{Parser, Subcommand};
-use tracing::debug;
+use clap::{Parser, Subcommand, ValueHint, CommandFactory};
+use clap_complete::{Shell, generate};
+use tracing::{debug, error};
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 pub mod config;
@@ -16,9 +18,11 @@ mod macros;
 use model::ModName;
 use utils::validate_modname;
 
+use crate::core::profile;
+
 #[derive(Parser)]
 #[clap(name = "Papa")]
-#[clap(author = "AnAcutalEmerald <emerald_actual@proton.me>")]
+#[clap(author = "AnAcutalEmerald <emerald@emeraldgreen.dev>")]
 #[clap(about = "Command line mod manager for Northstar")]
 #[clap(after_help = "Welcome back. Cockpit cooling reactivated.")]
 #[clap(version)]
@@ -35,19 +39,27 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Generate completions for the current shell
+    Complete {
+        ///Shell to generate for, defaults to the value of the SHELL environment variable
+        #[clap(value_name = "SHELL", value_enum)]
+        shell: Option<Shell>,
+    },
+
     ///Show the current config and environment info
     Env {},
 
     ///Export the list of currently installed mods
     Export {
+        ///File to export to
         #[clap(default_value = "papa.ron")]
         file: PathBuf,
     },
 
     ///Import a list of mods, installing them to the current install directory
     Import {
-        ///'papa.ron' file to import
-        #[arg(default_value = "papa.ron")]
+        ///File to import
+        #[arg(default_value = "papa.ron", value_hint = ValueHint::FilePath)]
         file: PathBuf,
 
         ///Don't ask for confirmation
@@ -62,14 +74,14 @@ enum Commands {
     ///Install a mod or mods from https://northstar.thunderstore.io/
     #[clap(alias = "i")]
     Install {
-        #[clap(value_name = "MOD")]
+        #[clap(value_name = "MOD", value_hint = ValueHint::Other)]
         #[clap(help = "Mod name(s) to install")]
         #[clap(required_unless_present = "file")]
         #[clap(value_parser = validate_modname)]
         mod_names: Vec<ModName>,
 
         ///File to read the list of mods from
-        #[arg(short = 'F', long)]
+        #[arg(short = 'F', long, value_hint = ValueHint::FilePath)]
         file: Option<PathBuf>,
 
         ///Don't ask for confirmation
@@ -87,7 +99,7 @@ enum Commands {
     ///Remove a mod or mods from the current mods directory
     #[clap(alias = "r", alias = "rm")]
     Remove {
-        #[clap(value_name = "MOD")]
+        #[clap(value_name = "MOD", value_hint = ValueHint::Other)]
         #[clap(help = "Mod name(s) to remove")]
         #[clap(value_parser = validate_modname)]
         #[clap(required = true)]
@@ -116,11 +128,13 @@ enum Commands {
     #[clap(alias = "s")]
     Search {
         ///The term to search for
+        #[clap(value_hint = ValueHint::Other)]
         term: Vec<String>,
     },
 
     ///Disable mod(s) or sub-mod(s)
     Disable {
+        #[clap(value_hint = ValueHint::Other)]
         mods: Vec<String>,
 
         ///Disable all mods excluding core N* mods
@@ -133,6 +147,7 @@ enum Commands {
     },
     ///Enable mod(s) or sub-mod(s)
     Enable {
+        #[clap(value_hint = ValueHint::Other)]
         mods: Vec<String>,
         #[arg(short, long)]
         all: bool,
@@ -145,6 +160,20 @@ enum Commands {
         #[clap(subcommand)]
         command: NstarCommands,
     },
+
+    ///Start Northstar through steam or origin
+    #[cfg(feature = "launcher")]
+    #[clap(alias("start"))]
+    Run {
+        #[arg(short = 'P', long = "no-profile")]
+        no_profile: bool,
+    },
+
+    #[clap(alias = "p", alias = "profiles")]
+    Profile {
+        #[clap(subcommand)]
+        command: ProfileCommands,
+    },
 }
 
 #[derive(Subcommand)]
@@ -152,10 +181,11 @@ pub enum NstarCommands {
     ///Attempts to install Northstar to a Titanfall 2 Steam installation, or updates the configuration if it already exists.
     Init {
         /// Ignore non-fatal errors
-        #[arg(default_value_t = false, short, long)]
+        #[arg(short, long)]
         force: bool,
 
         /// The path to install Northstar into. Defaults to the local Titanfall 2 steam installation, if available.
+        #[arg(value_hint = ValueHint::DirPath)]
         path: Option<PathBuf>,
     },
     ///Updates the current northstar install.
@@ -165,8 +195,12 @@ pub enum NstarCommands {
     // Start {},
 }
 
-fn main() {
-    let cli = Cli::parse();
+fn main() -> ExitCode {
+    let cli = Cli::try_parse();
+    if let Err(e) = cli {
+        e.exit();
+    }
+    let cli = cli.unwrap();
     if cli.debug {
         std::env::set_var("RUST_LOG", "DEBUG");
     }
@@ -181,15 +215,25 @@ fn main() {
     debug!("Config: {:#?}", *config::CONFIG);
 
     let res = match cli.command {
+        Commands::Complete { shell } => {
+            if let Some(shell) = shell.or_else(Shell::from_env) {
+                let mut cmd = Cli::command();
+                let out = std::io::stdout();
+                generate(shell, &mut cmd, "papa", &mut out.lock());
+                Ok(())
+            } else {
+                eprintln!("Please provide a shell to generate completions for");
+                Err(anyhow::anyhow!("Unknown shell"))
+            }
+        }
         Commands::Update { yes } => core::update(yes, cli.no_cache),
         Commands::List { global, all } => core::list(global, all),
         Commands::Install {
             file, yes, force, ..
         } if file.is_some() => {
             let Some(f) = file else {
-                return
+                return ExitCode::FAILURE;
             };
-
             core::import(f, yes, force, cli.no_cache)
         }
         Commands::Install {
@@ -210,11 +254,18 @@ fn main() {
         // Commands::Clear { full } => clear(&ctx, full),
         #[cfg(feature = "northstar")]
         Commands::Northstar { command } => core::northstar(&command),
+        #[cfg(feature = "launcher")]
+        Commands::Run { no_profile } => core::run(no_profile),
+        Commands::Profile { command } => profile::handle(&command),
     };
 
     if let Err(e) = res {
         if cli.debug {
-            debug!("{:#?}", e);
+            error!("{:#?}", e);
         }
+        eprintln!("{e}");
+        return ExitCode::FAILURE;
     }
+
+    ExitCode::SUCCESS
 }

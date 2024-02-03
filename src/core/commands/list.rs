@@ -1,21 +1,23 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    io::{ErrorKind, IsTerminal, Write},
+};
 
 use anyhow::{Context, Result};
 use owo_colors::OwoColorize;
 use thermite::prelude::*;
-use tracing::{debug, instrument, trace};
+use tracing::{debug, trace};
 
 use crate::{config::CONFIG, model::ModName};
 
-#[instrument]
-pub fn list(global: bool, all: bool) -> Result<()> {
+pub fn list(global: bool, _all: bool) -> Result<()> {
     if global {
         todo!();
     }
-    let mods = find_mods(CONFIG.install_dir()).context("Error finding mods")?;
+    let mods = find_mods(CONFIG.install_dir()?).context("Error finding mods")?;
     debug!("Found {} mods", mods.len());
     trace!("{:?}", mods);
-    let enabled_mods = get_enabled_mods(CONFIG.install_dir().join("..")).ok();
+    let enabled_mods = get_enabled_mods(CONFIG.install_dir()?.join("..")).ok();
 
     let mut grouped_mods: BTreeMap<ModName, BTreeSet<String>> = BTreeMap::new();
     let mut disabled: BTreeMap<ModName, BTreeSet<String>> = BTreeMap::new();
@@ -43,6 +45,27 @@ pub fn list(global: bool, all: bool) -> Result<()> {
         } else {
             process_mod(&mut grouped_mods);
         }
+    }
+
+    if !std::io::stdout().is_terminal() {
+        let out = std::io::stdout();
+        for (group, name) in grouped_mods {
+            if let Err(e) = writeln!(out.lock(), "{}", group.name) {
+                if e.kind() != ErrorKind::BrokenPipe {
+                    return Err(e.into());
+                }
+            }
+
+            for n in name {
+                if let Err(e) = writeln!(out.lock(), "{n}") {
+                    if e.kind() != ErrorKind::BrokenPipe {
+                        return Err(e.into());
+                    }
+                }
+            }
+        }
+
+        return Ok(());
     }
 
     println!("Installed mods: ");
