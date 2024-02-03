@@ -50,14 +50,14 @@ pub fn list(global: bool, _all: bool) -> Result<()> {
     if !std::io::stdout().is_terminal() {
         let out = std::io::stdout();
         for (group, name) in grouped_mods {
-            if let Err(e) = write!(out.lock(), "{}\n", group.name) {
+            if let Err(e) = writeln!(out.lock(), "{}", group.name) {
                 if e.kind() != ErrorKind::BrokenPipe {
                     return Err(e.into());
                 }
             }
 
             for n in name {
-                if let Err(e) = write!(out.lock(), "{n}\n") {
+                if let Err(e) = writeln!(out.lock(), "{n}") {
                     if e.kind() != ErrorKind::BrokenPipe {
                         return Err(e.into());
                     }

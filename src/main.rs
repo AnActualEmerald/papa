@@ -216,7 +216,7 @@ fn main() -> ExitCode {
 
     let res = match cli.command {
         Commands::Complete { shell } => {
-            if let Some(shell) = shell.or_else(|| Shell::from_env()) {
+            if let Some(shell) = shell.or_else(Shell::from_env) {
                 let mut cmd = Cli::command();
                 let out = std::io::stdout();
                 generate(shell, &mut cmd, "papa", &mut out.lock());

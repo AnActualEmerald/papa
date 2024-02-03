@@ -79,7 +79,7 @@ fn activate_profile(name: &String) -> Result<()> {
         return init_msg();
     };
 
-    if CONFIG.is_ignored(&name) {
+    if CONFIG.is_ignored(name) {
         println!(
             "Directory {} is on the ignore list. Please run '{}' and try again.",
             name.bright_red(),
@@ -129,7 +129,7 @@ fn list_profiles() -> Result<()> {
         let out = std::io::stdout();
         for p in profiles {
             if let Some(name) = p.file_name().and_then(|os| os.to_str()) {
-                if let Err(e) = write!(out.lock(), "{name}\n") {
+                if let Err(e) = writeln!(out.lock(), "{name}") {
                     if e.kind() != ErrorKind::BrokenPipe {
                         return Err(e.into());
                     }
