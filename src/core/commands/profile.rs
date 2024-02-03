@@ -20,7 +20,7 @@ pub enum ProfileCommands {
         #[clap(value_hint = ValueHint::Other)]
         name: String,
     },
-    ///Ignore a directory, preventing it from displayed as a profile
+    ///Ignore a directory, preventing it from being displayed as a profile
     Ignore {
         #[clap(value_hint = ValueHint::Other)]
         name: String,
