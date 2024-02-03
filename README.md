@@ -4,8 +4,8 @@
  <br>
  Papa
 <br>
-<a href="https://github.com/AnActualEmerald/papa/actions/workflows/rust.yml"> 
- <img alt="Rust workflow badge" src="https://github.com/AnActualEmerald/papa/actions/workflows/rust.yml/badge.svg" />
+<a href="https://github.com/AnActualEmerald/papa/actions/workflows/build.yml"> 
+ <img alt="Build" src="https://github.com/AnActualEmerald/papa/actions/workflows/build.yml/badge.svg"/>
 </a>
 <a href="https://crates.io/crates/papa">
  <img alt="Crates.io (latest)" src="https://img.shields.io/crates/dv/papa" />
