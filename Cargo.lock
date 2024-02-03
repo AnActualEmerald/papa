@@ -626,7 +626,7 @@ checksum = "caff54706df99d2a78a5a4e3455ff45448d81ef1bb63c22cd14052ca0e993a3f"
 
 [[package]]
 name = "papa"
-version = "4.0.0"
+version = "4.1.0-rc"
 dependencies = [
  "anyhow",
  "clap",

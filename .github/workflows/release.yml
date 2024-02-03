@@ -40,7 +40,7 @@ jobs:
             - name: Bundle .rpm
               run: cargo generate-rpm
             - name: Compress binary
-              run: tar czvf papa.tar.gz -C target/release papa
+              run: tar czvf papa_${{github.ref_name}}_linux_amd64.tar.gz -C target/release papa
             - name: Create release notes
               id: changelog
               uses: orhun/git-cliff-action@v2.3.0
@@ -57,7 +57,7 @@ jobs:
                       LICENSE
                       target/debian/*.deb
                       target/generate-rpm/*.rpm
-                      papa.tar.gz
+                      papa_${{github.ref_name}}_linux_amd64.tar.gz
                       
     windows:
         runs-on: windows-latest
@@ -73,11 +73,11 @@ jobs:
               run: cargo build --release
             - name: Bundle
               run: |
-                  $version= "${{ github.ref_name }}" -replace "[A-Za-z]*"
+                  $version= "${{ github.ref_name }}" -replace "v"
                   cargo wix -p papa -b "C:\Program Files (x86)\WiX Toolset v3.11\bin" --nocapture -i $version
             - name: Compress binary
               run: |
-                  Compress-Archive -Path "target\release\papa.exe" -DestinationPath "papa.zip"
+                  Compress-Archive -Path "target\release\papa.exe" -DestinationPath "target\release\papa_${{ github.ref_name }}_windows.zip"
             - name: Release
               uses: softprops/action-gh-release@v0.1.15
               with:
@@ -85,5 +85,5 @@ jobs:
                   append_body: true
                   files: |
                       LICENSE
-                      target/wix/*.msi
-                      target/release/papa.exe
+                      target\wix\*.msi
+                      target\release\papa_${{ github.ref_name }}_windows.zip
