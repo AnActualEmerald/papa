@@ -11,10 +11,11 @@ pub fn run(no_profile: bool) -> Result<()> {
             let profile = if no_profile {
                 String::new()
             } else {
-                format!("//-profile={}", CONFIG.current_profile())
+                println!("Using profile {}", CONFIG.current_profile().bright_cyan());
+                format!("-profile={}", CONFIG.current_profile())
             };
             open::that_detached(format!(
-                "steam://launch/{}{profile} -northstar",
+                "steam://run/{}//{profile} -northstar/",
                 thermite::TITANFALL2_STEAM_ID
             ))?;
         }

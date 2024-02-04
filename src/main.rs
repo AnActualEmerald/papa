@@ -1,10 +1,12 @@
 use core::profile::ProfileCommands;
-use std::{path::PathBuf, process::ExitCode};
+use std::{fs, path::PathBuf, process::ExitCode};
 
 use clap::{CommandFactory, Parser, Subcommand, ValueHint};
 use clap_complete::{generate, Shell};
 use tracing::{debug, error};
-use tracing_subscriber::{EnvFilter, FmtSubscriber};
+use tracing_subscriber::{
+    fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, FmtSubscriber, Layer, Registry,
+};
 
 pub mod config;
 mod core;
@@ -18,7 +20,7 @@ mod macros;
 use model::ModName;
 use utils::validate_modname;
 
-use crate::core::profile;
+use crate::{config::DIRS, core::profile};
 
 #[derive(Parser)]
 #[clap(name = "Papa")]
@@ -35,6 +37,9 @@ struct Cli {
     ///Don't check cache before downloading
     #[clap(global = true, short = 'C', long = "no-cache")]
     no_cache: bool,
+    ///File to write logs to, will truncate any existing file
+    #[clap(global = true, long = "log-file")]
+    log_file: Option<PathBuf>,
 }
 
 #[derive(Subcommand)]
@@ -211,12 +216,45 @@ fn main() -> ExitCode {
         std::env::set_var("RUST_LOG", "DEBUG");
     }
 
-    let subscriber = FmtSubscriber::builder()
-        .without_time()
-        .with_env_filter(EnvFilter::from_default_env())
-        .finish();
+    let (writer, _handle) = if let Some(file) = cli.log_file {
+        let file = fs::OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(file)
+            .expect("log file");
+        tracing_appender::non_blocking(file)
+    } else {
+        let file_logger = tracing_appender::rolling::never(DIRS.config_dir(), "papa.log");
+        tracing_appender::non_blocking(file_logger)
+    };
 
-    tracing::subscriber::set_global_default(subscriber).expect("Unable to init tracing");
+    let reg = Registry::default().with(
+        fmt::layer()
+            .compact()
+            .without_time()
+            .with_writer(writer)
+            .with_ansi(false)
+            .with_filter(EnvFilter::from_default_env()),
+    );
+
+    if cli.debug {
+        reg.with(
+            fmt::layer()
+                .compact()
+                .with_ansi(true)
+                .without_time()
+                .with_filter(EnvFilter::from_default_env()),
+        )
+        .init();
+    } else {
+        reg.init();
+    }
+
+    // FmtSubscriber::builder()
+    //     .without_time()
+    //     .with_env_filter(EnvFilter::from_default_env())
+    //     .init();
 
     debug!("Config: {:#?}", *config::CONFIG);
 

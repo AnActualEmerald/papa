@@ -6,7 +6,7 @@ use std::{
 use anyhow::{Context, Result};
 use owo_colors::OwoColorize;
 use thermite::prelude::*;
-use tracing::{debug, trace};
+use tracing::{debug, error, trace};
 
 use crate::{config::CONFIG, model::ModName};
 
@@ -14,7 +14,19 @@ pub fn list(global: bool, _all: bool) -> Result<()> {
     if global {
         todo!();
     }
-    let mods = find_mods(CONFIG.install_dir()?).context("Error finding mods")?;
+    let mods = match find_mods(CONFIG.install_dir()?) {
+        Ok(mods) => mods,
+        Err(e) => {
+            error!("Error finding mods: {e}");
+            vec![]
+        }
+    };
+
+    if mods.is_empty() {
+        println!("No mods found");
+        return Ok(());
+    }
+
     debug!("Found {} mods", mods.len());
     trace!("{:?}", mods);
     let enabled_mods = get_enabled_mods(CONFIG.install_dir()?.join("..")).ok();

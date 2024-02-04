@@ -53,7 +53,6 @@ fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
         println!("Found an existing Northstar installation, updating config!");
         let mut new_config = CONFIG.clone();
         new_config.set_game_dir(titanfall_path.clone());
-        new_config.set_install_dir(titanfall_path.join("R2Northstar").join("packages"));
 
         if titanfall().is_some() {
             new_config.set_install_type(crate::config::InstallType::Steam);
@@ -100,7 +99,6 @@ fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
 
     let mut new_config = CONFIG.clone();
     new_config.set_game_dir(titanfall_path.clone());
-    new_config.set_install_dir(titanfall_path.join("R2Northstar").join("packages"));
     if titanfall().is_some() {
         new_config.set_install_type(crate::config::InstallType::Steam);
     }
