@@ -11,13 +11,12 @@ pub fn run(no_profile: bool) -> Result<()> {
             let profile = if no_profile {
                 String::new()
             } else {
-                format!("//-profile={}/", CONFIG.current_profile())
+                format!("//-profile={}", CONFIG.current_profile())
             };
             open::that_detached(format!(
-                "steam://launch/{}{profile}",
+                "steam://launch/{}{profile} -northstar",
                 thermite::TITANFALL2_STEAM_ID
             ))?;
-            println!("Done!");
         }
         Origin => {
             println!("Launching Titanfall 2 using origin...");
@@ -28,7 +27,6 @@ pub fn run(no_profile: bool) -> Result<()> {
                 "origin://LaunchGame/{}",
                 thermite::TITANFALL2_ORIGIN_IDS[0]
             ))?;
-            println!("Done!");
         }
         Other => {
             println!("Can't launch the game for this type of installation.\nIf you think this is a mistake, try running {}.", "papa ns init".bright_cyan());

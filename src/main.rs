@@ -1,8 +1,8 @@
 use core::profile::ProfileCommands;
 use std::{path::PathBuf, process::ExitCode};
 
-use clap::{Parser, Subcommand, ValueHint, CommandFactory};
-use clap_complete::{Shell, generate};
+use clap::{CommandFactory, Parser, Subcommand, ValueHint};
+use clap_complete::{generate, Shell};
 use tracing::{debug, error};
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
@@ -193,6 +193,12 @@ pub enum NstarCommands {
     // #[cfg(feature = "launcher")]
     // ///Start the Northstar client
     // Start {},
+    ///Uninstalls Northstar and all related files
+    Reset {
+        ///Skip confirmation (MAKE SURE YOU WANT TO DO THIS)
+        #[arg(long, short)]
+        yes: bool,
+    },
 }
 
 fn main() -> ExitCode {

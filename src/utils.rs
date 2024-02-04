@@ -166,9 +166,9 @@ pub fn download_and_install(
 }
 
 #[inline]
-pub fn init_msg() -> Result<(), anyhow::Error> {
+pub fn init_msg() -> anyhow::Error {
     println!("Please run '{}' first", "papa ns init".bright_cyan());
-    Err(anyhow::anyhow!("Game path not set"))
+    anyhow::anyhow!("Game path not set")
 }
 
 #[cfg(test)]

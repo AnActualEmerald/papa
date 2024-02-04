@@ -2,6 +2,7 @@ use std::{
     ffi::OsString,
     fs,
     io::{ErrorKind, IsTerminal, Write},
+    path::{Path, PathBuf},
 };
 
 use anyhow::{anyhow, Result};
@@ -76,7 +77,7 @@ pub fn handle(command: &ProfileCommands) -> Result<()> {
 
 fn activate_profile(name: &String) -> Result<()> {
     let Some(dir) = CONFIG.game_dir() else {
-        return init_msg();
+        return Err(init_msg());
     };
 
     if CONFIG.is_ignored(name) {
@@ -101,13 +102,9 @@ fn activate_profile(name: &String) -> Result<()> {
     Ok(())
 }
 
-fn list_profiles() -> Result<()> {
-    let Some(dir) = CONFIG.game_dir() else {
-        return init_msg();
-    };
-
+pub fn find_profiles(dir: impl AsRef<Path>) -> Result<Vec<PathBuf>> {
     let mut profiles = vec![];
-    for candidate in dir.read_dir()? {
+    for candidate in dir.as_ref().read_dir()? {
         let candidate = candidate?;
         if !candidate.file_type()?.is_dir()
             || CONFIG.is_ignored(
@@ -123,6 +120,16 @@ fn list_profiles() -> Result<()> {
         let path = candidate.path();
         profiles.push(path);
     }
+
+    Ok(profiles)
+}
+
+fn list_profiles() -> Result<()> {
+    let Some(dir) = CONFIG.game_dir() else {
+        return Err(init_msg());
+    };
+
+    let profiles = find_profiles(dir)?;
 
     // output the raw list if we're in a script or pipeline
     if !std::io::stdout().is_terminal() {
@@ -166,7 +173,7 @@ fn list_profiles() -> Result<()> {
 
 fn new_profile(name: &OsString, force: bool) -> Result<()> {
     let Some(dir) = CONFIG.game_dir() else {
-        return init_msg();
+        return Err(init_msg());
     };
 
     let prof = dir.join(name);
@@ -187,7 +194,7 @@ fn new_profile(name: &OsString, force: bool) -> Result<()> {
 
 fn clone_profile(source: &String, new: &Option<String>, force: bool) -> Result<()> {
     let Some(game) = CONFIG.game_dir() else {
-        return init_msg();
+        return Err(init_msg());
     };
     let source_dir = game.join(source);
     let target_dir = if let Some(target) = new {

@@ -1,6 +1,6 @@
 #[macro_export]
 macro_rules! readln {
-    ($l:literal) => {{
+    ($l:expr) => {{
         use std::io;
         use std::io::Write;
         let mut input = String::new();
@@ -60,7 +60,7 @@ macro_rules! get_answer {
     ($yes:expr) => {
         get_answer!($yes, "OK? [Y/n]: ")
     };
-    ($yes:expr, $msg: literal) => {
+    ($yes:expr, $msg:expr) => {
         if $yes {
             Ok(String::new())
         } else {
