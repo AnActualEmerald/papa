@@ -28,7 +28,7 @@ pub fn northstar(commands: &NstarCommands) -> Result<()> {
 }
 
 fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
-    let titanfall = if let Some(path) = path {
+    let titanfall_path = if let Some(path) = path {
         path.as_ref().to_path_buf()
     } else if let Some(dir) = titanfall() {
         dir
@@ -39,14 +39,19 @@ fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
         return Err(anyhow!("Unable to locate Titanfall 2 in Steam libraries"));
     };
 
-    debug!("Installing N* to '{}'", titanfall.display());
+    debug!("Installing N* to '{}'", titanfall_path.display());
 
     //try to detect existing installation
-    if !force && titanfall.join("NorthstarLauncher.exe").try_exists()? {
+    if !force && titanfall_path.join("NorthstarLauncher.exe").try_exists()? {
         println!("Found an existing Northstar installation, updating config!");
         let mut new_config = CONFIG.clone();
-        new_config.set_game_dir(titanfall.clone());
-        new_config.set_install_dir(titanfall.join("R2Northstar").join("packages"));
+        new_config.set_game_dir(titanfall_path.clone());
+        new_config.set_install_dir(titanfall_path.join("R2Northstar").join("packages"));
+
+        if titanfall().is_some() {
+            new_config.set_install_type(crate::config::InstallType::Steam);
+        }
+
         write_config(&new_config)?;
         return Ok(());
     }
@@ -83,12 +88,15 @@ fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
         .with_prefix("Installing Northstar...")
         .with_message("");
     pb.enable_steady_tick(Duration::from_millis(50));
-    install_northstar(&nsfile, &titanfall)?;
+    install_northstar(&nsfile, &titanfall_path)?;
     pb.finish_with_message("Done!");
 
     let mut new_config = CONFIG.clone();
-    new_config.set_game_dir(titanfall.clone());
-    new_config.set_install_dir(titanfall.join("R2Northstar").join("packages"));
+    new_config.set_game_dir(titanfall_path.clone());
+    new_config.set_install_dir(titanfall_path.join("R2Northstar").join("packages"));
+    if titanfall().is_some() {
+        new_config.set_install_type(crate::config::InstallType::Steam);
+    }
     write_config(&new_config)?;
 
     Ok(())
