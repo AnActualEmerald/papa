@@ -21,7 +21,8 @@ use thermite::{
 use tracing::debug;
 
 lazy_static! {
-    static ref RE: Regex = Regex::new(r"^(\S\w+)[\.-](\w+)(?:[@-](\d+\.\d+\.\d+))?$").unwrap();
+    static ref RE: Regex =
+        Regex::new(r"^(\S\w+)[\.-](\w+)(?:[@-](\d+\.\d+\.\d+))?$").expect("ModName regex");
 }
 
 pub fn validate_modname(input: &str) -> Result<ModName, String> {

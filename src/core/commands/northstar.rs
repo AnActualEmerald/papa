@@ -1,4 +1,5 @@
-use std::path::Path;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use crate::config::DIRS;
@@ -12,7 +13,7 @@ use crate::{get_answer, modfile};
 use anyhow::{anyhow, Result};
 use indicatif::{ProgressBar, ProgressStyle};
 use owo_colors::OwoColorize;
-use thermite::model::{InstalledMod, Mod};
+use thermite::model::{Mod, ModJSON};
 use thermite::prelude::*;
 use tracing::{debug, warn};
 
@@ -111,13 +112,7 @@ pub fn update_ns() -> Result<bool> {
             dir.clone()
         } else {
             // the fact that this works is kinda funny but also makes my life massively easier
-            let Ok(p) = ns_client
-                .path
-                .join("..")
-                .join("..")
-                .join("..")
-                .canonicalize()
-            else {
+            let Ok(p) = ns_client.join("..").join("..").join("..").canonicalize() else {
                 warn!("Northstar installation seems to be invalid, aborting update");
                 println!(
                     "Can't update this Northstar installation. Try running {} first",
@@ -135,25 +130,40 @@ pub fn update_ns() -> Result<bool> {
     }
 }
 
-pub fn update_check() -> Result<Option<(InstalledMod, Mod)>> {
+pub fn update_check() -> Result<Option<(PathBuf, Mod)>> {
+    let ns_client_path = CONFIG
+        .current_profile_dir()
+        .ok_or_else(|| anyhow!("Unable to get current profile directory from config"))?
+        .join("mods")
+        .join("Northstar.Client");
     let index = get_package_index()?;
-    let mods = find_mods(CONFIG.install_dir()?)?;
-    let Some(ns_client) = mods.get_item(&ModName::new("northstar", "Northstar.Client", None))
-    else {
+
+    if !ns_client_path.try_exists()? {
         debug!(
-            "Didn't find 'Northstar.Client' in '{}'",
-            CONFIG.install_dir()?.display()
+            "Didn't find 'Northstar.Client' at '{}'",
+            ns_client_path.display()
         );
         return Err(anyhow!("Unable to find Northstar.Client mod"));
-    };
+    }
+
+    let mod_json_path = ns_client_path.join("mod.json");
+    let mod_json: ModJSON = serde_json::from_slice(&fs::read(mod_json_path)?)?;
+
+    // else {
+    //     debug!(
+    //         "Didn't find 'Northstar.Client' in '{}'",
+    //         search_dir.display()
+    //     );
+    //     return Err(anyhow!("Unable to find Northstar.Client mod"));
+    // };
 
     let remote_ns = index
         .get_item(&ModName::new("northstar", "Northstar", None))
         .ok_or_else(|| anyhow!("Unable to find Northstar in Thunderstore index"))?;
 
-    if ns_client.mod_json.version == remote_ns.latest {
+    if mod_json.version == remote_ns.latest {
         Ok(None)
     } else {
-        Ok(Some((ns_client.clone(), remote_ns.clone())))
+        Ok(Some((ns_client_path, remote_ns.clone())))
     }
 }
