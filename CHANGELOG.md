@@ -3,11 +3,12 @@
 All notable changes to this project will be documented in this file.
 
 
-## v4.1.0-rc.3
+## v4.1.0-rc.4
 
 ### Bug Fixes
 
 - Don't try to canonicalize path that might not exist
+- Use exact expected path when finding Northar core mods
 
 ### Dependencies
 
@@ -26,6 +27,7 @@ All notable changes to this project will be documented in this file.
 - Add `.rpm` bundle
 - Remove nsargs crate
 - Update action versions
+- Specify include in `Cargo.toml` (via [cargo-diet](https://github.com/the-lean-crate/cargo-diet))
 
 ## v4.0.0
 
