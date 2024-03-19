@@ -95,6 +95,10 @@ impl Config {
         self.current_profile = current_profile.into();
     }
 
+    pub fn current_profile_dir(&self) -> Option<PathBuf> {
+        self.game_dir().map(|d| d.join(&self.current_profile))
+    }
+
     pub fn is_ignored(&self, val: &str) -> bool {
         self.ignore.contains(val)
     }

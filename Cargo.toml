@@ -1,12 +1,13 @@
 [package]
 name = "papa"
-version = "4.1.0-rc.3"                                       # managed by release.sh
+version = "4.1.0-rc.4" # managed by release.sh
 edition = "2021"
 license = "MIT"
 description = "A cli mod manager for the Northstar launcher"
 readme = "README.md"
 authors = ["AnActualEmerald"]
 repository = "https://github.com/AnActualEmerald/papa"
+include = ["src/**/*", "LICENSE", "README.md", "CHANGELOG.*"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
