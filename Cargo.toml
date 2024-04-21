@@ -13,7 +13,7 @@ include = ["src/**/*", "LICENSE", "README.md", "CHANGELOG.*"]
 
 [dependencies]
 tracing = { default-features = false, version = "0.1.37" }
-libthermite = { path = "./thermite", version = "0.7.1", features = [
+libthermite = { git = "https://github.com/anactualemerald/thermite", branch = "main", version = "0.8.1", features = [
     "steam",
 ], default-features = false }
 anyhow = "1.0.72"

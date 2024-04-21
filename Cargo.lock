@@ -548,7 +548,8 @@ dependencies = [
 
 [[package]]
 name = "libthermite"
-version = "0.7.1"
+version = "0.8.1"
+source = "git+https://github.com/anactualemerald/thermite?branch=main#8732719c3ddee14064593fb8c465836361d7055f"
 dependencies = [
  "json5",
  "lazy_static",
