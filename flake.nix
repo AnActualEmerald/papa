@@ -33,11 +33,16 @@
 
       packages.default = packages.papa;
 
+      app.default = {
+        type = "app";
+        program = packages.default;
+      };
+
       formatter = pkgs.alejandra;
 
       devShells.default = pkgs.mkShell {
         nativeBuildInputs = buildDeps;
-        packages = [pkgs.just pkgs.cargo pkgs.cargo-watch pkgs.rust-analyzer];
+        packages = [pkgs.just pkgs.cargo pkgs.clippy pkgs.cargo-watch pkgs.rust-analyzer];
       };
     });
 }

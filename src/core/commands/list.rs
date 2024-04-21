@@ -3,7 +3,7 @@ use std::{
     io::{ErrorKind, IsTerminal, Write},
 };
 
-use anyhow::{Context, Result};
+use anyhow::{Result};
 use owo_colors::OwoColorize;
 use thermite::prelude::*;
 use tracing::{debug, error, trace};
