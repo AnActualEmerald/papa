@@ -95,6 +95,6 @@ macro_rules! update_cfg {
     ($($cmd:ident($op:tt)),*) => {{
         let mut c = $crate::config::CONFIG.clone();
         $(update_cfg!(@cmd c, $cmd $op);)*
-        $crate::config::write_config(&c)
+        c.save()
     }};
 }

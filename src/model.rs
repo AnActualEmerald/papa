@@ -44,7 +44,7 @@ impl Display for ModName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}.{}", self.author, self.name)?;
         if let Some(version) = &self.version {
-            write!(f, "@{}", version)?;
+            write!(f, "@{version}")?;
         }
 
         Ok(())
@@ -138,7 +138,7 @@ impl Display for ModString {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}-{}", self.author, self.inner.name)?;
         if let Some(version) = &self.version {
-            write!(f, "-{}", version)?;
+            write!(f, "-{version}")?;
         }
 
         Ok(())
@@ -168,7 +168,7 @@ impl<'a> Display for ModStr<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}-{}", self.author, self.inner.name)?;
         if let Some(version) = &self.version {
-            write!(f, "-{}", version)?;
+            write!(f, "-{version}")?;
         }
 
         Ok(())

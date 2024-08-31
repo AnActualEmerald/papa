@@ -84,7 +84,7 @@ fn activate_profile(name: &String) -> Result<()> {
         println!(
             "Directory {} is on the ignore list. Please run '{}' and try again.",
             name.bright_red(),
-            format!("papa profile unignore {}", name).bright_cyan()
+            format!("papa profile unignore {name}").bright_cyan()
         );
         return Err(anyhow!("Profile was ignored"));
     }
@@ -200,7 +200,7 @@ fn clone_profile(source: &String, new: &Option<String>, force: bool) -> Result<(
     let target_dir = if let Some(target) = new {
         game.join(target)
     } else {
-        game.join(format!("{}-copy", source))
+        game.join(format!("{source}-copy"))
     };
     let target_name = target_dir
         .file_name()

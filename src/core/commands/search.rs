@@ -1,4 +1,4 @@
-use crate::traits::Index;
+use crate::traits::Indexed;
 use anyhow::Result;
 use owo_colors::OwoColorize;
 use textwrap::Options;

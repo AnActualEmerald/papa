@@ -3,13 +3,9 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use crate::config::DIRS;
-use crate::traits::{Answer, Index};
+use crate::traits::{Answer, Indexed};
 use crate::utils::init_msg;
-use crate::{
-    config::{write_config, CONFIG},
-    model::ModName,
-    NstarCommands,
-};
+use crate::{config::CONFIG, model::ModName, NstarCommands};
 use crate::{get_answer, modfile};
 use anyhow::{anyhow, Result};
 use indicatif::{ProgressBar, ProgressStyle};
@@ -58,7 +54,7 @@ fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
             new_config.set_install_type(crate::config::InstallType::Steam);
         }
 
-        write_config(&new_config)?;
+        new_config.save()?;
         return Ok(());
     }
 
@@ -102,7 +98,7 @@ fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
     if titanfall().is_some() {
         new_config.set_install_type(crate::config::InstallType::Steam);
     }
-    write_config(&new_config)?;
+    new_config.save()?;
 
     Ok(())
 }

@@ -4,7 +4,7 @@ use tracing::warn;
 
 use crate::get_answer;
 use crate::model::ModName;
-use crate::traits::{Answer, Index};
+use crate::traits::{Answer, Indexed};
 use crate::utils::{download_and_install, to_file_size_string};
 
 use owo_colors::OwoColorize;

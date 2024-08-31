@@ -5,19 +5,19 @@ use tracing::debug;
 
 use crate::model::ModName;
 
-const SCORE_THRESHOLD: i32 = 75;
+const SCORE_THRESHOLD: i64 = 75;
 
 pub trait Answer {
     fn is_no(&self) -> bool;
     fn is_yes(&self) -> bool;
 }
 
-pub trait Index<T> {
+pub trait Indexed<T> {
     fn get_item(&self, name: &ModName) -> Option<&T>;
     fn search(&self, term: &str) -> Vec<&T>;
 }
 
-impl Index<Mod> for Vec<Mod> {
+impl Indexed<Mod> for Vec<Mod> {
     fn get_item(&self, name: &ModName) -> Option<&Mod> {
         self.iter().find(|v| {
             v.name.to_lowercase() == name.name.to_lowercase()
@@ -31,24 +31,24 @@ impl Index<Mod> for Vec<Mod> {
         }
         let matcher = SkimMatcherV2::default();
         let mut res = vec![];
-        for v in self.iter() {
+        for v in self {
             let author = matcher.fuzzy_indices(&v.author, term);
             let name = matcher.fuzzy_indices(&v.name, term);
             let desc = matcher.fuzzy_indices(&v.get_latest().unwrap().desc, term);
 
             if let Some((score, _)) = author {
                 debug!("author matched with score '{score}'");
-                if score >= SCORE_THRESHOLD as i64 {
+                if score >= SCORE_THRESHOLD {
                     res.push((score, v));
                 }
             } else if let Some((score, _)) = name {
                 debug!("name matched with score '{score}'");
-                if score >= SCORE_THRESHOLD as i64 {
+                if score >= SCORE_THRESHOLD {
                     res.push((score, v));
                 }
             } else if let Some((score, _)) = desc {
                 debug!("desc matched with score '{score}'");
-                if score >= SCORE_THRESHOLD as i64 {
+                if score >= SCORE_THRESHOLD {
                     res.push((score, v));
                 }
             }
@@ -59,7 +59,7 @@ impl Index<Mod> for Vec<Mod> {
     }
 }
 
-impl Index<InstalledMod> for Vec<InstalledMod> {
+impl Indexed<InstalledMod> for Vec<InstalledMod> {
     fn get_item(&self, name: &ModName) -> Option<&InstalledMod> {
         self.iter()
             .find(|v| v.mod_json.name.to_lowercase() == name.name.to_lowercase())

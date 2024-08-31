@@ -3,12 +3,12 @@ use std::{
     io::{ErrorKind, IsTerminal, Write},
 };
 
-use anyhow::{Result};
+use anyhow::Result;
 use owo_colors::OwoColorize;
 use thermite::prelude::*;
 use tracing::{debug, error, trace};
 
-use crate::{config::CONFIG, model::ModName};
+use crate::{config::CONFIG, model::ModName, utils::find_enabled_mods};
 
 pub fn list(global: bool, _all: bool) -> Result<()> {
     if global {
@@ -29,7 +29,7 @@ pub fn list(global: bool, _all: bool) -> Result<()> {
 
     debug!("Found {} mods", mods.len());
     trace!("{:?}", mods);
-    let enabled_mods = get_enabled_mods(CONFIG.install_dir()?.join("..")).ok();
+    let enabled_mods = find_enabled_mods(CONFIG.install_dir()?);
 
     let mut grouped_mods: BTreeMap<ModName, BTreeSet<String>> = BTreeMap::new();
     let mut disabled: BTreeMap<ModName, BTreeSet<String>> = BTreeMap::new();
@@ -80,6 +80,10 @@ pub fn list(global: bool, _all: bool) -> Result<()> {
         return Ok(());
     }
 
+    println!(
+        "Current profile: {}",
+        CONFIG.current_profile().bright_purple().bold()
+    );
     println!("Installed mods: ");
     for (group, names) in grouped_mods {
         if names.len() == 1 {

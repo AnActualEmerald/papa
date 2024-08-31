@@ -15,7 +15,8 @@ use lazy_static::lazy_static;
 use owo_colors::OwoColorize;
 use regex::Regex;
 use thermite::{
-    model::ModVersion,
+    core::get_enabled_mods,
+    model::{EnabledMods, ModVersion},
     prelude::{download_with_progress, install_mod},
 };
 use tracing::debug;
@@ -25,7 +26,7 @@ lazy_static! {
         Regex::new(r"^(\S\w+)[\.-](\w+)(?:[@-](\d+\.\d+\.\d+))?$").expect("ModName regex");
 }
 
-pub fn validate_modname(input: &str) -> Result<ModName, String> {
+pub(crate) fn validate_modname(input: &str) -> Result<ModName, String> {
     if let Some(captures) = RE.captures(input) {
         let mut name = ModName::default();
         if let Some(author) = captures.get(1) {
@@ -46,32 +47,45 @@ pub fn validate_modname(input: &str) -> Result<ModName, String> {
     }
 }
 
-pub fn to_file_size_string(size: u64) -> String {
+#[must_use]
+pub(crate) fn to_file_size_string(size: u64) -> String {
     if size / 1_000_000 >= 1 {
         let size = size as f64 / 1_048_576f64;
 
-        format!("{:.2} MB", size)
+        format!("{size:.2} MB")
     } else {
         let size = size as f64 / 1024f64;
-        format!("{:.2} KB", size)
+        format!("{size:.2} KB")
     }
 }
 
-pub fn ensure_dir(dir: impl AsRef<Path>) -> Result<()> {
+pub(crate) fn ensure_dir(dir: impl AsRef<Path>) -> Result<()> {
     let dir = dir.as_ref();
 
     debug!("Checking if path '{}' exists", dir.display());
-    if !dir.try_exists()? {
+    if dir.try_exists()? {
+        debug!("Path '{}' already exists", dir.display());
+    } else {
         debug!("Path '{}' doesn't exist, creating it", dir.display());
         fs::create_dir_all(dir)?;
-    } else {
-        debug!("Path '{}' already exists", dir.display());
     }
 
     Ok(())
 }
 
-pub fn download_and_install(
+pub fn find_enabled_mods(start: impl AsRef<Path>) -> Option<EnabledMods> {
+    let dir = start.as_ref();
+
+    if let Ok(mods) = get_enabled_mods(dir) {
+        Some(mods)
+    } else if let Some(parent) = dir.parent() {
+        find_enabled_mods(parent)
+    } else {
+        None
+    }
+}
+
+pub(crate) fn download_and_install(
     mods: Vec<(ModName, impl AsRef<ModVersion>)>,
     check_cache: bool,
     cont: bool,
@@ -129,7 +143,9 @@ pub fn download_and_install(
 
     for (mn, full_name, f) in files.iter().progress_with(pb.clone()) {
         pb.set_message(format!("{}", mn.bright_cyan()));
-        if !CONFIG.is_server() {
+        if CONFIG.is_server() {
+            todo!();
+        } else {
             ensure_dir(CONFIG.install_dir()?)?;
             let mod_path = CONFIG.install_dir()?;
             match install_mod(full_name, f, mod_path) {
@@ -150,16 +166,15 @@ pub fn download_and_install(
                     installed.push(mod_path);
                 }
             }
-        } else {
-            todo!();
         }
     }
 
+    pb.disable_steady_tick();
     pb.set_prefix("");
     pb.set_tab_width(0);
     pb.finish_with_message("Installed ");
     if had_error {
-        println!("Finished with errors")
+        println!("Finished with errors");
     } else {
         println!("Done!");
     }
@@ -167,6 +182,7 @@ pub fn download_and_install(
 }
 
 #[inline]
+#[must_use]
 pub fn init_msg() -> anyhow::Error {
     println!("Please run '{}' first", "papa ns init".bright_cyan());
     anyhow::anyhow!("Game path not set")

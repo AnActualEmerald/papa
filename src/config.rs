@@ -110,6 +110,13 @@ impl Config {
     pub fn remove_ignored(&mut self, val: impl AsRef<str>) -> bool {
         self.ignore.remove(val.as_ref())
     }
+
+    pub fn save(&self) -> Result<()> {
+        let cereal = toml::to_string_pretty(self)?;
+        fs::create_dir_all(DIRS.config_dir())?;
+        fs::write(DIRS.config_dir().join("config.toml"), cereal)?;
+        Ok(())
+    }
 }
 
 impl Default for Config {
@@ -150,11 +157,4 @@ impl Display for InstallType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
     }
-}
-
-pub fn write_config(cfg: &Config) -> Result<()> {
-    let cereal = toml::to_string_pretty(cfg)?;
-    fs::create_dir_all(DIRS.config_dir())?;
-    fs::write(DIRS.config_dir().join("config.toml"), cereal)?;
-    Ok(())
 }

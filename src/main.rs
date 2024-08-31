@@ -76,7 +76,7 @@ enum Commands {
         force: bool,
     },
 
-    ///Install a mod or mods from https://northstar.thunderstore.io/
+    ///Install a mod or mods from <https://northstar.thunderstore.io/>
     #[clap(alias = "i")]
     Install {
         #[clap(value_name = "MOD", value_hint = ValueHint::Other)]

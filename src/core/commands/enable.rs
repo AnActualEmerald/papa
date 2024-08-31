@@ -4,10 +4,10 @@ use anyhow::Result;
 use owo_colors::OwoColorize;
 use tracing::debug;
 
-use crate::{config::CONFIG, model::ModName};
+use crate::{config::CONFIG, model::ModName, utils::find_enabled_mods};
 use thermite::{
     model::{EnabledMods, InstalledMod},
-    prelude::{find_mods, get_enabled_mods, ThermiteError},
+    prelude::find_mods,
 };
 
 pub fn enable(mods: BTreeSet<String>, all: bool) -> Result<()> {
@@ -34,10 +34,9 @@ pub fn enable(mods: BTreeSet<String>, all: bool) -> Result<()> {
         })
         .collect::<Vec<(String, InstalledMod)>>();
 
-    let mut enabled_mods = match get_enabled_mods(dir.join("..")) {
-        Ok(mods) => mods,
-        Err(ThermiteError::MissingFile(path)) => EnabledMods::default_with_path(*path),
-        Err(e) => return Err(e.into()),
+    let mut enabled_mods = match find_enabled_mods(dir.join("..")) {
+        Some(mods) => mods,
+        None => EnabledMods::default_with_path(dir.join("..").join("enabledmods.json")),
     };
 
     debug!("Enabled mods: {:?}", enabled_mods.mods);

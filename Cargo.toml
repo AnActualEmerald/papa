@@ -5,15 +5,22 @@ edition = "2021"
 license = "MIT"
 description = "A cli mod manager for the Northstar launcher"
 readme = "README.md"
-authors = ["AnActualEmerald"]
+authors = [
+    "AnActualEmerald",
+]
 repository = "https://github.com/AnActualEmerald/papa"
-include = ["src/**/*", "LICENSE", "README.md", "CHANGELOG.*"]
+include = [
+    "src/**/*",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.*",
+]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 tracing = { default-features = false, version = "0.1.37" }
-libthermite = { git = "https://github.com/anactualemerald/thermite", branch = "main", version = "0.8.1", features = [
+libthermite = { git = "https://github.com/anactualemerald/thermite", branch = "dev", version = "0.8.1", features = [
     "steam",
 ], default-features = false }
 anyhow = "1.0.72"
@@ -25,11 +32,15 @@ clap = { version = "4.3.19", features = [
     "usage",
 ], default-features = false }
 directories = "5.0.1"
-regex = { version = "1.9.1", default-features = false, features = ["perf"] }
+regex = { version = "1.9.1", default-features = false, features = [
+    "perf",
+] }
 serde = { version = "1.0.174", default-features = false }
 serde_json = { default-features = false, version = "1.0.103" }
-toml = { default-features = false, features = ["display"], version = "0.8" }
-zip = { default-features = false, version = "0.6.6" }
+toml = { default-features = false, features = [
+    "display",
+], version = "0.8" }
+zip = { default-features = false, version = "2.2.0" }
 tracing-subscriber = { version = "0.3.17", features = [
     "ansi",
     "fmt",
@@ -61,11 +72,19 @@ source = "target/release/papa"
 dest = "/usr/bin/papa"
 
 [features]
-default = ["northstar", "launcher"]
-northstar = []
-launcher = ["northstar"]
-cluster = []
-profiles = []
+default = [
+    "northstar",
+    "launcher",
+]
+northstar = [
+]
+launcher = [
+    "northstar",
+]
+cluster = [
+]
+profiles = [
+]
 
 [profile.release]
 strip = true
