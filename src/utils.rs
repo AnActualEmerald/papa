@@ -1,6 +1,7 @@
 use std::{
     fs,
     path::{Path, PathBuf},
+    sync::LazyLock,
     time::Duration,
 };
 
@@ -11,7 +12,6 @@ use crate::{
 };
 use anyhow::{Context, Result};
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
-use lazy_static::lazy_static;
 use owo_colors::OwoColorize;
 use regex::Regex;
 use thermite::{
@@ -21,10 +21,9 @@ use thermite::{
 };
 use tracing::debug;
 
-lazy_static! {
-    static ref RE: Regex =
-        Regex::new(r"^(\S\w+)[\.-](\w+)(?:[@-](\d+\.\d+\.\d+))?$").expect("ModName regex");
-}
+static RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\S\w+)[\.-](\w+)(?:[@-](\d+\.\d+\.\d+))?$").expect("ModName regex")
+});
 
 pub(crate) fn validate_modname(input: &str) -> Result<ModName, String> {
     if let Some(captures) = RE.captures(input) {
@@ -127,7 +126,7 @@ pub(crate) fn download_and_install(
         files.push((mn, v.full_name.clone(), file));
     }
 
-    let mut pb = ProgressBar::new_spinner()
+    let pb = ProgressBar::new_spinner()
         .with_style(
             ProgressStyle::with_template("{prefix}{msg}\t{spinner}\t{pos}/{len}")?
                 .tick_chars("(|)|\0"),

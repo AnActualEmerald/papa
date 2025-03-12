@@ -20,7 +20,7 @@ include = [
 
 [dependencies]
 tracing = { default-features = false, version = "0.1.37" }
-libthermite = { git = "https://github.com/anactualemerald/thermite", branch = "dev", version = "0.8.1", features = [
+libthermite = { git = "https://github.com/anactualemerald/thermite", branch = "profile", version = "0.8", features = [
     "steam",
 ], default-features = false }
 anyhow = "1.0.72"
@@ -32,7 +32,7 @@ clap = { version = "4.3.19", features = [
     "usage",
 ], default-features = false }
 directories = "5.0.1"
-regex = { version = "1.9.1", default-features = false, features = [
+regex = { version = "1", default-features = false, features = [
     "perf",
 ] }
 serde = { version = "1.0.174", default-features = false }
@@ -51,7 +51,6 @@ figment = { version = "0.10.10", features = [
     "toml",
     "env",
 ], default-features = false }
-lazy_static = "1.4.0"
 fuzzy-matcher = "0.3.7"
 indicatif = { default-features = false, version = "0.17.5" }
 ron = "0.8.0"

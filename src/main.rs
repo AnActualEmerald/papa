@@ -22,6 +22,17 @@ use utils::validate_modname;
 
 use crate::{config::DIRS, core::profile};
 
+pub const IGNORED_DIRS: [&str; 8] = [
+    "__Installer",
+    "__overlay",
+    "bin",
+    "Core",
+    "r2",
+    "vpk",
+    "platform",
+    "Support",
+];
+
 #[derive(Parser)]
 #[clap(name = "Papa")]
 #[clap(author = "AnAcutalEmerald <emerald@emeraldgreen.dev>")]
