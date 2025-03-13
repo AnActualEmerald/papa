@@ -1,4 +1,5 @@
 use std::{
+    collections::{BTreeMap, BTreeSet},
     fs,
     path::{Path, PathBuf},
     sync::LazyLock,
@@ -15,11 +16,11 @@ use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use owo_colors::OwoColorize;
 use regex::Regex;
 use thermite::{
-    core::get_enabled_mods,
-    model::{EnabledMods, ModVersion},
+    core::{find_mods, get_enabled_mods},
+    model::{EnabledMods, InstalledMod, ModVersion},
     prelude::{download_with_progress, install_mod},
 };
-use tracing::debug;
+use tracing::{debug, error, trace};
 
 static RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(\S\w+)[\.-](\w+)(?:[@-](\d+\.\d+\.\d+))?$").expect("ModName regex")
@@ -178,6 +179,63 @@ pub(crate) fn download_and_install(
         println!("Done!");
     }
     Ok(installed)
+}
+
+#[derive(Default)]
+pub struct GroupedMods {
+    pub enabled: BTreeMap<ModName, BTreeSet<InstalledMod>>,
+    pub disabled: BTreeMap<ModName, BTreeSet<InstalledMod>>,
+}
+
+impl GroupedMods {
+    pub fn try_from_dir(dir: &Path) -> Result<Self> {
+        let mods = match find_mods(dir) {
+            Ok(mods) => mods,
+            Err(e) => {
+                error!("Error finding mods: {e}");
+                vec![]
+            }
+        };
+
+        if mods.is_empty() {
+            println!("No mods found");
+            return Ok(Self::default());
+        }
+
+        debug!("Found {} mods", mods.len());
+        trace!("{:?}", mods);
+        let enabled_mods = find_enabled_mods(dir);
+
+        let mut enabled = BTreeMap::new();
+        let mut disabled = BTreeMap::new();
+        for m in mods {
+            let local_name = m.mod_json.name.clone();
+
+            let mn = m.clone().into();
+            let process_mod = |mod_group: &mut BTreeMap<ModName, BTreeSet<InstalledMod>>| {
+                if let Some(group) = mod_group.get_mut(&mn) {
+                    debug!("Adding submod {local_name} to group {}", mn);
+                    group.insert(m);
+                } else {
+                    debug!("Adding group {local_name} for sdubmod {}", mn);
+                    let group = BTreeSet::from([m]);
+                    mod_group.insert(mn, group);
+                }
+            };
+
+            if let Some(em) = enabled_mods.as_ref() {
+                if em.is_enabled(&local_name) {
+                    process_mod(&mut enabled);
+                } else {
+                    process_mod(&mut disabled);
+                }
+            } else {
+                process_mod(&mut enabled);
+            }
+        }
+
+        Ok(Self { enabled, disabled })
+    }
 }
 
 #[inline]

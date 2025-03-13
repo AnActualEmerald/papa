@@ -7,6 +7,7 @@ use std::{
 
 use anyhow::{anyhow, Result};
 use clap::{Subcommand, ValueHint};
+use clap_complete::ArgValueCompleter;
 use copy_dir::copy_dir;
 use owo_colors::OwoColorize;
 
@@ -18,28 +19,29 @@ pub enum ProfileCommands {
     ///Select a profile
     Select {
         ///Name of the profile to select
-        #[clap(value_hint = ValueHint::Other)]
+        #[clap(add = ArgValueCompleter::new(crate::completers::profiles))]
         name: String,
     },
     ///Ignore a directory, preventing it from being displayed as a profile
     Ignore {
-        #[clap(value_hint = ValueHint::Other)]
+        #[clap(value_hint = ValueHint::DirPath)]
         name: String,
     },
     ///Un-ignore a directory, allowing it to be displayed as a profile
     Unignore {
-        #[clap(value_hint = ValueHint::Other)]
+        #[clap(value_hint = ValueHint::DirPath)]
         name: String,
     },
     #[clap(alias("ls"))]
     ///List profiles
     List,
-    ///Create an empty profile
+    ///Create a new profile
     #[clap(alias("n"))]
     New {
         ///Name of the profile to create
-        #[clap(value_hint = ValueHint::Other)]
+        #[clap(value_hint = ValueHint::DirPath)]
         name: OsString,
+        ///Remove any existing folder of the same name
         #[arg(long, short)]
         force: bool,
     },
@@ -47,9 +49,9 @@ pub enum ProfileCommands {
     #[clap(alias = "dupe", alias = "cp", alias = "copy")]
     ///Clone an existing profile
     Clone {
-        #[clap(value_hint = ValueHint::Other)]
+        #[clap(add = ArgValueCompleter::new(crate::completers::profiles))]
         source: String,
-        #[clap(value_hint = ValueHint::Other)]
+        #[clap(value_hint = ValueHint::DirPath)]
         new: Option<String>,
         #[arg(long, short)]
         force: bool,
