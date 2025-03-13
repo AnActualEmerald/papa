@@ -164,7 +164,7 @@ enum Commands {
     },
     ///Enable mod(s) or sub-mod(s)
     Enable {
-        // #[clap()]
+        #[clap(add = ArgValueCompleter::new(completers::disabled_mods))]
         mods: Vec<String>,
         #[arg(short, long)]
         all: bool,

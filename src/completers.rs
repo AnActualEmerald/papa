@@ -82,15 +82,75 @@ pub fn enabled_mods(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
         return vec![];
     };
 
-    mods.enabled
-        .values()
-        .flatten()
-        .map(|installed| ModName {
-            author: installed.author.clone(),
-            name: installed.mod_json.name.clone(),
-            version: None,
-        })
-        .map(|name| name.to_string())
+    let mods = mods.enabled;
+
+    let mut names = vec![];
+    for (modname, group) in mods {
+        names.push(
+            ModName {
+                author: modname.author.clone(),
+                name: modname.name.clone(),
+                version: None,
+            }
+            .to_string(),
+        );
+        if group.len() > 1 {
+            let rest = group
+                .iter()
+                .skip(1)
+                .map(|installed| installed.mod_json.name.clone());
+
+            names.extend(rest);
+        }
+    }
+
+    names
+        .iter()
+        .filter(|name| name.to_lowercase().starts_with(&current))
+        .map(CompletionCandidate::new)
+        .collect()
+}
+
+pub fn disabled_mods(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
+    let Some(current) = current.to_str() else {
+        return vec![];
+    };
+
+    let current = current.to_lowercase();
+
+    let prefix = CONFIG
+        .install_dir()
+        .or_else(|_| std::env::current_dir())
+        .expect("Game dir or cwd");
+
+    let Ok(mods) = GroupedMods::try_from_dir(&prefix) else {
+        return vec![];
+    };
+
+    let mods = mods.disabled;
+
+    let mut names = vec![];
+    for (modname, group) in mods {
+        names.push(
+            ModName {
+                author: modname.author.clone(),
+                name: modname.name.clone(),
+                version: None,
+            }
+            .to_string(),
+        );
+        if group.len() > 1 {
+            let rest = group
+                .iter()
+                .skip(1)
+                .map(|installed| installed.mod_json.name.clone());
+
+            names.extend(rest);
+        }
+    }
+
+    names
+        .iter()
         .filter(|name| name.to_lowercase().starts_with(&current))
         .map(CompletionCandidate::new)
         .collect()
