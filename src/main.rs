@@ -2,12 +2,13 @@ use core::profile::ProfileCommands;
 use std::{fs, path::PathBuf, process::ExitCode};
 
 use clap::{CommandFactory, Parser, Subcommand, ValueHint};
-use clap_complete::{generate, Shell};
+use clap_complete::{env::Shells, ArgValueCompleter, CompleteEnv, Shell};
 use tracing::{debug, error};
 use tracing_subscriber::{
     fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer, Registry,
 };
 
+mod completers;
 pub mod config;
 mod core;
 pub mod model;
@@ -34,7 +35,7 @@ pub const IGNORED_DIRS: [&str; 8] = [
 ];
 
 #[derive(Parser)]
-#[clap(name = "Papa")]
+#[clap(name = "papa")]
 #[clap(author = "AnAcutalEmerald <emerald@emeraldgreen.dev>")]
 #[clap(about = "Command line mod manager for Northstar")]
 #[clap(after_help = "Welcome back. Cockpit cooling reactivated.")]
@@ -88,9 +89,9 @@ enum Commands {
     },
 
     ///Install a mod or mods from <https://northstar.thunderstore.io/>
-    #[clap(alias = "i")]
+    #[clap(alias = "i", alias = "add")]
     Install {
-        #[clap(value_name = "MOD", value_hint = ValueHint::Other)]
+        #[clap(value_name = "MOD", add = ArgValueCompleter::new(completers::mod_index))]
         #[clap(help = "Mod name(s) to install")]
         #[clap(required_unless_present = "file")]
         #[clap(value_parser = validate_modname)]
@@ -115,7 +116,7 @@ enum Commands {
     ///Remove a mod or mods from the current mods directory
     #[clap(alias = "r", alias = "rm")]
     Remove {
-        #[clap(value_name = "MOD", value_hint = ValueHint::Other)]
+        #[clap(value_name = "MOD", add = ArgValueCompleter::new(completers::installed_mods))]
         #[clap(help = "Mod name(s) to remove")]
         #[clap(value_parser = validate_modname)]
         #[clap(required = true)]
@@ -150,7 +151,7 @@ enum Commands {
 
     ///Disable mod(s) or sub-mod(s)
     Disable {
-        #[clap(value_hint = ValueHint::Other)]
+        #[clap(add = ArgValueCompleter::new(completers::enabled_mods))]
         mods: Vec<String>,
 
         ///Disable all mods excluding core N* mods
@@ -163,7 +164,7 @@ enum Commands {
     },
     ///Enable mod(s) or sub-mod(s)
     Enable {
-        #[clap(value_hint = ValueHint::Other)]
+        #[clap(add = ArgValueCompleter::new(completers::disabled_mods))]
         mods: Vec<String>,
         #[arg(short, long)]
         all: bool,
@@ -218,11 +219,13 @@ pub enum NstarCommands {
 }
 
 fn main() -> ExitCode {
+    CompleteEnv::with_factory(|| Cli::command()).complete();
+
     let cli = Cli::try_parse();
     if let Err(e) = cli {
         e.exit();
     }
-    let cli = cli.unwrap();
+    let cli = cli.expect("cli");
     if cli.debug {
         std::env::set_var("RUST_LOG", "DEBUG");
     }
@@ -272,10 +275,16 @@ fn main() -> ExitCode {
     let res = match cli.command {
         Commands::Complete { shell } => {
             if let Some(shell) = shell.or_else(Shell::from_env) {
-                let mut cmd = Cli::command();
-                let out = std::io::stdout();
-                generate(shell, &mut cmd, "papa", &mut out.lock());
-                Ok(())
+                if let Some(completer) = Shells::builtins().completer(&shell.to_string()) {
+                    let cmd = Cli::command();
+                    let name = cmd.get_name();
+                    completer
+                        .write_registration("COMPLETE", name, name, name, &mut std::io::stdout())
+                        .map_err(anyhow::Error::from)
+                } else {
+                    eprintln!("Please provide a shell to generate completions for");
+                    Err(anyhow::anyhow!("Unknown shell"))
+                }
             } else {
                 eprintln!("Please provide a shell to generate completions for");
                 Err(anyhow::anyhow!("Unknown shell"))

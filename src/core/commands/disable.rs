@@ -47,7 +47,7 @@ pub fn disable(mods: BTreeSet<String>, all: bool, force: bool) -> Result<()> {
 
             debug!("Checking if {} should be disabled", ModName::from(&v));
             let res = mods.iter().find(|m| {
-                if let Ok(mn) = TryInto::<ModName>::try_into(m.as_str()) {
+                if let Ok(mn) = ModName::try_from(m.as_str()) {
                     (mn.author.to_lowercase() == v.author.to_lowercase()
                         && mn.name.to_lowercase() == v.manifest.name.to_lowercase())
                         || m.to_lowercase() == v.mod_json.name.to_lowercase()
