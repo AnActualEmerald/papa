@@ -1,13 +1,14 @@
-use std::fs;
+use std::fs::{self, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use crate::config::DIRS;
+use crate::model::Cache;
 use crate::traits::{Answer, Indexed};
-use crate::utils::init_msg;
-use crate::{config::CONFIG, model::ModName, NstarCommands};
+use crate::utils::{ensure_dir, init_msg};
+use crate::{NstarCommands, config::CONFIG, model::ModName};
 use crate::{get_answer, modfile};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use indicatif::{ProgressBar, ProgressStyle};
 use owo_colors::OwoColorize;
 use thermite::model::{Mod, ModJSON};
@@ -18,7 +19,11 @@ use super::profile;
 
 pub fn northstar(commands: &NstarCommands) -> Result<()> {
     match commands {
-        NstarCommands::Init { force, path } => init_ns(*force, path.as_ref())?,
+        NstarCommands::Init {
+            force,
+            path,
+            no_cache,
+        } => init_ns(*force, path.as_ref(), *no_cache)?,
         NstarCommands::Update {} => {
             update_ns()?;
         }
@@ -30,11 +35,11 @@ pub fn northstar(commands: &NstarCommands) -> Result<()> {
     Ok(())
 }
 
-fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
-    let titanfall_path = if let Some(path) = path {
-        path.as_ref().to_path_buf()
+fn init_ns(force: bool, path: Option<impl AsRef<Path>>, no_cache: bool) -> Result<()> {
+    let (titanfall_path, steam) = if let Some(path) = path {
+        (path.as_ref().to_path_buf(), false)
     } else if let Ok(dir) = titanfall2_dir() {
-        dir
+        (dir, true)
     } else {
         println!(
             "Couldn't automatically locate your Titanfall installation.\nPlease provide a path."
@@ -50,7 +55,7 @@ fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
         let mut new_config = CONFIG.clone();
         new_config.set_game_dir(titanfall_path.clone());
 
-        if titanfall2_dir().is_ok() {
+        if steam {
             new_config.set_install_type(crate::config::InstallType::Steam);
         }
 
@@ -63,27 +68,39 @@ fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
         .get_item(&ModName::new("northstar", "Northstar", None))
         .ok_or(anyhow!("Couldn't find Northstar in the package index"))?;
 
-    std::fs::create_dir_all(DIRS.cache_dir())?;
-    //TODO: remove this file after install
-    let mut nsfile = modfile!(DIRS
-        .cache_dir()
-        .join(format!("{}.zip", ModName::from(nsmod))))?;
-    let nsversion = nsmod.get_latest().expect("N* mod missing latest version");
+    ensure_dir(DIRS.cache_dir())?;
 
-    let pb = ProgressBar::new(nsversion.file_size)
-        .with_style(
-            ProgressStyle::with_template("{msg}{bar:.cyan} {bytes}/{total_bytes} {duration}")?
-                .progress_chars(".. "),
-        )
-        .with_message(format!(
-            "Downloading Northstar version {}",
-            nsmod.latest.bold()
-        ));
-    download_with_progress(&mut nsfile, &nsversion.url, |delta, _, _| {
-        pb.inc(delta);
-    })?;
-    pb.finish();
-    println!();
+    let cache = Cache::from_dir(DIRS.cache_dir())?;
+    let ns_name = ModName::from(nsmod);
+
+    let nsfile = if !no_cache && let Some(cached_ns) = cache.get(&ns_name) {
+        println!("Using cached version of {}", ns_name.bright_cyan());
+
+        OpenOptions::new().read(true).open(cached_ns)?
+    } else {
+        let mut nsfile = modfile!(
+            DIRS.cache_dir()
+                .join(format!("{}.zip", ModName::from(nsmod)))
+        )?;
+        let nsversion = nsmod.get_latest().expect("N* mod missing latest version");
+
+        let pb = ProgressBar::new(nsversion.file_size)
+            .with_style(
+                ProgressStyle::with_template("{msg}{bar:.cyan} {bytes}/{total_bytes} {duration}")?
+                    .progress_chars(".. "),
+            )
+            .with_message(format!(
+                "Downloading Northstar version {}",
+                nsmod.latest.bold()
+            ));
+        download_with_progress(&mut nsfile, &nsversion.url, |delta, _, _| {
+            pb.inc(delta);
+        })?;
+        pb.finish();
+        println!();
+
+        nsfile
+    };
 
     let pb = ProgressBar::new_spinner()
         .with_style(ProgressStyle::with_template("{prefix} {msg} {spinner}")?)
@@ -95,7 +112,7 @@ fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
 
     let mut new_config = CONFIG.clone();
     new_config.set_game_dir(titanfall_path.clone());
-    if titanfall2_dir().is_ok() {
+    if steam {
         new_config.set_install_type(crate::config::InstallType::Steam);
     }
     new_config.save()?;
@@ -131,7 +148,7 @@ pub fn update_ns() -> Result<bool> {
             p
         };
 
-        init_ns(true, Some(path))?;
+        init_ns(true, Some(path), false)?;
         Ok(true)
     } else {
         Ok(false)
@@ -189,7 +206,13 @@ const NSTAR_FILES: [&str; 8] = [
 
 fn reset(yes: bool) -> Result<()> {
     if !yes {
-        let ans = get_answer!(yes, format!("{0}This action will remove Northstar and all related files{0}\n\nAre you sure you want to continue? [y/N]: ", "!!!".bright_red()))?;
+        let ans = get_answer!(
+            yes,
+            format!(
+                "{0}This action will remove Northstar and all related files{0}\n\nAre you sure you want to continue? [y/N]: ",
+                "!!!".bright_red()
+            )
+        )?;
         if !ans.is_yes() {
             println!("Reset cancelled.");
             return Ok(());

@@ -181,7 +181,7 @@ pub struct Cache {
 }
 
 impl Cache {
-    pub fn to_cache_path(&self, name: impl AsRef<ModName>) -> PathBuf {
+    pub fn as_cache_path(&self, name: impl AsRef<ModName>) -> PathBuf {
         let name = name.as_ref();
         self.root.join(format!("{name}"))
     }

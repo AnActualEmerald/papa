@@ -111,7 +111,7 @@ pub(crate) fn download_and_install(
         }
         let v = v.as_ref();
         // flush!()?;
-        let filename = cache.to_cache_path(&mn);
+        let filename = cache.as_cache_path(&mn);
         let pb = ProgressBar::new(v.file_size)
             .with_style(
                 ProgressStyle::with_template("{msg}{bar} {bytes}/{total_bytes} {duration}")?
@@ -247,6 +247,7 @@ pub fn init_msg() -> anyhow::Error {
 
 #[cfg(test)]
 mod test {
+
     use crate::utils::validate_modname;
 
     #[test]

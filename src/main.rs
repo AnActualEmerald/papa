@@ -1,3 +1,5 @@
+#![feature(let_chains)]
+
 use core::profile::ProfileCommands;
 use std::{fs, path::PathBuf, process::ExitCode};
 
@@ -204,6 +206,9 @@ pub enum NstarCommands {
         /// The path to install Northstar into. Defaults to the local Titanfall 2 steam installation, if available.
         #[arg(value_hint = ValueHint::DirPath)]
         path: Option<PathBuf>,
+
+        #[arg(short = 'C', long = "no-cache")]
+        no_cache: bool,
     },
     ///Updates the current northstar install.
     Update {},
@@ -227,7 +232,10 @@ fn main() -> ExitCode {
     }
     let cli = cli.expect("cli");
     if cli.debug {
-        std::env::set_var("RUST_LOG", "DEBUG");
+        unsafe {
+            // always safe to call from single threaded programs
+            std::env::set_var("RUST_LOG", "DEBUG");
+        }
     }
 
     let (writer, _handle) = if let Some(file) = cli.log_file {

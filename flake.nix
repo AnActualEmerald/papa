@@ -29,8 +29,8 @@
         devShell = pkgs.mkShell {
           nativeBuildInputs = with pkgs; [
             alejandra
-            rust-analyzer
-            (pkgs.fenix.stable.withComponents [
+            rust-analyzer-nightly
+            (pkgs.fenix.latest.withComponents [
               "cargo"
               "clippy"
               "rust-src"
