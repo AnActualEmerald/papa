@@ -33,7 +33,7 @@ pub fn northstar(commands: &NstarCommands) -> Result<()> {
 fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
     let titanfall_path = if let Some(path) = path {
         path.as_ref().to_path_buf()
-    } else if let Some(dir) = titanfall() {
+    } else if let Ok(dir) = titanfall2_dir() {
         dir
     } else {
         println!(
@@ -50,7 +50,7 @@ fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
         let mut new_config = CONFIG.clone();
         new_config.set_game_dir(titanfall_path.clone());
 
-        if titanfall().is_some() {
+        if titanfall2_dir().is_ok() {
             new_config.set_install_type(crate::config::InstallType::Steam);
         }
 
@@ -95,7 +95,7 @@ fn init_ns(force: bool, path: Option<impl AsRef<Path>>) -> Result<()> {
 
     let mut new_config = CONFIG.clone();
     new_config.set_game_dir(titanfall_path.clone());
-    if titanfall().is_some() {
+    if titanfall2_dir().is_ok() {
         new_config.set_install_type(crate::config::InstallType::Steam);
     }
     new_config.save()?;

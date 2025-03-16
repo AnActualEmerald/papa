@@ -1,48 +1,44 @@
 {
-  description = "A command line mod manager for Northstar";
-
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs";
     flake-utils.url = "github:numtide/flake-utils";
+    naersk.url = "github:nix-community/naersk";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    fenix.url = "github:nix-community/fenix";
   };
 
   outputs = {
     self,
-    nixpkgs,
     flake-utils,
+    naersk,
+    nixpkgs,
+    fenix,
   }:
-    flake-utils.lib.eachDefaultSystem (system: let
-      pkgs = import nixpkgs {inherit system;};
-      buildDeps = with pkgs; [pkg-config openssl rustc];
-      cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
-      rustPackage = features:
-        pkgs.rustPlatform.buildRustPackage {
-          inherit (cargoToml.package) name version;
-          src = ./.;
-          cargoLock = {
-            lockFile = ./Cargo.lock;
-            outputHashes = {
-              "libthermite-0.8.1" = "sha256-DPc6Nt8BN0Q+t+bf3p171BiIXuAAcVBbve2rR1l9QTg=";
-            };
-          };
-          buildFeatures = features;
-          nativeBuildInputs = buildDeps;
+    flake-utils.lib.eachDefaultSystem (
+      system: let
+        pkgs = (import nixpkgs) {
+          inherit system;
+          overlays = [fenix.overlays.default];
         };
-    in rec {
-      packages.papa = rustPackage "";
 
-      packages.default = packages.papa;
+        naersk' = pkgs.callPackage naersk {};
+      in rec {
+        defaultPackage = naersk'.buildPackage {
+          src = ./.;
+        };
 
-      app.default = {
-        type = "app";
-        program = packages.default;
-      };
-
-      formatter = pkgs.alejandra;
-
-      devShells.default = pkgs.mkShell {
-        nativeBuildInputs = buildDeps;
-        packages = [pkgs.just pkgs.cargo pkgs.clippy pkgs.cargo-watch pkgs.rust-analyzer];
-      };
-    });
+        devShell = pkgs.mkShell {
+          nativeBuildInputs = with pkgs; [
+            alejandra
+            rust-analyzer
+            (pkgs.fenix.stable.withComponents [
+              "cargo"
+              "clippy"
+              "rust-src"
+              "rustc"
+              "rustfmt"
+            ])
+          ];
+        };
+      }
+    );
 }
