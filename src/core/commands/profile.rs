@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::{Subcommand, ValueHint};
 use clap_complete::ArgValueCompleter;
 use copy_dir::copy_dir;

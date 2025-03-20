@@ -1,13 +1,13 @@
 #![feature(let_chains)]
 
 use core::profile::ProfileCommands;
-use std::{fs, path::PathBuf, process::ExitCode};
+use std::{fs, io::IsTerminal, path::PathBuf, process::ExitCode};
 
 use clap::{CommandFactory, Parser, Subcommand, ValueHint};
-use clap_complete::{env::Shells, ArgValueCompleter, CompleteEnv, Shell};
+use clap_complete::{ArgValueCompleter, CompleteEnv, Shell, env::Shells};
 use tracing::{debug, error};
 use tracing_subscriber::{
-    fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer, Registry,
+    EnvFilter, Layer, Registry, fmt, layer::SubscriberExt, util::SubscriberInitExt,
 };
 
 mod completers;
@@ -60,6 +60,9 @@ struct Cli {
 enum Commands {
     /// Generate completions for the current shell
     Complete {
+        ///Print the shell script for initializing completions
+        #[arg(long, short)]
+        init: bool,
         ///Shell to generate for, defaults to the value of the SHELL environment variable
         #[clap(value_name = "SHELL", value_enum)]
         shell: Option<Shell>,
@@ -184,8 +187,16 @@ enum Commands {
     #[cfg(feature = "launcher")]
     #[clap(alias("start"))]
     Run {
+        ///Don't pass a `-profile` argument when launching
+        ///
+        /// Only affects Steam installations
         #[arg(short = 'P', long = "no-profile")]
         no_profile: bool,
+        ///Don't wait for the game to exit before exiting `papa`
+        #[arg(short = 'W', long = "no-wait")]
+        no_wait: bool,
+        ///Extra arguments to pass when launching the game
+        args: Vec<String>,
     },
 
     #[clap(alias = "p", alias = "profiles")]
@@ -224,7 +235,7 @@ pub enum NstarCommands {
 }
 
 fn main() -> ExitCode {
-    CompleteEnv::with_factory(|| Cli::command()).complete();
+    CompleteEnv::with_factory(Cli::command).complete();
 
     let cli = Cli::try_parse();
     if let Err(e) = cli {
@@ -281,17 +292,61 @@ fn main() -> ExitCode {
     debug!("Config: {:#?}", *config::CONFIG);
 
     let res = match cli.command {
-        Commands::Complete { shell } => {
+        Commands::Complete { shell, init } => {
             if let Some(shell) = shell.or_else(Shell::from_env) {
-                if let Some(completer) = Shells::builtins().completer(&shell.to_string()) {
-                    let cmd = Cli::command();
-                    let name = cmd.get_name();
-                    completer
-                        .write_registration("COMPLETE", name, name, name, &mut std::io::stdout())
-                        .map_err(anyhow::Error::from)
+                if init {
+                    if std::io::stdout().is_terminal() {
+                        let file = match shell {
+                            Shell::Bash => "~/.bashrc",
+                            Shell::Elvish => "~/.elvish/rc.elv",
+                            Shell::Fish => "~/.config/fish/conf.d/papa.fish",
+                            Shell::PowerShell => "$PROFILE",
+                            Shell::Zsh => "~/.zshrc",
+                            _ => panic!("Unknown shell"),
+                        };
+
+                        eprintln!("Redirect this command to '{file}'");
+                        eprintln!("e.g. 'papa complete {shell} >> {file}'");
+                        eprintln!();
+                    }
+
+                    match shell {
+                        Shell::Bash => {
+                            println!("source <(papa complete bash)");
+                            Ok(())
+                        }
+                        Shell::Elvish => {
+                            println!("eval (papa complete elvish | slurp)");
+                            Ok(())
+                        }
+                        Shell::Fish => {
+                            println!("source (papa complete fish | psub)");
+                            Ok(())
+                        }
+                        Shell::PowerShell => {
+                            println!("papa complete powershell | Out-String | Invoke-Expression");
+                            Ok(())
+                        }
+                        Shell::Zsh => {
+                            println!("source <(papa complete zsh)");
+                            Ok(())
+                        }
+                        _ => Err(anyhow::anyhow!("Unknown shell")),
+                    }
                 } else {
-                    eprintln!("Please provide a shell to generate completions for");
-                    Err(anyhow::anyhow!("Unknown shell"))
+                    let cli = Cli::command();
+
+                    Shells::builtins()
+                        .completer(&shell.to_string())
+                        .expect("shell completer")
+                        .write_registration(
+                            "COMPLETE",
+                            cli.get_name(),
+                            cli.get_name(),
+                            cli.get_name(),
+                            &mut std::io::stdout(),
+                        )
+                        .map_err(anyhow::Error::from)
                 }
             } else {
                 eprintln!("Please provide a shell to generate completions for");
@@ -327,7 +382,11 @@ fn main() -> ExitCode {
         #[cfg(feature = "northstar")]
         Commands::Northstar { command } => core::northstar(&command),
         #[cfg(feature = "launcher")]
-        Commands::Run { no_profile } => core::run(no_profile),
+        Commands::Run {
+            no_profile,
+            no_wait,
+            args: extra_args,
+        } => core::run(no_profile, no_wait, extra_args),
         Commands::Profile { command } => profile::handle(&command),
     };
 
