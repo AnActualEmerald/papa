@@ -1,5 +1,4 @@
-use std::os::unix::process::CommandExt;
-use std::process::Command;
+use std::time::Duration;
 
 use anyhow::Result;
 use owo_colors::OwoColorize;
@@ -8,7 +7,7 @@ use thermite::TITANFALL2_STEAM_ID;
 use crate::config::CONFIG;
 use crate::config::InstallType::*;
 
-pub fn run(no_profile: bool) -> Result<()> {
+pub fn run(no_profile: bool, no_wait: bool, extra: Vec<String>) -> Result<()> {
     match CONFIG.install_type() {
         Steam(t) => {
             println!("Launching Titanfall 2 using steam...");
@@ -23,16 +22,21 @@ pub fn run(no_profile: bool) -> Result<()> {
             //     thermite::TITANFALL2_STEAM_ID
             // ))?;
 
-            let mut child = dbg!(
-                dbg!(t.to_launch_command())
-                    .arg("-applaunch")
-                    .arg(TITANFALL2_STEAM_ID.to_string())
-                    .arg("-northstar")
-            )
-            // .arg(profile)
-            .spawn()?;
+            let mut child = t
+                .to_launch_command()
+                .arg("-applaunch")
+                .arg(TITANFALL2_STEAM_ID.to_string())
+                .arg("-northstar")
+                .arg(profile)
+                .args(extra)
+                .spawn()?;
 
-            child.wait()?;
+            if !no_wait {
+                let spinner = indicatif::ProgressBar::new_spinner().with_message("Gaming...");
+                spinner.enable_steady_tick(Duration::from_millis(100));
+                child.wait()?;
+                spinner.finish_and_clear();
+            }
         }
         Origin => {
             println!("Launching Titanfall 2 using origin...");

@@ -14,7 +14,7 @@ use owo_colors::OwoColorize;
 use steamlocate::SteamDir;
 use thermite::model::{Mod, ModJSON};
 use thermite::prelude::*;
-use tracing::{Instrument, debug, warn};
+use tracing::{debug, warn};
 
 use super::profile;
 

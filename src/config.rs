@@ -10,7 +10,6 @@ use anyhow::anyhow;
 use directories::ProjectDirs;
 use figment::Figment;
 use figment::providers::{Env, Format, Serialized, Toml};
-use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 
 use crate::IGNORED_DIRS;
@@ -41,6 +40,7 @@ pub struct Config {
     ignore: HashSet<String>,
     #[serde(default)]
     install_type: InstallType,
+    #[serde(default)]
     is_server: bool,
 }
 
