@@ -6,10 +6,16 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
-use thermite::model::{InstalledMod, Mod};
+use thermite::model::{InstalledMod, Manifest, Mod};
 use tracing::{debug, warn};
 
 use crate::utils::validate_modname;
+
+#[derive(Clone, Debug)]
+pub struct Package {
+    pub path: PathBuf,
+    pub manifest: Manifest,
+}
 
 #[derive(Default, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ModName {
@@ -101,7 +107,7 @@ impl TryFrom<String> for ModName {
     type Error = anyhow::Error;
 
     fn try_from(value: String) -> std::result::Result<ModName, Self::Error> {
-        validate_modname(&value).map_err(|e| anyhow!("{e}"))
+        validate_modname(&value)
     }
 }
 
@@ -109,7 +115,19 @@ impl TryFrom<&str> for ModName {
     type Error = anyhow::Error;
 
     fn try_from(value: &str) -> std::result::Result<ModName, Self::Error> {
-        validate_modname(value).map_err(|e| anyhow!("{e}"))
+        validate_modname(value)
+    }
+}
+
+impl TryFrom<&Path> for ModName {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &Path) -> std::result::Result<Self, Self::Error> {
+        let name = value
+            .file_name()
+            .ok_or_else(|| anyhow!("missing file name"))?;
+
+        validate_modname(&name.to_string_lossy())
     }
 }
 

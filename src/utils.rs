@@ -11,7 +11,7 @@ use crate::{
     model::{Cache, ModName},
     modfile,
 };
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use owo_colors::OwoColorize;
 use regex::Regex;
@@ -26,7 +26,7 @@ static RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(\S\w+)[\.-](\w+)(?:[@-](\d+\.\d+\.\d+))?$").expect("ModName regex")
 });
 
-pub(crate) fn validate_modname(input: &str) -> Result<ModName, String> {
+pub(crate) fn validate_modname(input: &str) -> Result<ModName> {
     if let Some(captures) = RE.captures(input) {
         let mut name = ModName::default();
         if let Some(author) = captures.get(1) {
@@ -41,7 +41,7 @@ pub(crate) fn validate_modname(input: &str) -> Result<ModName, String> {
 
         Ok(name)
     } else {
-        Err(format!(
+        Err(anyhow!(
             "Mod name '{input}' should be in 'Author.ModName' format"
         ))
     }
@@ -198,7 +198,7 @@ impl GroupedMods {
         };
 
         if mods.is_empty() {
-            println!("No mods found");
+            // println!("No mods found");
             return Ok(Self::default());
         }
 
@@ -238,11 +238,34 @@ impl GroupedMods {
     }
 }
 
+/// Find the roots for all packages in the given directory
+pub fn find_package_roots(dir: impl AsRef<Path>) -> anyhow::Result<Vec<PathBuf>> {
+    let dir = dir.as_ref();
+
+    let mut res = vec![];
+
+    for entry in fs::read_dir(dir)? {
+        let child = entry?;
+
+        if !child.file_type()?.is_dir() {
+            continue;
+        }
+
+        let manifest_path = child.path().join("manifest.json");
+
+        if manifest_path.try_exists()? {
+            res.push(child.path())
+        }
+    }
+
+    Ok(res)
+}
+
 #[inline]
 #[must_use]
 pub fn init_msg() -> anyhow::Error {
     println!("Please run '{}' first", "papa ns init".bright_cyan());
-    anyhow::anyhow!("Game path not set")
+    anyhow!("Game path not set")
 }
 
 #[cfg(test)]

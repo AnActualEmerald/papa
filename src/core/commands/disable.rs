@@ -78,5 +78,8 @@ pub fn disable(mods: BTreeSet<String>, all: bool, force: bool) -> Result<()> {
         println!("Couldn't find {}", m.bright_cyan());
     }
 
+    // ensure the file gets saved, drop seems to be failing silently
+    enabled_mods.save()?;
+
     Ok(())
 }

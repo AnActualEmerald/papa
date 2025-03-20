@@ -53,5 +53,7 @@ pub fn enable(mods: BTreeSet<String>, all: bool) -> Result<()> {
         println!("Couldn't find {}", m.bright_cyan());
     }
 
+    enabled_mods.save()?;
+
     Ok(())
 }

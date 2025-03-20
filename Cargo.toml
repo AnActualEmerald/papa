@@ -20,7 +20,7 @@ include = [
 
 [dependencies]
 tracing = { default-features = false, version = "0.1.37" }
-libthermite = { version = "0.9", features = [
+libthermite = { git = "https://github.com/anactualemerald/thermite", version = "0.9", features = [
     "steam",
 ], default-features = false }
 anyhow = "1.0.72"

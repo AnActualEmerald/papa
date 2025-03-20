@@ -51,11 +51,11 @@ impl Config {
         } else if let Some(dir) = &self.game_dir {
             dir.join(&self.current_profile).join("packages")
         } else {
-            println!(
-                "Please run '{}' or set '{}' in the config",
-                "papa ns init".bright_cyan(),
-                "install_dir".bright_cyan()
-            );
+            // eprintln!(
+            //     "Please run '{}' or set '{}' in the config",
+            //     "papa ns init".bright_cyan(),
+            //     "install_dir".bright_cyan()
+            // );
             return Err(anyhow!("Unintialized config"));
         })
     }
