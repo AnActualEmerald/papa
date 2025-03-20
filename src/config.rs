@@ -2,13 +2,14 @@ use std::collections::HashSet;
 use std::fmt::Display;
 use std::fs;
 use std::path::PathBuf;
+use std::process::Command;
 use std::sync::LazyLock;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use directories::ProjectDirs;
-use figment::providers::{Env, Format, Serialized, Toml};
 use figment::Figment;
+use figment::providers::{Env, Format, Serialized, Toml};
 use owo_colors::OwoColorize;
 use serde::{Deserialize, Serialize};
 
@@ -145,7 +146,7 @@ pub fn default_ignore_list() -> HashSet<String> {
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum InstallType {
-    Steam,
+    Steam(SteamType),
     Origin,
     EA,
     #[default]
@@ -155,5 +156,42 @@ pub enum InstallType {
 impl Display for InstallType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, Default)]
+pub enum SteamType {
+    #[default]
+    Native,
+    Flatpak,
+}
+
+impl SteamType {
+    pub fn to_launch_command(self) -> Command {
+        match self {
+            Self::Native => Command::new("steam"),
+            Self::Flatpak => {
+                let mut cmd = Command::new("flatpak");
+                cmd.args(["run", "com.valvesoftware.Steam"]);
+                cmd
+            }
+        }
+    }
+
+    pub fn determine() -> Result<Self> {
+        use which::which;
+
+        if which("steam").is_ok() {
+            Ok(Self::Native)
+        } else if Command::new("flatpak")
+            .args(["info", "com.valvesoftware.Steam"])
+            .spawn()?
+            .wait()?
+            .success()
+        {
+            Ok(Self::Flatpak)
+        } else {
+            Err(anyhow!("Unable to find steam installation?"))
+        }
     }
 }

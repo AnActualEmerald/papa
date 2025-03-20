@@ -2,7 +2,7 @@ use std::fs::{self, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use crate::config::DIRS;
+use crate::config::{DIRS, InstallType, SteamType};
 use crate::model::Cache;
 use crate::traits::{Answer, Indexed};
 use crate::utils::{ensure_dir, init_msg};
@@ -11,9 +11,10 @@ use crate::{get_answer, modfile};
 use anyhow::{Result, anyhow};
 use indicatif::{ProgressBar, ProgressStyle};
 use owo_colors::OwoColorize;
+use steamlocate::SteamDir;
 use thermite::model::{Mod, ModJSON};
 use thermite::prelude::*;
-use tracing::{debug, warn};
+use tracing::{Instrument, debug, warn};
 
 use super::profile;
 
@@ -35,14 +36,24 @@ pub fn northstar(commands: &NstarCommands) -> Result<()> {
     Ok(())
 }
 
+fn get_titanfall() -> Result<PathBuf> {
+    let maybe = SteamDir::locate_multiple()?
+        .iter()
+        .filter_map(|dir| dir.find_app(TITANFALL2_STEAM_ID).ok().flatten())
+        .map(|(app, lib)| lib.resolve_app_dir(&app))
+        .next();
+
+    maybe.ok_or_else(|| anyhow!("Failed to find titanfall 2"))
+}
+
 fn init_ns(force: bool, path: Option<impl AsRef<Path>>, no_cache: bool) -> Result<()> {
     let (titanfall_path, steam) = if let Some(path) = path {
         (path.as_ref().to_path_buf(), false)
-    } else if let Ok(dir) = titanfall2_dir() {
+    } else if let Ok(dir) = get_titanfall() {
         (dir, true)
     } else {
-        println!(
-            "Couldn't automatically locate your Titanfall installation.\nPlease provide a path."
+        eprintln!(
+            "Couldn't automatically locate your Titanfall installation.\nPlease make sure it's installed or provide a path."
         );
         return Err(anyhow!("Unable to locate Titanfall 2 in Steam libraries"));
     };
@@ -56,7 +67,7 @@ fn init_ns(force: bool, path: Option<impl AsRef<Path>>, no_cache: bool) -> Resul
         new_config.set_game_dir(titanfall_path.clone());
 
         if steam {
-            new_config.set_install_type(crate::config::InstallType::Steam);
+            new_config.set_install_type(InstallType::Steam(SteamType::determine()?));
         }
 
         new_config.save()?;
@@ -113,7 +124,7 @@ fn init_ns(force: bool, path: Option<impl AsRef<Path>>, no_cache: bool) -> Resul
     let mut new_config = CONFIG.clone();
     new_config.set_game_dir(titanfall_path.clone());
     if steam {
-        new_config.set_install_type(crate::config::InstallType::Steam);
+        new_config.set_install_type(InstallType::Steam(SteamType::determine()?));
     }
     new_config.save()?;
 
