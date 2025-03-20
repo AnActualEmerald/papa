@@ -1,5 +1,5 @@
-use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
+use fuzzy_matcher::skim::SkimMatcherV2;
 use thermite::model::{InstalledMod, Mod};
 use tracing::debug;
 
@@ -77,12 +77,12 @@ impl Indexed<InstalledMod> for Vec<InstalledMod> {
 
             if let Some((score, _)) = author {
                 debug!("author matched with score '{score}'");
-                if score >= SCORE_THRESHOLD as i64 {
+                if score >= SCORE_THRESHOLD {
                     res.push((score, v));
                 }
             } else if let Some((score, _)) = name {
                 debug!("name matched with score '{score}'");
-                if score >= SCORE_THRESHOLD as i64 {
+                if score >= SCORE_THRESHOLD {
                     res.push((score, v));
                 }
             }

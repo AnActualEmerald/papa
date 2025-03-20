@@ -4,10 +4,7 @@ use core::profile::ProfileCommands;
 use std::{fs, io::IsTerminal, path::PathBuf, process::ExitCode};
 
 use clap::{CommandFactory, Parser, Subcommand, ValueHint};
-use clap_complete::{
-    ArgValueCompleter, CompleteEnv, Shell,
-    env::{EnvCompleter, Shells},
-};
+use clap_complete::{ArgValueCompleter, CompleteEnv, Shell, env::Shells};
 use tracing::{debug, error};
 use tracing_subscriber::{
     EnvFilter, Layer, Registry, fmt, layer::SubscriberExt, util::SubscriberInitExt,
@@ -238,7 +235,7 @@ pub enum NstarCommands {
 }
 
 fn main() -> ExitCode {
-    CompleteEnv::with_factory(|| Cli::command()).complete();
+    CompleteEnv::with_factory(Cli::command).complete();
 
     let cli = Cli::try_parse();
     if let Err(e) = cli {
