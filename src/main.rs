@@ -387,7 +387,7 @@ fn main() -> ExitCode {
             no_wait,
             args: extra_args,
         } => core::run(no_profile, no_wait, extra_args),
-        Commands::Profile { command } => profile::handle(&command),
+        Commands::Profile { command } => profile::handle(&command, cli.no_cache),
     };
 
     if let Err(e) = res {

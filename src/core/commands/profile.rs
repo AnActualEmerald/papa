@@ -1,17 +1,24 @@
 use std::{
     ffi::OsString,
-    fs,
+    fs::{self, File},
     io::{ErrorKind, IsTerminal, Write},
     path::{Path, PathBuf},
 };
 
 use anyhow::{Result, anyhow};
-use clap::{Subcommand, ValueHint};
+use clap::{Args, Subcommand, ValueHint};
 use clap_complete::ArgValueCompleter;
 use copy_dir::copy_dir;
 use owo_colors::OwoColorize;
+use semver::Version;
+use thermite::core::manage::install_northstar_profile;
 
-use crate::{config::CONFIG, update_cfg, utils::init_msg};
+use crate::{
+    config::{CONFIG, DIRS},
+    model::{Cache, ModName},
+    update_cfg,
+    utils::{download_northstar, init_msg},
+};
 
 #[derive(Subcommand)]
 pub enum ProfileCommands {
@@ -41,9 +48,9 @@ pub enum ProfileCommands {
         ///Name of the profile to create
         #[clap(value_hint = ValueHint::DirPath)]
         name: OsString,
-        ///Remove any existing folder of the same name
-        #[arg(long, short)]
-        force: bool,
+
+        #[command(flatten)]
+        options: NewOptions,
     },
 
     #[clap(alias = "dupe", alias = "cp", alias = "copy")]
@@ -58,10 +65,25 @@ pub enum ProfileCommands {
     },
 }
 
-pub fn handle(command: &ProfileCommands) -> Result<()> {
+#[derive(Args, Clone)]
+pub struct NewOptions {
+    ///Don't inlcude Norhtstar core files and mods
+    #[arg(long, short)]
+    empty: bool,
+    ///Remove any existing folder of the same name
+    #[arg(long, short)]
+    force: bool,
+    ///The version of Northstar to use when for this profile
+    ///
+    /// Leave unset for latest
+    #[arg(long, short, conflicts_with = "empty")]
+    version: Option<Version>,
+}
+
+pub fn handle(command: &ProfileCommands, no_cache: bool) -> Result<()> {
     match command {
         ProfileCommands::List => list_profiles(),
-        ProfileCommands::New { name, force } => new_profile(name, *force),
+        ProfileCommands::New { name, options } => new_profile(name, options.clone(), no_cache),
         ProfileCommands::Clone { source, new, force } => clone_profile(source, new, *force),
         ProfileCommands::Select { name } => activate_profile(name),
         ProfileCommands::Ignore { name } => {
@@ -173,14 +195,14 @@ fn list_profiles() -> Result<()> {
     Ok(())
 }
 
-fn new_profile(name: &OsString, force: bool) -> Result<()> {
+fn new_profile(name: &OsString, options: NewOptions, no_cache: bool) -> Result<()> {
     let Some(dir) = CONFIG.game_dir() else {
         return Err(init_msg());
     };
 
     let prof = dir.join(name);
     if prof.try_exists()? {
-        if force {
+        if options.force {
             fs::remove_dir_all(&prof)?;
         } else {
             println!("A folder of that name already exists, remove it first");
@@ -189,7 +211,26 @@ fn new_profile(name: &OsString, force: bool) -> Result<()> {
     }
     fs::create_dir(&prof)?;
 
-    println!("Created profile {:?}", name.bright_cyan());
+    if !options.empty {
+        let nsname = ModName::new("northstar", "Northstar", dbg!(options.version.clone()));
+        let cache = Cache::from_dir(DIRS.cache_dir())?;
+        let file = if !no_cache
+            && let Some(nstar) = if options.version.is_some() {
+                dbg!(cache.get(nsname))
+            } else {
+                cache.get_any(nsname)
+            } {
+            File::open(nstar)?
+        } else {
+            // get_answer!("");
+
+            download_northstar(options.version)?
+        };
+
+        install_northstar_profile(file, prof)?;
+    }
+
+    println!("Created profile {}", name.display().bright_cyan());
 
     Ok(())
 }

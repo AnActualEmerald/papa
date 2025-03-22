@@ -755,6 +755,7 @@ dependencies = [
  "owo-colors",
  "regex",
  "ron",
+ "semver",
  "serde",
  "serde_json",
  "steamlocate 2.0.1 (git+https://github.com/WilliamVenner/steamlocate-rs)",
@@ -1057,6 +1058,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
 dependencies = [
  "winapi-util",
+]
+
+[[package]]
+name = "semver"
+version = "1.0.26"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "56e6fa9c48d24d85fb3de5ad847117517440f6beceb7798af16b4a87d616b8d0"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

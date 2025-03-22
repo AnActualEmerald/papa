@@ -1,6 +1,7 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
-    fs,
+    fs::{self, File, OpenOptions},
+    io::Seek,
     path::{Path, PathBuf},
     sync::LazyLock,
     time::Duration,
@@ -10,12 +11,15 @@ use crate::{
     config::{CONFIG, DIRS},
     model::{Cache, ModName},
     modfile,
+    traits::Index,
 };
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use owo_colors::OwoColorize;
 use regex::Regex;
+use semver::Version;
 use thermite::{
+    api::get_package_index,
     core::{find_mods, get_enabled_mods},
     model::{EnabledMods, InstalledMod, ModVersion},
     prelude::{download_with_progress, install_mod},
@@ -37,7 +41,7 @@ pub(crate) fn validate_modname(input: &str) -> Result<ModName> {
             name.name = n.as_str().to_string();
         }
 
-        name.version = captures.get(3).map(|v| v.as_str().to_string());
+        name.version = captures.get(3).map(|v| v.as_str().parse()).transpose()?;
 
         Ok(name)
     } else {
@@ -179,6 +183,65 @@ pub(crate) fn download_and_install(
         println!("Done!");
     }
     Ok(installed)
+}
+
+fn temp_path() -> Result<PathBuf> {
+    ensure_dir(std::env::temp_dir())?;
+    let path = std::env::temp_dir().join("ns-temp");
+
+    Ok(path)
+}
+
+pub fn download_northstar(version: Option<Version>) -> Result<File> {
+    let nsname = ModName::new("northstar", "northstar", version);
+
+    let nsmod = get_package_index()?
+        .get_item(&nsname)
+        .cloned()
+        .ok_or_else(|| anyhow!("Package index missing northstar mod"))?;
+
+    let nsversion = if let Some(version) = nsname.version {
+        nsmod
+            .get_version(version.to_string())
+            .ok_or_else(|| anyhow!("Northstar has no version '{version}'"))?
+    } else {
+        nsmod
+            .get_latest()
+            .expect("Northstar missing latest version")
+    };
+
+    let mut tmp = OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .read(true)
+        .open(temp_path()?)?;
+
+    let mut nsfile = modfile!(DIRS.cache_dir().join(format!(
+        "{}",
+        ModName::new(&nsmod.author, &nsmod.name, nsversion.version.parse().ok())
+    )))?;
+
+    let pb = ProgressBar::new(nsversion.file_size)
+        .with_style(
+            ProgressStyle::with_template("{msg}{bar:.cyan} {bytes}/{total_bytes} {duration}")?
+                .progress_chars(".. "),
+        )
+        .with_message(format!(
+            "Downloading Northstar version {}",
+            nsversion.version
+        ));
+    download_with_progress(&mut tmp, &nsversion.url, |delta, _, _| {
+        pb.inc(delta);
+    })?;
+    pb.finish();
+
+    tmp.rewind()?;
+    std::io::copy(&mut tmp, &mut nsfile)?;
+
+    nsfile.rewind()?;
+
+    Ok(nsfile)
 }
 
 #[derive(Default)]

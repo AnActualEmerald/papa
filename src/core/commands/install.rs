@@ -1,10 +1,10 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use thermite::model::ModVersion;
 use tracing::warn;
 
 use crate::get_answer;
 use crate::model::ModName;
-use crate::traits::{Answer, Indexed};
+use crate::traits::{Answer, Index};
 use crate::utils::{download_and_install, to_file_size_string};
 
 use owo_colors::OwoColorize;
@@ -26,7 +26,7 @@ pub fn install(mods: Vec<ModName>, assume_yes: bool, force: bool, no_cache: bool
         }
         if let Some(m) = remote_index.get_item(&mn) {
             if let Some(version) = &mn.version {
-                let Some(mv) = m.get_version(version) else {
+                let Some(mv) = m.get_version(version.to_string()) else {
                     println!(
                         "Package {} has no version {}",
                         format!("{}.{}", mn.author, mn.name).bright_cyan(),
