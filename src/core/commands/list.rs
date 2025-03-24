@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::Result;
 use owo_colors::OwoColorize;
-use semver::{Version, VersionReq};
+use semver::Version;
 use thermite::{model::ModJSON, prelude::*};
 use tracing::{debug, error, trace};
 
