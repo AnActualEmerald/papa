@@ -1,15 +1,28 @@
 use std::{
     ffi::OsString,
-    fs,
+    fs::{self, File},
     io::{ErrorKind, IsTerminal, Write},
+    path::{Path, PathBuf},
+    time::Duration,
 };
 
-use anyhow::{anyhow, Result};
-use clap::{Subcommand, ValueHint};
+use anyhow::{Result, anyhow};
+use clap::{Args, Subcommand, ValueHint};
+use clap_complete::ArgValueCompleter;
 use copy_dir::copy_dir;
+use indicatif::{ProgressBar, ProgressStyle};
 use owo_colors::OwoColorize;
+use semver::Version;
+use thermite::core::manage::install_northstar_profile;
 
-use crate::{config::CONFIG, update_cfg, utils::init_msg};
+use crate::{
+    config::{CONFIG, DIRS},
+    get_answer,
+    model::{Cache, ModName},
+    traits::Answer,
+    update_cfg,
+    utils::{download_northstar, init_msg},
+};
 
 #[derive(Subcommand)]
 pub enum ProfileCommands {
@@ -17,48 +30,67 @@ pub enum ProfileCommands {
     ///Select a profile
     Select {
         ///Name of the profile to select
-        #[clap(value_hint = ValueHint::Other)]
+        #[clap(add = ArgValueCompleter::new(crate::completers::profiles))]
         name: String,
     },
     ///Ignore a directory, preventing it from being displayed as a profile
     Ignore {
-        #[clap(value_hint = ValueHint::Other)]
+        #[clap(value_hint = ValueHint::DirPath)]
         name: String,
     },
     ///Un-ignore a directory, allowing it to be displayed as a profile
     Unignore {
-        #[clap(value_hint = ValueHint::Other)]
+        #[clap(value_hint = ValueHint::DirPath)]
         name: String,
     },
     #[clap(alias("ls"))]
     ///List profiles
     List,
-    ///Create an empty profile
+    ///Create a new profile
     #[clap(alias("n"))]
     New {
         ///Name of the profile to create
-        #[clap(value_hint = ValueHint::Other)]
+        #[clap(value_hint = ValueHint::DirPath)]
         name: OsString,
-        #[arg(long, short)]
-        force: bool,
+
+        #[command(flatten)]
+        options: NewOptions,
     },
 
     #[clap(alias = "dupe", alias = "cp", alias = "copy")]
     ///Clone an existing profile
     Clone {
-        #[clap(value_hint = ValueHint::Other)]
+        #[clap(add = ArgValueCompleter::new(crate::completers::profiles))]
         source: String,
-        #[clap(value_hint = ValueHint::Other)]
+        #[clap(value_hint = ValueHint::DirPath)]
         new: Option<String>,
         #[arg(long, short)]
         force: bool,
     },
 }
 
-pub fn handle(command: &ProfileCommands) -> Result<()> {
+#[derive(Args, Clone)]
+pub struct NewOptions {
+    ///Don't inlcude Norhtstar core files and mods
+    #[arg(long, short)]
+    empty: bool,
+    ///Remove any existing folder of the same name
+    #[arg(long, short)]
+    force: bool,
+    ///Answer "yes" to any prompts
+    #[arg(long, short)]
+    yes: bool,
+    ///The version of Northstar to use when for this profile
+    ///
+    /// Leave unset for latest
+    #[arg(long, short, conflicts_with = "empty")]
+    version: Option<Version>,
+}
+
+pub fn handle(command: &ProfileCommands, no_cache: bool) -> Result<()> {
     match command {
         ProfileCommands::List => list_profiles(),
-        ProfileCommands::New { name, force } => new_profile(name, *force),
+        ProfileCommands::New { name, options } => new_profile(name, options.clone(), no_cache),
         ProfileCommands::Clone { source, new, force } => clone_profile(source, new, *force),
         ProfileCommands::Select { name } => activate_profile(name),
         ProfileCommands::Ignore { name } => {
@@ -76,14 +108,14 @@ pub fn handle(command: &ProfileCommands) -> Result<()> {
 
 fn activate_profile(name: &String) -> Result<()> {
     let Some(dir) = CONFIG.game_dir() else {
-        return init_msg();
+        return Err(init_msg());
     };
 
     if CONFIG.is_ignored(name) {
         println!(
             "Directory {} is on the ignore list. Please run '{}' and try again.",
             name.bright_red(),
-            format!("papa profile unignore {}", name).bright_cyan()
+            format!("papa profile unignore {name}").bright_cyan()
         );
         return Err(anyhow!("Profile was ignored"));
     }
@@ -101,13 +133,9 @@ fn activate_profile(name: &String) -> Result<()> {
     Ok(())
 }
 
-fn list_profiles() -> Result<()> {
-    let Some(dir) = CONFIG.game_dir() else {
-        return init_msg();
-    };
-
+pub fn find_profiles(dir: impl AsRef<Path>) -> Result<Vec<PathBuf>> {
     let mut profiles = vec![];
-    for candidate in dir.read_dir()? {
+    for candidate in dir.as_ref().read_dir()? {
         let candidate = candidate?;
         if !candidate.file_type()?.is_dir()
             || CONFIG.is_ignored(
@@ -123,6 +151,16 @@ fn list_profiles() -> Result<()> {
         let path = candidate.path();
         profiles.push(path);
     }
+
+    Ok(profiles)
+}
+
+fn list_profiles() -> Result<()> {
+    let Some(dir) = CONFIG.game_dir() else {
+        return Err(init_msg());
+    };
+
+    let profiles = find_profiles(dir)?;
 
     // output the raw list if we're in a script or pipeline
     if !std::io::stdout().is_terminal() {
@@ -164,14 +202,14 @@ fn list_profiles() -> Result<()> {
     Ok(())
 }
 
-fn new_profile(name: &OsString, force: bool) -> Result<()> {
+fn new_profile(name: &OsString, options: NewOptions, no_cache: bool) -> Result<()> {
     let Some(dir) = CONFIG.game_dir() else {
-        return init_msg();
+        return Err(init_msg());
     };
 
     let prof = dir.join(name);
     if prof.try_exists()? {
-        if force {
+        if options.force {
             fs::remove_dir_all(&prof)?;
         } else {
             println!("A folder of that name already exists, remove it first");
@@ -180,20 +218,56 @@ fn new_profile(name: &OsString, force: bool) -> Result<()> {
     }
     fs::create_dir(&prof)?;
 
-    println!("Created profile {:?}", name.bright_cyan());
+    if !options.empty {
+        let nsname = ModName::new("northstar", "Northstar", options.version.clone());
+        let cache = Cache::from_dir(DIRS.cache_dir())?;
+        let file = if !no_cache
+            && let Some(nstar) = if options.version.is_some() {
+                cache.get(nsname)
+            } else {
+                cache.get_any(nsname)
+            } {
+            File::open(nstar)?
+        } else {
+            let ans = if let Some(version) = options.version.as_ref() {
+                get_answer!(options.yes, "Download Northstar {}? [Y/n] ", version)?
+            } else {
+                get_answer!(options.yes, "Download latest Northstar? [Y/n] ")?
+            };
+
+            if ans.is_no() {
+                println!("Not downloading Northstar, aborting");
+                return Ok(());
+            } else {
+                download_northstar(options.version)?
+            }
+        };
+
+        let bar = ProgressBar::new_spinner()
+            .with_style(
+                ProgressStyle::with_template("{prefix}{spinner:.cyan}")?
+                    .tick_strings(&["   ", ".  ", ".. ", "...", "   "]),
+            )
+            .with_prefix("Installing Northstar core files");
+        bar.enable_steady_tick(Duration::from_millis(500));
+        install_northstar_profile(file, prof)?;
+        bar.finish();
+    }
+
+    println!("Created profile {}", name.display().bright_cyan());
 
     Ok(())
 }
 
 fn clone_profile(source: &String, new: &Option<String>, force: bool) -> Result<()> {
     let Some(game) = CONFIG.game_dir() else {
-        return init_msg();
+        return Err(init_msg());
     };
     let source_dir = game.join(source);
     let target_dir = if let Some(target) = new {
         game.join(target)
     } else {
-        game.join(format!("{}-copy", source))
+        game.join(format!("{source}-copy"))
     };
     let target_name = target_dir
         .file_name()

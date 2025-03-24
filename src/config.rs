@@ -2,30 +2,31 @@ use std::collections::HashSet;
 use std::fmt::Display;
 use std::fs;
 use std::path::PathBuf;
+use std::process::Command;
+use std::sync::LazyLock;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use directories::ProjectDirs;
-use figment::providers::{Env, Format, Serialized, Toml};
 use figment::Figment;
-use lazy_static::lazy_static;
-use owo_colors::OwoColorize;
+use figment::providers::{Env, Format, Serialized, Toml};
 use serde::{Deserialize, Serialize};
 
-lazy_static! {
-    pub static ref DIRS: ProjectDirs =
-        ProjectDirs::from("me", "greenboi", "Papa").expect("Unable to find base dirs");
-    pub static ref CONFIG: Config = {
-        let path = DIRS.config_dir().join("config.toml");
-        let mut cfg: Config = Figment::from(Serialized::defaults(Config::default()))
-            .merge(Toml::file(&path))
-            .merge(Env::prefixed("PAPA_"))
-            .extract()
-            .expect("Error reading configuration");
-        cfg.config_path = Some(path);
-        cfg
-    };
-}
+use crate::IGNORED_DIRS;
+
+pub static DIRS: LazyLock<ProjectDirs> = LazyLock::new(|| {
+    ProjectDirs::from("me", "greenboi", "Papa").expect("Unable to find base dirs")
+});
+pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
+    let path = DIRS.config_dir().join("config.toml");
+    let mut cfg: Config = Figment::from(Serialized::defaults(Config::default()))
+        .merge(Toml::file(&path))
+        .merge(Env::prefixed("PAPA_"))
+        .extract()
+        .expect("Error reading configuration");
+    cfg.config_path = Some(path);
+    cfg
+});
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
@@ -39,6 +40,7 @@ pub struct Config {
     ignore: HashSet<String>,
     #[serde(default)]
     install_type: InstallType,
+    #[serde(default)]
     is_server: bool,
 }
 
@@ -50,11 +52,11 @@ impl Config {
         } else if let Some(dir) = &self.game_dir {
             dir.join(&self.current_profile).join("packages")
         } else {
-            println!(
-                "Please run '{}' or set '{}' in the config",
-                "papa ns init".bright_cyan(),
-                "install_dir".bright_cyan()
-            );
+            // eprintln!(
+            //     "Please run '{}' or set '{}' in the config",
+            //     "papa ns init".bright_cyan(),
+            //     "install_dir".bright_cyan()
+            // );
             return Err(anyhow!("Unintialized config"));
         })
     }
@@ -110,6 +112,17 @@ impl Config {
     pub fn remove_ignored(&mut self, val: impl AsRef<str>) -> bool {
         self.ignore.remove(val.as_ref())
     }
+
+    pub fn core_mods(&self) -> Option<PathBuf> {
+        self.current_profile_dir().map(|dir| dir.join("mods"))
+    }
+
+    pub fn save(&self) -> Result<()> {
+        let cereal = toml::to_string_pretty(self)?;
+        fs::create_dir_all(DIRS.config_dir())?;
+        fs::write(DIRS.config_dir().join("config.toml"), cereal)?;
+        Ok(())
+    }
 }
 
 impl Default for Config {
@@ -131,15 +144,13 @@ pub fn default_profile() -> String {
 }
 
 pub fn default_ignore_list() -> HashSet<String> {
-    let list = include_str!("./ignore_list.csv").trim();
-
-    list.split('\n').map(String::from).collect()
+    IGNORED_DIRS.into_iter().map(String::from).collect()
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum InstallType {
-    Steam,
+    Steam(SteamType),
     Origin,
     EA,
     #[default]
@@ -152,9 +163,39 @@ impl Display for InstallType {
     }
 }
 
-pub fn write_config(cfg: &Config) -> Result<()> {
-    let cereal = toml::to_string_pretty(cfg)?;
-    fs::create_dir_all(DIRS.config_dir())?;
-    fs::write(DIRS.config_dir().join("config.toml"), cereal)?;
-    Ok(())
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, Default)]
+pub enum SteamType {
+    #[default]
+    Native,
+    Flatpak,
+}
+
+impl SteamType {
+    pub fn to_launch_command(self) -> Command {
+        match self {
+            Self::Native => Command::new("steam"),
+            Self::Flatpak => {
+                let mut cmd = Command::new("flatpak");
+                cmd.args(["run", "com.valvesoftware.Steam"]);
+                cmd
+            }
+        }
+    }
+
+    pub fn determine() -> Result<Self> {
+        use which::which;
+
+        if which("steam").is_ok() {
+            Ok(Self::Native)
+        } else if Command::new("flatpak")
+            .args(["info", "com.valvesoftware.Steam"])
+            .spawn()?
+            .wait()?
+            .success()
+        {
+            Ok(Self::Flatpak)
+        } else {
+            Err(anyhow!("Unable to find steam installation?"))
+        }
+    }
 }

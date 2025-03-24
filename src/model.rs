@@ -5,24 +5,31 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{anyhow, Result};
-use thermite::model::{InstalledMod, Mod};
+use anyhow::{Result, anyhow};
+use semver::Version;
+use thermite::model::{InstalledMod, Manifest, Mod};
 use tracing::{debug, warn};
 
 use crate::utils::validate_modname;
+
+#[derive(Clone, Debug)]
+pub struct Package {
+    pub path: PathBuf,
+    pub manifest: Manifest,
+}
 
 #[derive(Default, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ModName {
     pub author: String,
     pub name: String,
-    pub version: Option<String>,
+    pub version: Option<Version>,
 }
 
 impl ModName {
     pub fn new(
         author: impl Into<String>,
         name: impl Into<String>,
-        version: Option<String>,
+        version: Option<Version>,
     ) -> Self {
         Self {
             author: author.into(),
@@ -44,7 +51,7 @@ impl Display for ModName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}.{}", self.author, self.name)?;
         if let Some(version) = &self.version {
-            write!(f, "@{}", version)?;
+            write!(f, "@{version}")?;
         }
 
         Ok(())
@@ -56,7 +63,7 @@ impl From<InstalledMod> for ModName {
         Self {
             author: value.author,
             name: value.manifest.name,
-            version: Some(value.manifest.version_number),
+            version: value.manifest.version_number.parse().ok(),
         }
     }
 }
@@ -66,7 +73,7 @@ impl From<&InstalledMod> for ModName {
         Self {
             author: value.author.clone(),
             name: value.manifest.name.clone(),
-            version: Some(value.manifest.version_number.clone()),
+            version: value.manifest.version_number.parse().ok(),
         }
     }
 }
@@ -76,7 +83,7 @@ impl From<Mod> for ModName {
         Self {
             author: value.author,
             name: value.name,
-            version: Some(value.latest),
+            version: value.latest.parse().ok(),
         }
     }
 }
@@ -86,7 +93,7 @@ impl From<&Mod> for ModName {
         Self {
             author: value.author.clone(),
             name: value.name.clone(),
-            version: Some(value.latest.clone()),
+            version: value.latest.parse().ok(),
         }
     }
 }
@@ -101,7 +108,7 @@ impl TryFrom<String> for ModName {
     type Error = anyhow::Error;
 
     fn try_from(value: String) -> std::result::Result<ModName, Self::Error> {
-        validate_modname(&value).map_err(|e| anyhow!("{e}"))
+        validate_modname(&value)
     }
 }
 
@@ -109,7 +116,19 @@ impl TryFrom<&str> for ModName {
     type Error = anyhow::Error;
 
     fn try_from(value: &str) -> std::result::Result<ModName, Self::Error> {
-        validate_modname(value).map_err(|e| anyhow!("{e}"))
+        validate_modname(value)
+    }
+}
+
+impl TryFrom<&Path> for ModName {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &Path) -> std::result::Result<Self, Self::Error> {
+        let name = value
+            .file_name()
+            .ok_or_else(|| anyhow!("missing file name"))?;
+
+        validate_modname(&name.to_string_lossy())
     }
 }
 
@@ -138,7 +157,7 @@ impl Display for ModString {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}-{}", self.author, self.inner.name)?;
         if let Some(version) = &self.version {
-            write!(f, "-{}", version)?;
+            write!(f, "-{version}")?;
         }
 
         Ok(())
@@ -168,7 +187,7 @@ impl<'a> Display for ModStr<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}-{}", self.author, self.inner.name)?;
         if let Some(version) = &self.version {
-            write!(f, "-{}", version)?;
+            write!(f, "-{version}")?;
         }
 
         Ok(())
@@ -181,9 +200,30 @@ pub struct Cache {
 }
 
 impl Cache {
-    pub fn to_cache_path(&self, name: impl AsRef<ModName>) -> PathBuf {
+    pub fn as_cache_path(&self, name: impl AsRef<ModName>) -> PathBuf {
         let name = name.as_ref();
         self.root.join(format!("{name}"))
+    }
+
+    pub fn get_any(&self, name: impl AsRef<ModName>) -> Option<&PathBuf> {
+        let name = name.as_ref();
+        let mut keys = self
+            .packages
+            .keys()
+            .filter(|k| {
+                k.author.to_lowercase() == name.author.to_lowercase()
+                    && k.name.to_lowercase() == name.name.to_lowercase()
+            })
+            .collect::<Vec<_>>();
+
+        keys.sort_by(|a, b| {
+            a.version
+                .as_ref()
+                .and_then(|av| b.version.as_ref().map(|bv| av.cmp(bv)))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        self.packages.get(keys.first()?)
     }
 
     #[inline]

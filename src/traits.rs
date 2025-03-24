@@ -1,11 +1,11 @@
-use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
+use fuzzy_matcher::skim::SkimMatcherV2;
 use thermite::model::{InstalledMod, Mod};
 use tracing::debug;
 
 use crate::model::ModName;
 
-const SCORE_THRESHOLD: i32 = 75;
+const SCORE_THRESHOLD: i64 = 75;
 
 pub trait Answer {
     fn is_no(&self) -> bool;
@@ -31,24 +31,24 @@ impl Index<Mod> for Vec<Mod> {
         }
         let matcher = SkimMatcherV2::default();
         let mut res = vec![];
-        for v in self.iter() {
+        for v in self {
             let author = matcher.fuzzy_indices(&v.author, term);
             let name = matcher.fuzzy_indices(&v.name, term);
             let desc = matcher.fuzzy_indices(&v.get_latest().unwrap().desc, term);
 
             if let Some((score, _)) = author {
                 debug!("author matched with score '{score}'");
-                if score >= SCORE_THRESHOLD as i64 {
+                if score >= SCORE_THRESHOLD {
                     res.push((score, v));
                 }
             } else if let Some((score, _)) = name {
                 debug!("name matched with score '{score}'");
-                if score >= SCORE_THRESHOLD as i64 {
+                if score >= SCORE_THRESHOLD {
                     res.push((score, v));
                 }
             } else if let Some((score, _)) = desc {
                 debug!("desc matched with score '{score}'");
-                if score >= SCORE_THRESHOLD as i64 {
+                if score >= SCORE_THRESHOLD {
                     res.push((score, v));
                 }
             }
@@ -77,12 +77,12 @@ impl Index<InstalledMod> for Vec<InstalledMod> {
 
             if let Some((score, _)) = author {
                 debug!("author matched with score '{score}'");
-                if score >= SCORE_THRESHOLD as i64 {
+                if score >= SCORE_THRESHOLD {
                     res.push((score, v));
                 }
             } else if let Some((score, _)) = name {
                 debug!("name matched with score '{score}'");
-                if score >= SCORE_THRESHOLD as i64 {
+                if score >= SCORE_THRESHOLD {
                     res.push((score, v));
                 }
             }

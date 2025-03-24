@@ -4,12 +4,12 @@ use anyhow::Result;
 use owo_colors::OwoColorize;
 use thermite::{
     model::{EnabledMods, InstalledMod},
-    prelude::{find_mods, get_enabled_mods, ThermiteError},
+    prelude::find_mods,
     CORE_MODS,
 };
 use tracing::debug;
 
-use crate::{config::CONFIG, get_answer, model::ModName, traits::Answer};
+use crate::{config::CONFIG, get_answer, model::ModName, traits::Answer, utils::find_enabled_mods};
 
 pub fn disable(mods: BTreeSet<String>, all: bool, force: bool) -> Result<()> {
     for m in mods.iter() {
@@ -45,9 +45,9 @@ pub fn disable(mods: BTreeSet<String>, all: bool, force: bool) -> Result<()> {
                 }
             }
 
-            debug!("Checking if {} should be enabled", ModName::from(&v));
+            debug!("Checking if {} should be disabled", ModName::from(&v));
             let res = mods.iter().find(|m| {
-                if let Ok(mn) = TryInto::<ModName>::try_into(m.as_str()) {
+                if let Ok(mn) = ModName::try_from(m.as_str()) {
                     (mn.author.to_lowercase() == v.author.to_lowercase()
                         && mn.name.to_lowercase() == v.manifest.name.to_lowercase())
                         || m.to_lowercase() == v.mod_json.name.to_lowercase()
@@ -60,10 +60,9 @@ pub fn disable(mods: BTreeSet<String>, all: bool, force: bool) -> Result<()> {
         })
         .collect::<Vec<(String, InstalledMod)>>();
 
-    let mut enabled_mods = match get_enabled_mods(dir.join("..")) {
-        Ok(mods) => mods,
-        Err(ThermiteError::MissingFile(path)) => EnabledMods::default_with_path(*path),
-        Err(e) => return Err(e.into()),
+    let mut enabled_mods = match find_enabled_mods(&dir) {
+        Some(mods) => mods,
+        None => EnabledMods::default_with_path(dir.join("..").join("enabledmods.json")),
     };
 
     debug!("Enabled mods: {:?}", enabled_mods.mods);
@@ -78,6 +77,9 @@ pub fn disable(mods: BTreeSet<String>, all: bool, force: bool) -> Result<()> {
     for m in mods.difference(&acted) {
         println!("Couldn't find {}", m.bright_cyan());
     }
+
+    // ensure the file gets saved, drop seems to be failing silently
+    enabled_mods.save()?;
 
     Ok(())
 }

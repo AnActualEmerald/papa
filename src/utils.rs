@@ -1,6 +1,9 @@
 use std::{
-    fs,
+    collections::{BTreeMap, BTreeSet},
+    fs::{self, File, OpenOptions},
+    io::Seek,
     path::{Path, PathBuf},
+    sync::LazyLock,
     time::Duration,
 };
 
@@ -8,24 +11,26 @@ use crate::{
     config::{CONFIG, DIRS},
     model::{Cache, ModName},
     modfile,
+    traits::Index,
 };
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
-use lazy_static::lazy_static;
 use owo_colors::OwoColorize;
 use regex::Regex;
+use semver::Version;
 use thermite::{
-    model::ModVersion,
+    api::get_package_index,
+    core::{find_mods, get_enabled_mods},
+    model::{EnabledMods, InstalledMod, ModVersion},
     prelude::{download_with_progress, install_mod},
 };
-use tracing::debug;
+use tracing::{debug, error, trace};
 
-lazy_static! {
-    static ref RE: Regex =
-        Regex::new(r"^(\S\w+)[\.-](\w+)(?:[@-](\d+\.\d+\.\d+))?$").expect("ModName regex");
-}
+static RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\S\w+)[\.-](\w+)(?:[@-](\d+\.\d+\.\d+))?$").expect("ModName regex")
+});
 
-pub fn validate_modname(input: &str) -> Result<ModName, String> {
+pub(crate) fn validate_modname(input: &str) -> Result<ModName> {
     if let Some(captures) = RE.captures(input) {
         let mut name = ModName::default();
         if let Some(author) = captures.get(1) {
@@ -36,42 +41,55 @@ pub fn validate_modname(input: &str) -> Result<ModName, String> {
             name.name = n.as_str().to_string();
         }
 
-        name.version = captures.get(3).map(|v| v.as_str().to_string());
+        name.version = captures.get(3).map(|v| v.as_str().parse()).transpose()?;
 
         Ok(name)
     } else {
-        Err(format!(
+        Err(anyhow!(
             "Mod name '{input}' should be in 'Author.ModName' format"
         ))
     }
 }
 
-pub fn to_file_size_string(size: u64) -> String {
+#[must_use]
+pub(crate) fn to_file_size_string(size: u64) -> String {
     if size / 1_000_000 >= 1 {
         let size = size as f64 / 1_048_576f64;
 
-        format!("{:.2} MB", size)
+        format!("{size:.2} MB")
     } else {
         let size = size as f64 / 1024f64;
-        format!("{:.2} KB", size)
+        format!("{size:.2} KB")
     }
 }
 
-pub fn ensure_dir(dir: impl AsRef<Path>) -> Result<()> {
+pub(crate) fn ensure_dir(dir: impl AsRef<Path>) -> Result<()> {
     let dir = dir.as_ref();
 
     debug!("Checking if path '{}' exists", dir.display());
-    if !dir.try_exists()? {
+    if dir.try_exists()? {
+        debug!("Path '{}' already exists", dir.display());
+    } else {
         debug!("Path '{}' doesn't exist, creating it", dir.display());
         fs::create_dir_all(dir)?;
-    } else {
-        debug!("Path '{}' already exists", dir.display());
     }
 
     Ok(())
 }
 
-pub fn download_and_install(
+pub fn find_enabled_mods(start: impl AsRef<Path>) -> Option<EnabledMods> {
+    let dir = start.as_ref();
+
+    if let Ok(mods) = get_enabled_mods(dir) {
+        Some(mods)
+    } else if let Some(parent) = dir.parent() {
+        find_enabled_mods(parent)
+    } else {
+        None
+    }
+}
+
+pub(crate) fn download_and_install(
     mods: Vec<(ModName, impl AsRef<ModVersion>)>,
     check_cache: bool,
     cont: bool,
@@ -97,7 +115,7 @@ pub fn download_and_install(
         }
         let v = v.as_ref();
         // flush!()?;
-        let filename = cache.to_cache_path(&mn);
+        let filename = cache.as_cache_path(&mn);
         let pb = ProgressBar::new(v.file_size)
             .with_style(
                 ProgressStyle::with_template("{msg}{bar} {bytes}/{total_bytes} {duration}")?
@@ -113,7 +131,7 @@ pub fn download_and_install(
         files.push((mn, v.full_name.clone(), file));
     }
 
-    let mut pb = ProgressBar::new_spinner()
+    let pb = ProgressBar::new_spinner()
         .with_style(
             ProgressStyle::with_template("{prefix}{msg}\t{spinner}\t{pos}/{len}")?
                 .tick_chars("(|)|\0"),
@@ -129,7 +147,9 @@ pub fn download_and_install(
 
     for (mn, full_name, f) in files.iter().progress_with(pb.clone()) {
         pb.set_message(format!("{}", mn.bright_cyan()));
-        if !CONFIG.is_server() {
+        if CONFIG.is_server() {
+            todo!();
+        } else {
             ensure_dir(CONFIG.install_dir()?)?;
             let mod_path = CONFIG.install_dir()?;
             match install_mod(full_name, f, mod_path) {
@@ -150,30 +170,170 @@ pub fn download_and_install(
                     installed.push(mod_path);
                 }
             }
-        } else {
-            todo!();
         }
     }
 
+    pb.disable_steady_tick();
     pb.set_prefix("");
     pb.set_tab_width(0);
     pb.finish_with_message("Installed ");
     if had_error {
-        println!("Finished with errors")
+        println!("Finished with errors");
     } else {
         println!("Done!");
     }
     Ok(installed)
 }
 
+fn temp_path() -> Result<PathBuf> {
+    ensure_dir(std::env::temp_dir())?;
+    let path = std::env::temp_dir().join("ns-temp");
+
+    Ok(path)
+}
+
+pub fn download_northstar(version: Option<Version>) -> Result<File> {
+    let nsname = ModName::new("northstar", "northstar", version);
+
+    let nsmod = get_package_index()?
+        .get_item(&nsname)
+        .cloned()
+        .ok_or_else(|| anyhow!("Package index missing northstar mod"))?;
+
+    let nsversion = if let Some(version) = nsname.version {
+        nsmod
+            .get_version(version.to_string())
+            .ok_or_else(|| anyhow!("Northstar has no version '{version}'"))?
+    } else {
+        nsmod
+            .get_latest()
+            .expect("Northstar missing latest version")
+    };
+
+    let mut tmp = OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .read(true)
+        .open(temp_path()?)?;
+
+    let mut nsfile = modfile!(DIRS.cache_dir().join(format!(
+        "{}",
+        ModName::new(&nsmod.author, &nsmod.name, nsversion.version.parse().ok())
+    )))?;
+
+    let pb = ProgressBar::new(nsversion.file_size)
+        .with_style(
+            ProgressStyle::with_template("{msg}{bar:.cyan} {bytes}/{total_bytes} {duration}")?
+                .progress_chars(".. "),
+        )
+        .with_message(format!(
+            "Downloading Northstar version {}",
+            nsversion.version
+        ));
+    download_with_progress(&mut tmp, &nsversion.url, |delta, _, _| {
+        pb.inc(delta);
+    })?;
+    pb.finish();
+
+    tmp.rewind()?;
+    std::io::copy(&mut tmp, &mut nsfile)?;
+
+    nsfile.rewind()?;
+
+    Ok(nsfile)
+}
+
+#[derive(Default)]
+pub struct GroupedMods {
+    pub enabled: BTreeMap<ModName, BTreeSet<InstalledMod>>,
+    pub disabled: BTreeMap<ModName, BTreeSet<InstalledMod>>,
+}
+
+impl GroupedMods {
+    pub fn try_from_dir(dir: &Path) -> Result<Self> {
+        let mods = match find_mods(dir) {
+            Ok(mods) => mods,
+            Err(e) => {
+                error!("Error finding mods: {e}");
+                vec![]
+            }
+        };
+
+        if mods.is_empty() {
+            // println!("No mods found");
+            return Ok(Self::default());
+        }
+
+        debug!("Found {} mods", mods.len());
+        trace!("{:?}", mods);
+        let enabled_mods = find_enabled_mods(dir);
+
+        let mut enabled = BTreeMap::new();
+        let mut disabled = BTreeMap::new();
+        for m in mods {
+            let local_name = m.mod_json.name.clone();
+
+            let mn = m.clone().into();
+            let process_mod = |mod_group: &mut BTreeMap<ModName, BTreeSet<InstalledMod>>| {
+                if let Some(group) = mod_group.get_mut(&mn) {
+                    debug!("Adding submod {local_name} to group {}", mn);
+                    group.insert(m);
+                } else {
+                    debug!("Adding group {local_name} for sdubmod {}", mn);
+                    let group = BTreeSet::from([m]);
+                    mod_group.insert(mn, group);
+                }
+            };
+
+            if let Some(em) = enabled_mods.as_ref() {
+                if em.is_enabled(&local_name) {
+                    process_mod(&mut enabled);
+                } else {
+                    process_mod(&mut disabled);
+                }
+            } else {
+                process_mod(&mut enabled);
+            }
+        }
+
+        Ok(Self { enabled, disabled })
+    }
+}
+
+/// Find the roots for all packages in the given directory
+pub fn find_package_roots(dir: impl AsRef<Path>) -> anyhow::Result<Vec<PathBuf>> {
+    let dir = dir.as_ref();
+
+    let mut res = vec![];
+
+    for entry in fs::read_dir(dir)? {
+        let child = entry?;
+
+        if !child.file_type()?.is_dir() {
+            continue;
+        }
+
+        let manifest_path = child.path().join("manifest.json");
+
+        if manifest_path.try_exists()? {
+            res.push(child.path())
+        }
+    }
+
+    Ok(res)
+}
+
 #[inline]
-pub fn init_msg() -> Result<(), anyhow::Error> {
+#[must_use]
+pub fn init_msg() -> anyhow::Error {
     println!("Please run '{}' first", "papa ns init".bright_cyan());
-    Err(anyhow::anyhow!("Game path not set"))
+    anyhow!("Game path not set")
 }
 
 #[cfg(test)]
 mod test {
+
     use crate::utils::validate_modname;
 
     #[test]

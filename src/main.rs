@@ -1,11 +1,16 @@
+#![feature(let_chains)]
+
 use core::profile::ProfileCommands;
-use std::{path::PathBuf, process::ExitCode};
+use std::{fs, io::IsTerminal, path::PathBuf, process::ExitCode};
 
-use clap::{Parser, Subcommand, ValueHint, CommandFactory};
-use clap_complete::{Shell, generate};
+use clap::{CommandFactory, Parser, Subcommand, ValueHint};
+use clap_complete::{ArgValueCompleter, CompleteEnv, Shell, env::Shells};
 use tracing::{debug, error};
-use tracing_subscriber::{EnvFilter, FmtSubscriber};
+use tracing_subscriber::{
+    EnvFilter, Layer, Registry, fmt, layer::SubscriberExt, util::SubscriberInitExt,
+};
 
+mod completers;
 pub mod config;
 mod core;
 pub mod model;
@@ -18,10 +23,21 @@ mod macros;
 use model::ModName;
 use utils::validate_modname;
 
-use crate::core::profile;
+use crate::{config::DIRS, core::profile};
+
+pub const IGNORED_DIRS: [&str; 8] = [
+    "__Installer",
+    "__overlay",
+    "bin",
+    "Core",
+    "r2",
+    "vpk",
+    "platform",
+    "Support",
+];
 
 #[derive(Parser)]
-#[clap(name = "Papa")]
+#[clap(name = "papa")]
 #[clap(author = "AnAcutalEmerald <emerald@emeraldgreen.dev>")]
 #[clap(about = "Command line mod manager for Northstar")]
 #[clap(after_help = "Welcome back. Cockpit cooling reactivated.")]
@@ -35,12 +51,18 @@ struct Cli {
     ///Don't check cache before downloading
     #[clap(global = true, short = 'C', long = "no-cache")]
     no_cache: bool,
+    ///File to write logs to, will truncate any existing file
+    #[clap(global = true, long = "log-file")]
+    log_file: Option<PathBuf>,
 }
 
 #[derive(Subcommand)]
 enum Commands {
     /// Generate completions for the current shell
     Complete {
+        ///Print the shell script for initializing completions
+        #[arg(long, short)]
+        init: bool,
         ///Shell to generate for, defaults to the value of the SHELL environment variable
         #[clap(value_name = "SHELL", value_enum)]
         shell: Option<Shell>,
@@ -71,16 +93,16 @@ enum Commands {
         force: bool,
     },
 
-    ///Install a mod or mods from https://northstar.thunderstore.io/
-    #[clap(alias = "i")]
+    ///Install a mod or mods from <https://northstar.thunderstore.io/>
+    #[clap(alias = "i", alias = "add")]
     Install {
-        #[clap(value_name = "MOD", value_hint = ValueHint::Other)]
+        #[clap(value_name = "MOD", add = ArgValueCompleter::new(completers::mod_index))]
         #[clap(help = "Mod name(s) to install")]
         #[clap(required_unless_present = "file")]
         #[clap(value_parser = validate_modname)]
         mod_names: Vec<ModName>,
 
-        ///File to read the list of mods from
+        ///File to read the list of mods from (see 'papa help import')
         #[arg(short = 'F', long, value_hint = ValueHint::FilePath)]
         file: Option<PathBuf>,
 
@@ -91,15 +113,14 @@ enum Commands {
         ///Force installation
         #[clap(short, long)]
         force: bool,
-
-        ///Make mod globally available (currently non-functioning)
-        #[clap(short, long)]
-        global: bool,
+        // ///Make mod globally available (currently non-functioning)
+        // #[clap(short, long)]
+        // global: bool,
     },
     ///Remove a mod or mods from the current mods directory
     #[clap(alias = "r", alias = "rm")]
     Remove {
-        #[clap(value_name = "MOD", value_hint = ValueHint::Other)]
+        #[clap(value_name = "MOD", add = ArgValueCompleter::new(completers::installed_mods))]
         #[clap(help = "Mod name(s) to remove")]
         #[clap(value_parser = validate_modname)]
         #[clap(required = true)]
@@ -134,7 +155,7 @@ enum Commands {
 
     ///Disable mod(s) or sub-mod(s)
     Disable {
-        #[clap(value_hint = ValueHint::Other)]
+        #[clap(add = ArgValueCompleter::new(completers::enabled_mods))]
         mods: Vec<String>,
 
         ///Disable all mods excluding core N* mods
@@ -147,7 +168,7 @@ enum Commands {
     },
     ///Enable mod(s) or sub-mod(s)
     Enable {
-        #[clap(value_hint = ValueHint::Other)]
+        #[clap(add = ArgValueCompleter::new(completers::disabled_mods))]
         mods: Vec<String>,
         #[arg(short, long)]
         all: bool,
@@ -165,8 +186,16 @@ enum Commands {
     #[cfg(feature = "launcher")]
     #[clap(alias("start"))]
     Run {
+        ///Don't pass a `-profile` argument when launching
+        ///
+        /// Only affects Steam installations
         #[arg(short = 'P', long = "no-profile")]
         no_profile: bool,
+        ///Don't wait for the game to exit before exiting `papa`
+        #[arg(short = 'W', long = "no-wait")]
+        no_wait: bool,
+        ///Extra arguments to pass when launching the game
+        args: Vec<String>,
     },
 
     #[clap(alias = "p", alias = "profiles")]
@@ -187,40 +216,137 @@ pub enum NstarCommands {
         /// The path to install Northstar into. Defaults to the local Titanfall 2 steam installation, if available.
         #[arg(value_hint = ValueHint::DirPath)]
         path: Option<PathBuf>,
+
+        #[arg(short = 'C', long = "no-cache")]
+        no_cache: bool,
     },
     ///Updates the current northstar install.
     Update {},
     // #[cfg(feature = "launcher")]
     // ///Start the Northstar client
     // Start {},
+    ///Uninstalls Northstar and all related files
+    Reset {
+        ///Skip confirmation (MAKE SURE YOU WANT TO DO THIS)
+        #[arg(long, short)]
+        yes: bool,
+    },
 }
 
 fn main() -> ExitCode {
+    CompleteEnv::with_factory(Cli::command).complete();
+
     let cli = Cli::try_parse();
     if let Err(e) = cli {
         e.exit();
     }
-    let cli = cli.unwrap();
+    let cli = cli.expect("cli");
     if cli.debug {
-        std::env::set_var("RUST_LOG", "DEBUG");
+        unsafe {
+            // always safe to call from single threaded programs
+            std::env::set_var("RUST_LOG", "DEBUG");
+        }
     }
 
-    let subscriber = FmtSubscriber::builder()
-        .without_time()
-        .with_env_filter(EnvFilter::from_default_env())
-        .finish();
+    let (writer, _handle) = if let Some(file) = cli.log_file {
+        let file = fs::OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(file)
+            .expect("log file");
+        tracing_appender::non_blocking(file)
+    } else {
+        let file_logger = tracing_appender::rolling::never(DIRS.config_dir(), "papa.log");
+        tracing_appender::non_blocking(file_logger)
+    };
 
-    tracing::subscriber::set_global_default(subscriber).expect("Unable to init tracing");
+    let reg = Registry::default().with(
+        fmt::layer()
+            .compact()
+            .without_time()
+            .with_writer(writer)
+            .with_ansi(false)
+            .with_filter(EnvFilter::from_default_env()),
+    );
+
+    if cli.debug {
+        reg.with(
+            fmt::layer()
+                .compact()
+                .with_ansi(true)
+                .without_time()
+                .with_filter(EnvFilter::from_default_env()),
+        )
+        .init();
+    } else {
+        reg.init();
+    }
+
+    // FmtSubscriber::builder()
+    //     .without_time()
+    //     .with_env_filter(EnvFilter::from_default_env())
+    //     .init();
 
     debug!("Config: {:#?}", *config::CONFIG);
 
     let res = match cli.command {
-        Commands::Complete { shell } => {
+        Commands::Complete { shell, init } => {
             if let Some(shell) = shell.or_else(Shell::from_env) {
-                let mut cmd = Cli::command();
-                let out = std::io::stdout();
-                generate(shell, &mut cmd, "papa", &mut out.lock());
-                Ok(())
+                if init {
+                    if std::io::stdout().is_terminal() {
+                        let file = match shell {
+                            Shell::Bash => "~/.bashrc",
+                            Shell::Elvish => "~/.elvish/rc.elv",
+                            Shell::Fish => "~/.config/fish/conf.d/papa.fish",
+                            Shell::PowerShell => "$PROFILE",
+                            Shell::Zsh => "~/.zshrc",
+                            _ => panic!("Unknown shell"),
+                        };
+
+                        eprintln!("Redirect this command to '{file}'");
+                        eprintln!("e.g. 'papa complete {shell} >> {file}'");
+                        eprintln!();
+                    }
+
+                    match shell {
+                        Shell::Bash => {
+                            println!("source <(papa complete bash)");
+                            Ok(())
+                        }
+                        Shell::Elvish => {
+                            println!("eval (papa complete elvish | slurp)");
+                            Ok(())
+                        }
+                        Shell::Fish => {
+                            println!("source (papa complete fish | psub)");
+                            Ok(())
+                        }
+                        Shell::PowerShell => {
+                            println!("papa complete powershell | Out-String | Invoke-Expression");
+                            Ok(())
+                        }
+                        Shell::Zsh => {
+                            println!("source <(papa complete zsh)");
+                            Ok(())
+                        }
+                        _ => Err(anyhow::anyhow!("Unknown shell")),
+                    }
+                } else {
+                    let cli = Cli::command();
+
+                    Shells::builtins()
+                        .completer(&shell.to_string())
+                        .expect("shell completer")
+                        .write_registration(
+                            "COMPLETE",
+                            cli.get_name(),
+                            cli.get_name(),
+                            cli.get_name(),
+                            &mut std::io::stdout(),
+                        )
+                        .map_err(anyhow::Error::from)
+                }
             } else {
                 eprintln!("Please provide a shell to generate completions for");
                 Err(anyhow::anyhow!("Unknown shell"))
@@ -255,8 +381,12 @@ fn main() -> ExitCode {
         #[cfg(feature = "northstar")]
         Commands::Northstar { command } => core::northstar(&command),
         #[cfg(feature = "launcher")]
-        Commands::Run { no_profile } => core::run(no_profile),
-        Commands::Profile { command } => profile::handle(&command),
+        Commands::Run {
+            no_profile,
+            no_wait,
+            args: extra_args,
+        } => core::run(no_profile, no_wait, extra_args),
+        Commands::Profile { command } => profile::handle(&command, cli.no_cache),
     };
 
     if let Err(e) = res {

@@ -3,21 +3,34 @@ use std::{
     io::{ErrorKind, IsTerminal, Write},
 };
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use owo_colors::OwoColorize;
-use thermite::prelude::*;
-use tracing::{debug, trace};
+use semver::Version;
+use thermite::{model::ModJSON, prelude::*};
+use tracing::{debug, error, trace};
 
-use crate::{config::CONFIG, model::ModName};
+use crate::{config::CONFIG, model::ModName, utils::find_enabled_mods};
 
 pub fn list(global: bool, _all: bool) -> Result<()> {
     if global {
         todo!();
     }
-    let mods = find_mods(CONFIG.install_dir()?).context("Error finding mods")?;
+    let mods = match find_mods(CONFIG.install_dir()?) {
+        Ok(mods) => mods,
+        Err(e) => {
+            error!("Error finding mods: {e}");
+            vec![]
+        }
+    };
+
+    // if mods.is_empty() {
+    //     println!("No mods found");
+    //     return Ok(());
+    // }
+
     debug!("Found {} mods", mods.len());
     trace!("{:?}", mods);
-    let enabled_mods = get_enabled_mods(CONFIG.install_dir()?.join("..")).ok();
+    let enabled_mods = find_enabled_mods(CONFIG.install_dir()?);
 
     let mut grouped_mods: BTreeMap<ModName, BTreeSet<String>> = BTreeMap::new();
     let mut disabled: BTreeMap<ModName, BTreeSet<String>> = BTreeMap::new();
@@ -47,6 +60,14 @@ pub fn list(global: bool, _all: bool) -> Result<()> {
         }
     }
 
+    let nsversion: Option<Version> = CONFIG.core_mods().and_then(|dir| {
+        let modfile =
+            std::fs::read_to_string(dir.join("Northstar.Client").join("mod.json")).ok()?;
+        let json: ModJSON = serde_json::from_str(&modfile).ok()?;
+
+        json.version.parse().ok()
+    });
+
     if !std::io::stdout().is_terminal() {
         let out = std::io::stdout();
         for (group, name) in grouped_mods {
@@ -68,6 +89,18 @@ pub fn list(global: bool, _all: bool) -> Result<()> {
         return Ok(());
     }
 
+    println!(
+        "Current profile: {}",
+        CONFIG.current_profile().bright_purple().bold()
+    );
+    if let Some(version) = nsversion {
+        println!("Northstar {}", format!("v{version}").bright_cyan().bold());
+    }
+    println!();
+    if grouped_mods.is_empty() && disabled.is_empty() {
+        println!("No mods installed");
+        return Ok(());
+    }
     println!("Installed mods: ");
     for (group, names) in grouped_mods {
         if names.len() == 1 {

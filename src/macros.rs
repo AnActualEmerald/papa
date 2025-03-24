@@ -1,6 +1,6 @@
 #[macro_export]
 macro_rules! readln {
-    ($l:literal) => {{
+    ($l:expr) => {{
         use std::io;
         use std::io::Write;
         let mut input = String::new();
@@ -60,13 +60,19 @@ macro_rules! get_answer {
     ($yes:expr) => {
         get_answer!($yes, "OK? [Y/n]: ")
     };
-    ($yes:expr, $msg: literal) => {
+    (yes:expr, $msg:literal) => {
+        get_answer!($yes, format!($msg))
+    };
+    ($yes:expr, $msg:expr) => {
         if $yes {
             Ok(String::new())
         } else {
             $crate::readln!($msg)
         }
     };
+    ($yes:expr, $msg:literal, $($arg:expr),*) => {
+        get_answer!($yes, format!($msg, $($arg,)*))
+    }
 }
 
 #[macro_export]
@@ -95,6 +101,6 @@ macro_rules! update_cfg {
     ($($cmd:ident($op:tt)),*) => {{
         let mut c = $crate::config::CONFIG.clone();
         $(update_cfg!(@cmd c, $cmd $op);)*
-        $crate::config::write_config(&c)
+        c.save()
     }};
 }
