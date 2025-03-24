@@ -1,6 +1,6 @@
 #![feature(let_chains)]
 
-use core::profile::ProfileCommands;
+use core::{RunOptions, profile::ProfileCommands};
 use std::{fs, io::IsTerminal, path::PathBuf, process::ExitCode};
 
 use clap::{CommandFactory, Parser, Subcommand, ValueHint};
@@ -187,16 +187,8 @@ enum Commands {
     #[cfg(feature = "launcher")]
     #[clap(alias("start"))]
     Run {
-        ///Don't pass a `-profile` argument when launching
-        ///
-        /// Only affects Steam installations
-        #[arg(short = 'P', long = "no-profile")]
-        no_profile: bool,
-        ///Don't wait for the game to exit before exiting `papa`
-        #[arg(short = 'W', long = "no-wait")]
-        no_wait: bool,
-        ///Extra arguments to pass when launching the game
-        args: Vec<String>,
+        #[command(flatten)]
+        options: RunOptions,
     },
 
     #[clap(alias = "p", alias = "profiles")]
@@ -382,11 +374,7 @@ fn main() -> ExitCode {
         #[cfg(feature = "northstar")]
         Commands::Northstar { command } => core::northstar(&command),
         #[cfg(feature = "launcher")]
-        Commands::Run {
-            no_profile,
-            no_wait,
-            args: extra_args,
-        } => core::run(no_profile, no_wait, extra_args),
+        Commands::Run { options } => core::run(options),
         Commands::Profile { command } => profile::handle(&command, cli.no_cache),
     };
 
