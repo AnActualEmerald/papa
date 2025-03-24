@@ -32,6 +32,7 @@ mod env;
 pub use env::env;
 
 mod run;
+pub use run::RunOptions;
 pub use run::run;
 
 pub mod profile;
