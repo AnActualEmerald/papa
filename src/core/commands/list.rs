@@ -5,7 +5,8 @@ use std::{
 
 use anyhow::Result;
 use owo_colors::OwoColorize;
-use thermite::prelude::*;
+use semver::{Version, VersionReq};
+use thermite::{model::ModJSON, prelude::*};
 use tracing::{debug, error, trace};
 
 use crate::{config::CONFIG, model::ModName, utils::find_enabled_mods};
@@ -22,10 +23,10 @@ pub fn list(global: bool, _all: bool) -> Result<()> {
         }
     };
 
-    if mods.is_empty() {
-        println!("No mods found");
-        return Ok(());
-    }
+    // if mods.is_empty() {
+    //     println!("No mods found");
+    //     return Ok(());
+    // }
 
     debug!("Found {} mods", mods.len());
     trace!("{:?}", mods);
@@ -59,6 +60,14 @@ pub fn list(global: bool, _all: bool) -> Result<()> {
         }
     }
 
+    let nsversion: Option<Version> = CONFIG.core_mods().and_then(|dir| {
+        let modfile =
+            std::fs::read_to_string(dir.join("Northstar.Client").join("mod.json")).ok()?;
+        let json: ModJSON = serde_json::from_str(&modfile).ok()?;
+
+        json.version.parse().ok()
+    });
+
     if !std::io::stdout().is_terminal() {
         let out = std::io::stdout();
         for (group, name) in grouped_mods {
@@ -84,6 +93,14 @@ pub fn list(global: bool, _all: bool) -> Result<()> {
         "Current profile: {}",
         CONFIG.current_profile().bright_purple().bold()
     );
+    if let Some(version) = nsversion {
+        println!("Northstar {}", format!("v{version}").bright_cyan().bold());
+    }
+    println!();
+    if grouped_mods.is_empty() && disabled.is_empty() {
+        println!("No mods installed");
+        return Ok(());
+    }
     println!("Installed mods: ");
     for (group, names) in grouped_mods {
         if names.len() == 1 {
