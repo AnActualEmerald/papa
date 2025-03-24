@@ -7,7 +7,7 @@ use std::{
 
 use anyhow::{Result, anyhow};
 use semver::Version;
-use thermite::model::{InstalledMod, Manifest, Mod, ModVersion};
+use thermite::model::{InstalledMod, Manifest, Mod};
 use tracing::{debug, warn};
 
 use crate::utils::validate_modname;
@@ -228,7 +228,6 @@ impl Cache {
 
     #[inline]
     pub fn get(&self, name: impl AsRef<ModName>) -> Option<&PathBuf> {
-        dbg!(&self.packages);
         self.packages.get(name.as_ref())
     }
 

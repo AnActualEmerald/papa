@@ -113,6 +113,10 @@ impl Config {
         self.ignore.remove(val.as_ref())
     }
 
+    pub fn core_mods(&self) -> Option<PathBuf> {
+        self.current_profile_dir().map(|dir| dir.join("mods"))
+    }
+
     pub fn save(&self) -> Result<()> {
         let cereal = toml::to_string_pretty(self)?;
         fs::create_dir_all(DIRS.config_dir())?;

@@ -102,7 +102,7 @@ enum Commands {
         #[clap(value_parser = validate_modname)]
         mod_names: Vec<ModName>,
 
-        ///File to read the list of mods from
+        ///File to read the list of mods from (see 'papa help import')
         #[arg(short = 'F', long, value_hint = ValueHint::FilePath)]
         file: Option<PathBuf>,
 
@@ -113,10 +113,9 @@ enum Commands {
         ///Force installation
         #[clap(short, long)]
         force: bool,
-
-        ///Make mod globally available (currently non-functioning)
-        #[clap(short, long)]
-        global: bool,
+        // ///Make mod globally available (currently non-functioning)
+        // #[clap(short, long)]
+        // global: bool,
     },
     ///Remove a mod or mods from the current mods directory
     #[clap(alias = "r", alias = "rm")]

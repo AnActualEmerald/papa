@@ -223,7 +223,7 @@ fn new_profile(name: &OsString, options: NewOptions, no_cache: bool) -> Result<(
         let cache = Cache::from_dir(DIRS.cache_dir())?;
         let file = if !no_cache
             && let Some(nstar) = if options.version.is_some() {
-                dbg!(cache.get(nsname))
+                cache.get(nsname)
             } else {
                 cache.get_any(nsname)
             } {
