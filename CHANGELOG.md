@@ -3,12 +3,16 @@
 All notable changes to this project will be documented in this file.
 
 
-## v4.1.0-rc.4
+## v4.1.0
 
 ### Bug Fixes
 
 - Don't try to canonicalize path that might not exist
+- Set install type when installing Northstar
+- Correctly pass profile arg when launching the game
 - Use exact expected path when finding Northar core mods
+- Fix enabled_mods.json not always saving
+- Fix `remove` command to work properly with packages
 
 ### Dependencies
 
@@ -20,6 +24,11 @@ All notable changes to this project will be documented in this file.
 - Write standard mod strings to exported mod lists
 - Launch game through steam and origin
 - Profiles ([#26](https://github.com/anactualemerald/papa/pull/26))
+- Nortstar reset/uninstall command
+- Improved/dynamic shell completions
+- Allow using cached versions of northstar when installing
+- Optionally install northstar core mods and DLL when creating a profile
+- Improve list command output with no mods installed
 
 ### Miscellaneous Tasks
 
@@ -27,7 +36,12 @@ All notable changes to this project will be documented in this file.
 - Add `.rpm` bundle
 - Remove nsargs crate
 - Update action versions
+- Add nix flake for development
 - Specify include in `Cargo.toml` (via [cargo-diet](https://github.com/the-lean-crate/cargo-diet))
+- Make nix flake buildable
+- Pedantic clippy
+- Remove `lazy_static` dependency
+- Update libthermite to v0.9.0
 
 ## v4.0.0
 
