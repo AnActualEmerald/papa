@@ -12,12 +12,12 @@ pub trait Answer {
     fn is_yes(&self) -> bool;
 }
 
-pub trait Indexed<T> {
+pub trait Index<T> {
     fn get_item(&self, name: &ModName) -> Option<&T>;
     fn search(&self, term: &str) -> Vec<&T>;
 }
 
-impl Indexed<Mod> for Vec<Mod> {
+impl Index<Mod> for Vec<Mod> {
     fn get_item(&self, name: &ModName) -> Option<&Mod> {
         self.iter().find(|v| {
             v.name.to_lowercase() == name.name.to_lowercase()
@@ -59,7 +59,7 @@ impl Indexed<Mod> for Vec<Mod> {
     }
 }
 
-impl Indexed<InstalledMod> for Vec<InstalledMod> {
+impl Index<InstalledMod> for Vec<InstalledMod> {
     fn get_item(&self, name: &ModName) -> Option<&InstalledMod> {
         self.iter()
             .find(|v| v.mod_json.name.to_lowercase() == name.name.to_lowercase())

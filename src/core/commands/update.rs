@@ -5,7 +5,7 @@ use crate::{
     core::commands::northstar,
     get_answer,
     model::ModName,
-    traits::{Answer, Indexed},
+    traits::{Answer, Index},
     utils::{download_and_install, to_file_size_string},
 };
 use anyhow::Result;

@@ -64,6 +64,7 @@ tracing-appender = "0.2.3"
 clap_lex = "0.7.4"
 which = "7.0.2"
 steamlocate = { git = "https://github.com/WilliamVenner/steamlocate-rs", version = "2.0.1" }
+semver = { version = "1.0.26", features = ["serde"] }
 # rustyline = {version = "10.1.0", default_features = false}
 
 [package.metadata.wix]

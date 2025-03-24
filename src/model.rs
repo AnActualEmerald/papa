@@ -5,8 +5,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{anyhow, Result};
-use thermite::model::{InstalledMod, Manifest, Mod};
+use anyhow::{Result, anyhow};
+use semver::Version;
+use thermite::model::{InstalledMod, Manifest, Mod, ModVersion};
 use tracing::{debug, warn};
 
 use crate::utils::validate_modname;
@@ -21,14 +22,14 @@ pub struct Package {
 pub struct ModName {
     pub author: String,
     pub name: String,
-    pub version: Option<String>,
+    pub version: Option<Version>,
 }
 
 impl ModName {
     pub fn new(
         author: impl Into<String>,
         name: impl Into<String>,
-        version: Option<String>,
+        version: Option<Version>,
     ) -> Self {
         Self {
             author: author.into(),
@@ -62,7 +63,7 @@ impl From<InstalledMod> for ModName {
         Self {
             author: value.author,
             name: value.manifest.name,
-            version: Some(value.manifest.version_number),
+            version: value.manifest.version_number.parse().ok(),
         }
     }
 }
@@ -72,7 +73,7 @@ impl From<&InstalledMod> for ModName {
         Self {
             author: value.author.clone(),
             name: value.manifest.name.clone(),
-            version: Some(value.manifest.version_number.clone()),
+            version: value.manifest.version_number.parse().ok(),
         }
     }
 }
@@ -82,7 +83,7 @@ impl From<Mod> for ModName {
         Self {
             author: value.author,
             name: value.name,
-            version: Some(value.latest),
+            version: value.latest.parse().ok(),
         }
     }
 }
@@ -92,7 +93,7 @@ impl From<&Mod> for ModName {
         Self {
             author: value.author.clone(),
             name: value.name.clone(),
-            version: Some(value.latest.clone()),
+            version: value.latest.parse().ok(),
         }
     }
 }
@@ -204,8 +205,30 @@ impl Cache {
         self.root.join(format!("{name}"))
     }
 
+    pub fn get_any(&self, name: impl AsRef<ModName>) -> Option<&PathBuf> {
+        let name = name.as_ref();
+        let mut keys = self
+            .packages
+            .keys()
+            .filter(|k| {
+                k.author.to_lowercase() == name.author.to_lowercase()
+                    && k.name.to_lowercase() == name.name.to_lowercase()
+            })
+            .collect::<Vec<_>>();
+
+        keys.sort_by(|a, b| {
+            a.version
+                .as_ref()
+                .and_then(|av| b.version.as_ref().map(|bv| av.cmp(bv)))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        self.packages.get(keys.first()?)
+    }
+
     #[inline]
     pub fn get(&self, name: impl AsRef<ModName>) -> Option<&PathBuf> {
+        dbg!(&self.packages);
         self.packages.get(name.as_ref())
     }
 

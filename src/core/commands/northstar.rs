@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use crate::config::{DIRS, InstallType, SteamType};
 use crate::model::Cache;
-use crate::traits::{Answer, Indexed};
+use crate::traits::{Answer, Index};
 use crate::utils::{ensure_dir, init_msg};
 use crate::{NstarCommands, config::CONFIG, model::ModName};
 use crate::{get_answer, modfile};
