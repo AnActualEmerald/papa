@@ -1,13 +1,37 @@
+use std::process::Stdio;
 use std::time::Duration;
 
 use anyhow::Result;
+use clap::Args;
 use owo_colors::OwoColorize;
 use thermite::TITANFALL2_STEAM_ID;
 
 use crate::config::CONFIG;
 use crate::config::InstallType::*;
 
-pub fn run(no_profile: bool, no_wait: bool, extra: Vec<String>) -> Result<()> {
+#[derive(Args)]
+pub struct RunOptions {
+    ///Don't specify a profile to use
+    ///
+    ///Otherwise, use the current profile
+    #[arg(short = 'P', long = "no-profile")]
+    no_profile: bool,
+
+    ///Try to launch with `-vanilla` instead of `-northstar`
+    #[arg(long = "vanilla")]
+    vanilla: bool,
+
+    ///Extra args to pass to the game
+    extra: Vec<String>,
+}
+
+pub fn run(
+    RunOptions {
+        no_profile,
+        vanilla,
+        extra,
+    }: RunOptions,
+) -> Result<()> {
     match CONFIG.install_type() {
         Steam(t) => {
             println!("Launching Titanfall 2 using steam...");
@@ -21,22 +45,19 @@ pub fn run(no_profile: bool, no_wait: bool, extra: Vec<String>) -> Result<()> {
             //     "steam://run/{}//{profile} -northstar/",
             //     thermite::TITANFALL2_STEAM_ID
             // ))?;
+            //
+            let mode = if vanilla { "-vanilla" } else { "-northstar" };
 
-            let mut child = t
-                .to_launch_command()
+            t.to_launch_command()
+                .stderr(Stdio::null())
+                .stdout(Stdio::null())
+                .stdin(Stdio::null())
                 .arg("-applaunch")
                 .arg(TITANFALL2_STEAM_ID.to_string())
-                .arg("-northstar")
+                .arg(mode)
                 .arg(profile)
                 .args(extra)
                 .spawn()?;
-
-            if !no_wait {
-                let spinner = indicatif::ProgressBar::new_spinner().with_message("Gaming...");
-                spinner.enable_steady_tick(Duration::from_millis(100));
-                child.wait()?;
-                spinner.finish_and_clear();
-            }
         }
         Origin => {
             println!("Launching Titanfall 2 using origin...");
