@@ -1,5 +1,4 @@
 use std::process::Stdio;
-use std::time::Duration;
 
 use anyhow::Result;
 use clap::Args;
