@@ -3,19 +3,23 @@ use std::{
     fs::{self, File},
     io::{ErrorKind, IsTerminal, Write},
     path::{Path, PathBuf},
+    time::Duration,
 };
 
 use anyhow::{Result, anyhow};
 use clap::{Args, Subcommand, ValueHint};
 use clap_complete::ArgValueCompleter;
 use copy_dir::copy_dir;
+use indicatif::{ProgressBar, ProgressStyle};
 use owo_colors::OwoColorize;
 use semver::Version;
 use thermite::core::manage::install_northstar_profile;
 
 use crate::{
     config::{CONFIG, DIRS},
+    get_answer,
     model::{Cache, ModName},
+    traits::Answer,
     update_cfg,
     utils::{download_northstar, init_msg},
 };
@@ -73,6 +77,9 @@ pub struct NewOptions {
     ///Remove any existing folder of the same name
     #[arg(long, short)]
     force: bool,
+    ///Answer "yes" to any prompts
+    #[arg(long, short)]
+    yes: bool,
     ///The version of Northstar to use when for this profile
     ///
     /// Leave unset for latest
@@ -212,7 +219,7 @@ fn new_profile(name: &OsString, options: NewOptions, no_cache: bool) -> Result<(
     fs::create_dir(&prof)?;
 
     if !options.empty {
-        let nsname = ModName::new("northstar", "Northstar", dbg!(options.version.clone()));
+        let nsname = ModName::new("northstar", "Northstar", options.version.clone());
         let cache = Cache::from_dir(DIRS.cache_dir())?;
         let file = if !no_cache
             && let Some(nstar) = if options.version.is_some() {
@@ -222,12 +229,29 @@ fn new_profile(name: &OsString, options: NewOptions, no_cache: bool) -> Result<(
             } {
             File::open(nstar)?
         } else {
-            // get_answer!("");
+            let ans = if let Some(version) = options.version.as_ref() {
+                get_answer!(options.yes, "Download Northstar {}? [Y/n] ", version)?
+            } else {
+                get_answer!(options.yes, "Download latest Northstar? [Y/n] ")?
+            };
 
-            download_northstar(options.version)?
+            if ans.is_no() {
+                println!("Not downloading Northstar, aborting");
+                return Ok(());
+            } else {
+                download_northstar(options.version)?
+            }
         };
 
+        let bar = ProgressBar::new_spinner()
+            .with_style(
+                ProgressStyle::with_template("{prefix}{spinner:.cyan}")?
+                    .tick_strings(&["   ", ".  ", ".. ", "...", "   "]),
+            )
+            .with_prefix("Installing Northstar core files");
+        bar.enable_steady_tick(Duration::from_millis(500));
         install_northstar_profile(file, prof)?;
+        bar.finish();
     }
 
     println!("Created profile {}", name.display().bright_cyan());

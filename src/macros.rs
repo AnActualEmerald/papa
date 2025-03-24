@@ -60,6 +60,9 @@ macro_rules! get_answer {
     ($yes:expr) => {
         get_answer!($yes, "OK? [Y/n]: ")
     };
+    (yes:expr, $msg:literal) => {
+        get_answer!($yes, format!($msg))
+    };
     ($yes:expr, $msg:expr) => {
         if $yes {
             Ok(String::new())
@@ -67,6 +70,9 @@ macro_rules! get_answer {
             $crate::readln!($msg)
         }
     };
+    ($yes:expr, $msg:literal, $($arg:expr),*) => {
+        get_answer!($yes, format!($msg, $($arg,)*))
+    }
 }
 
 #[macro_export]
