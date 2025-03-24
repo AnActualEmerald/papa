@@ -26,11 +26,11 @@ jobs:
         with:
           submodules: recursive
       - name: Install cargo-deb
-        uses: baptiste0928/cargo-install@v3.0.0
+        uses: baptiste0928/cargo-install@v3.3.0
         with:
           crate: cargo-deb
       - name: Install cargo-generate-rpm
-        uses: baptiste0928/cargo-install@v3.0.0
+        uses: baptiste0928/cargo-install@v3.3.0
         with:
           crate: cargo-generate-rpm
       - name: Build
@@ -43,11 +43,11 @@ jobs:
         run: tar czvf papa_${{github.ref_name}}_linux_amd64.tar.gz -C target/release papa
       - name: Create release notes
         id: changelog
-        uses: orhun/git-cliff-action@v2.3.0
+        uses: orhun/git-cliff-action@v4.4.2
         with:
           args: -v -l --strip all
       - name: Release
-        uses: softprops/action-gh-release@v0.1.15
+        uses: softprops/action-gh-release@v2.2.1
         with:
           draft: true
           body: ${{ steps.changelog.outputs.content }}
@@ -65,8 +65,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+      - name: Setup msbuild
+        uses: microsoft/setup-msbuild@v2
+      - name: Install wix
+        run: dotnet tool install --global wix
       - name: Install cargo-wix
-        uses: baptiste0928/cargo-install@v3.0.0
+        uses: baptiste0928/cargo-install@v3.3.0
         with:
           crate: cargo-wix
       - name: Build
@@ -74,12 +78,12 @@ jobs:
       - name: Bundle
         run: |
           $version= "${{ github.ref_name }}" -replace "v"
-          cargo wix -p papa -b "C:\Program Files (x86)\WiX Toolset v3.11\bin" --nocapture -i $version
+          cargo wix -p papa --nocapture -i $version
       - name: Compress binary
         run: |
           Compress-Archive -Path "target\release\papa.exe" -DestinationPath "target\release\papa_${{ github.ref_name }}_windows.zip"
       - name: Release
-        uses: softprops/action-gh-release@v0.1.15
+        uses: softprops/action-gh-release@v2.2.1
         with:
           draft: true
           name: Version ${{ github.ref_name }}
