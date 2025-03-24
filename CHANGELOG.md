@@ -42,6 +42,7 @@ All notable changes to this project will be documented in this file.
 - Pedantic clippy
 - Remove `lazy_static` dependency
 - Update libthermite to v0.9.0
+- Update release workflow
 
 ## v4.0.0
 
