@@ -20,7 +20,16 @@
           overlays = [fenix.overlays.default];
         };
 
-        naersk' = pkgs.callPackage naersk {};
+        toolchain = pkgs.fenix.latest.withComponents [
+          "cargo"
+          "rustc"
+        ];
+
+        naersk' = pkgs.callPackage naersk {
+          cargo = toolchain;
+          rustc = toolchain;
+        };
+
       in rec {
         defaultPackage = naersk'.buildPackage {
           src = ./.;
